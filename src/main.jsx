@@ -16,6 +16,7 @@ import "./end.css";
 import "./mobile.css";
 import "./turns.css";
 import "./controller-answer.css";
+import "./controller-tools.css";
 import "./timer.css";
 import "./signals.css";
 
@@ -398,6 +399,16 @@ function Display({ game, host = false, onAction }) {
     </main>
   );
 }
+function ControllerPlayerTools({ player, onAction }) {
+  const [name, setName] = useState(player.name), [amount, setAmount] = useState("100");
+  useEffect(() => setName(player.name), [player.name]);
+  const scoreAmount = Math.max(1, Math.trunc(Number(amount) || 0));
+  return <div className="controller-player-tools">
+    <input aria-label={`${player.name} name`} value={name} maxLength="20" onChange={(event) => setName(event.target.value)} onBlur={() => name.trim() && name.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name })} />
+    <div className="score-adjustment"><input aria-label="Score amount" type="number" min="1" step="1" value={amount} onChange={(event) => setAmount(event.target.value)} /><button onClick={() => onAction("adjustScore", { playerId: player.id, amount: scoreAmount })}>+${scoreAmount}</button><button onClick={() => onAction("adjustScore", { playerId: player.id, amount: -scoreAmount })}>−${scoreAmount}</button></div>
+    <button className="kick-player" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Kick</button>
+  </div>;
+}
 function Controller({ game, onAction }) {
   const buzzed = game.players.find((p) => p.id === game.buzzedPlayer),
     finalMode = game.status === "final";
@@ -525,6 +536,11 @@ function Controller({ game, onAction }) {
             : "Skip to Final Jeopardy →"}
         </button>
       )}
+      <section className="controller-players">
+        <h2>Players</h2>
+        <p className="muted">Rename, adjust a score, or remove a player.</p>
+        {game.players.map((player) => <ControllerPlayerTools key={player.id} player={player} onAction={onAction} />)}
+      </section>
       <Scores players={game.players} />
     </main>
   );
@@ -692,7 +708,9 @@ function App() {
     [playerId, setPlayerId] = useState(sessionStorage.playerId);
   useEffect(() => {
     socket.on("game:update", setGame);
-    return () => socket.off("game:update");
+    const kicked = () => { sessionStorage.removeItem("playerId"); sessionStorage.removeItem("gameCode"); sessionStorage.removeItem("playerName"); location.assign("./"); };
+    socket.on("player:kicked", kicked);
+    return () => { socket.off("game:update"); socket.off("player:kicked", kicked); };
   }, []);
   const action = (action, payload = {}) =>
     socket.emit("host:action", { code: game.code, action, payload });
