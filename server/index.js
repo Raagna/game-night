@@ -45,7 +45,7 @@ function revealThenReturn(game, eventType='reveal', giveLowestControl=false) { c
 function timeoutClue(game) { const active=game.activeQuestion; if(active?.dailyDouble) { const player=game.players.get(active.dailyPlayerId); if(player) player.score-=active.dailyWager; revealThenReturn(game,'reveal',true) } else revealThenReturn(game,'reveal',true) }
 function revealFinal(game) { clearTimeout((gameTimers.get(game.code)||{}).final); game.finalDeadline=null; game.reveal=true; emitGame(game) }
 function resumeBuzzersAfterIncorrect(game) { const remaining=game.cluePausedRemaining ?? 45000; game.clueDeadline=Date.now()+remaining; game.cluePausedRemaining=null; game.buzzerOpen=true; game.buzzerOpenedAt=Date.now(); game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; schedule(game,'clue',remaining,()=>timeoutClue(game)) }
-function openAnswerWindow(game, playerId) { game.buzzedPlayer=playerId; game.answeringPlayerId=playerId; game.buzzerOpen=false; game.cluePausedRemaining=game.clueDeadline ? Math.max(0,game.clueDeadline-Date.now()) : game.cluePausedRemaining; game.clueDeadline=null; game.answerDeadline=Date.now()+10000; clearTimeout((gameTimers.get(game.code)||{}).clue); emitGame(game); schedule(game,'answer',10000,()=>{ const p=game.players.get(playerId); if(p&&game.activeQuestion){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) { game.turnPlayerId=playerId; revealThenReturn(game) } else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); emitGame(game) } } }) }
+function openAnswerWindow(game, playerId) { game.buzzedPlayer=playerId; game.answeringPlayerId=playerId; game.buzzerOpen=false; game.cluePausedRemaining=game.clueDeadline ? Math.max(0,game.clueDeadline-Date.now()) : game.cluePausedRemaining; game.clueDeadline=null; game.answerDeadline=Date.now()+10000; clearTimeout((gameTimers.get(game.code)||{}).clue); emitGame(game); schedule(game,'answer',10000,()=>{ const p=game.players.get(playerId); if(p&&game.activeQuestion){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) revealThenReturn(game,'reveal',true); else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); emitGame(game) } } }) }
 function makeGame(code, config) {
   const boards = config.boards.map((board) => board.map((category) => ({ ...category, questions: category.questions.map((q, i) => ({ ...q, value: q.value || (i + 1) * 200, used: false, dailyDouble: false })) })))
   boards.forEach((board, index) => {
@@ -91,7 +91,7 @@ io.on('connection', (socket) => {
     if (action === 'start') { game.status = 'playing'; const players=connectedPlayers(game); game.turnPlayerId=players[Math.floor(Math.random()*players.length)]?.id || null }
     if (action === 'select') {
       const { categoryIndex, questionIndex } = payload; const q = game.boards[game.boardIndex][categoryIndex]?.questions[questionIndex]
-      if (q && !q.used) {
+      if (!game.activeQuestion && q && !q.used) {
         clearGameTimers(game)
         const dailyPlayer=q.dailyDouble ? (game.players.get(game.turnPlayerId) || connectedPlayers(game)[Math.floor(Math.random()*connectedPlayers(game).length)]) : null
         if(dailyPlayer) game.lastEvent={type:'daily',playerId:dailyPlayer.id,at:Date.now()}
@@ -129,7 +129,7 @@ io.on('connection', (socket) => {
     if (action === 'final') { clearGameTimers(game); game.status = 'final'; game.activeQuestion = { final: true, question: clone(game.final) }; game.clueDeadline=null; game.answerDeadline=null; game.finalDeadline=Date.now()+50000; game.reveal = false; game.buzzerOpen = false; schedule(game,'final',50000,()=>revealFinal(game)) }
     if (action === 'reveal' && game.status === 'final') { game.reveal = !game.reveal; if(game.reveal) { clearTimeout((gameTimers.get(game.code)||{}).final); game.finalDeadline=null } }
     if (action === 'revealFinalPlayer') { const response = game.finalResponses.get(payload.playerId); if (response) response.revealed = !response.revealed }
-    if (action === 'nextBoard') { game.boardIndex = 1; game.activeQuestion = null; game.clueDeadline=null; game.cluePausedRemaining=null; game.buzzerOpen = false; game.buzzerOpenedAt=null; game.buzzedPlayer = null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.reveal = false }
+    if (action === 'nextBoard') { clearGameTimers(game); game.boardIndex = 1; game.activeQuestion = null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen = false; game.buzzerOpenedAt=null; game.buzzedPlayer = null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal = false }
     if (action === 'timeout') { const players=[...game.players.values()]; if(players.length){const low=Math.min(...players.map(p=>p.score)); const choices=players.filter(p=>p.score===low); const next=choices[Math.floor(Math.random()*choices.length)]; game.turnPlayerId=next.id; game.answeringPlayerId=game.activeQuestion?next.id:null; game.buzzerOpen=false; game.buzzedPlayer=null} }
     if (action === 'replay') {
       const reset = makeGame(game.code, game.config)
@@ -171,7 +171,17 @@ io.on('connection', (socket) => {
       if (game.hostSocketId === socket.id) { game.hostSocketId = null; emitGame(game) }
       for (const [pid, player] of game.players) if (player.socketId === socket.id) {
         player.socketId = null
-        if (game.turnPlayerId === pid || game.answeringPlayerId === pid || game.buzzedPlayer === pid) assignLowestConnected(game)
+        const active=game.activeQuestion
+        const wasAnswering=game.answeringPlayerId===pid || game.buzzedPlayer===pid
+        const wasDailyOwner=active?.dailyDouble && active.dailyPlayerId===pid
+        if (wasDailyOwner) {
+          const replacement=assignLowestConnected(game)
+          if (replacement) { active.dailyPlayerId=replacement.id; active.dailyReady=false; active.dailyWager=null; game.answeringPlayerId=null; game.buzzedPlayer=null; game.buzzerOpen=false; game.clueDeadline=null; game.answerDeadline=null; clearGameTimers(game) }
+        } else if (wasAnswering && active) {
+          clearTimeout((gameTimers.get(game.code)||{}).answer)
+          game.answeringPlayerId=null; game.buzzedPlayer=null; game.answerDeadline=null
+          if (connectedPlayers(game).length) resumeBuzzersAfterIncorrect(game)
+        } else if (game.turnPlayerId === pid) assignLowestConnected(game)
         emitGame(game)
       }
     }
