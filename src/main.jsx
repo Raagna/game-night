@@ -17,6 +17,7 @@ import "./mobile.css";
 import "./turns.css";
 import "./controller-answer.css";
 import "./controller-tools.css";
+import "./hostless.css";
 import "./timer.css";
 import "./signals.css";
 
@@ -65,6 +66,7 @@ function Setup({ onCreate }) {
     [board, setBoard] = useState(0),
     [picked, setPicked] = useState([[], []]),
     [final, setFinal] = useState(null),
+    [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
     [openYear, setOpenYear] = useState("All dates"),
     [visibleCount, setVisibleCount] = useState(60);
@@ -128,7 +130,7 @@ function Setup({ onCreate }) {
       final ||
       finalPool[Math.floor(Math.random() * finalPool.length)] ||
       questions[Math.floor(Math.random() * questions.length)];
-    onCreate({ boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), final: finalQ });
+    onCreate({ boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), final: finalQ, hostless });
   };
   return (
     <main className="setup">
@@ -187,6 +189,7 @@ function Setup({ onCreate }) {
             ⚄ Random remaining
           </button>
         </div>
+        <label className="game-mode"><input type="checkbox" checked={hostless} onChange={(event) => setHostless(event.target.checked)} /> <span><b>Play without a host</b><small>Players select clues, buzz automatically, and type their own responses.</small></span></label>
         <div className="builder">
           <div>
             <div className="archive-controls">
@@ -319,7 +322,7 @@ function Display({ game, host = false, onAction }) {
         <div className="brand">JEOPARDY!</div>
         <div className="code">
           JOIN AT <b>raagna.github.io/jeopardy-party/</b> · CODE <strong>{game.code}</strong>
-          {game.activeQuestion && <ClueTimer deadline={game.answerDeadline || game.clueDeadline || game.finalDeadline} serverNow={game.serverNow} />}
+          {game.activeQuestion && <ClueTimer deadline={game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline} serverNow={game.serverNow} />}
         </div>
       </header>
       {game.status === "lobby" ? (
@@ -360,7 +363,7 @@ function Display({ game, host = false, onAction }) {
                 <div className="cat">{c.name}</div>
                 {c.questions.map((q, qi) => (
                   <button
-                    disabled={q.used || !host}
+                    disabled={q.used || !host || game.hostless}
                     onClick={() =>
                       onAction("select", {
                         categoryIndex: ci,
@@ -393,11 +396,16 @@ function Display({ game, host = false, onAction }) {
               )}
             </div>
           )}
+          {host && game.hostless && <DisplayScoreCorrections game={game} onAction={onAction} />}
         </>
       )}
       <Scores players={game.players} />
     </main>
   );
+}
+function DisplayScoreCorrections({ game, onAction }) {
+  const [amount,setAmount]=useState("100"); const value=Math.max(1,Math.trunc(Number(amount)||0));
+  return <section className="display-score-corrections"><p>Score corrections</p><input type="number" min="1" value={amount} onChange={(event)=>setAmount(event.target.value)} />{game.players.map((player)=><div key={player.id}><span>{player.name} · ${player.score}</span><button onClick={()=>onAction("adjustScore",{playerId:player.id,amount:value})}>+${value}</button><button onClick={()=>onAction("adjustScore",{playerId:player.id,amount:-value})}>−${value}</button></div>)}</section>
 }
 function ControllerPlayerTools({ player, onAction }) {
   const [name, setName] = useState(player.name), [amount, setAmount] = useState("100");
@@ -552,6 +560,8 @@ function FinalPlayer({ game, playerId, p }) {
   const submitted = game.finalResponses.find((x) => x.playerId === playerId);
   if (p.score < 1)
     return <p className="locked-final">You are not eligible for Final Jeopardy.</p>;
+  if (submitted && game.hostless && game.reveal)
+    return <div className="locked-final"><p>Final answer: <b>{game.activeQuestion?.question?.answer}</b></p><p className={submitted.correct ? "final-correct" : "final-incorrect"}>{submitted.correct ? `Correct! +$${submitted.wager}` : `Incorrect. −$${submitted.wager}`}</p></div>;
   if (submitted)
     return (
       <p className="locked-final">
@@ -588,8 +598,16 @@ function FinalPlayer({ game, playerId, p }) {
 }
 function DailyWager({ game, playerId, player }) {
   const [wager,setWager]=useState("5"); const max=Math.max(player.score,game.boardIndex===0?1000:2000,5)
-  if(game.activeQuestion.dailyReady) return <><p className="locked-final">Your wager is locked: ${game.activeQuestion.dailyWager}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
+  if(game.activeQuestion.dailyReady) return <><p className="locked-final">Your wager is locked: ${game.activeQuestion.dailyWager}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : game.hostless ? "Buzzer opens automatically in 10 seconds." : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
   return <div className="final-form"><p>DAILY DOUBLE! Wager $5 to ${max}</p><input type="number" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
+}
+function HostlessBoard({ game, playerId }) {
+  const chooser=game.players.find((player)=>player.id===game.turnPlayerId), canSelect=chooser?.id===playerId;
+  return <div className="hostless-board"><p className="player-status">{canSelect ? "It’s your turn to select a clue." : `It’s ${chooser?.name || "another player"}’s turn to select a clue.`}</p><div className="board">{game.board.map((category,categoryIndex)=><div className="column" key={category.name}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
+}
+function HostlessAnswer({ game, playerId }) {
+  const [response,setResponse]=useState("");
+  return <div className="final-form"><p>Type your response before time runs out.</p><input autoFocus value={response} onChange={(event)=>setResponse(event.target.value)} placeholder="Your response" onKeyDown={(event)=>event.key==='Enter'&&socket.emit("player:answer",{code:game.code,playerId,response})}/><button className="primary" onClick={()=>socket.emit("player:answer",{code:game.code,playerId,response})}>Submit response</button></div>
 }
 function Player({ game, playerId }) {
   const p = game.players.find((p) => p.id === playerId);
@@ -618,11 +636,11 @@ function Player({ game, playerId }) {
         <p>Waiting for the host to start…</p>
       ) : game.status === "final" ? (
         <FinalPlayer game={game} playerId={playerId} p={p} />
-      ) : !game.activeQuestion ? (
+      ) : !game.activeQuestion && game.hostless ? <HostlessBoard game={game} playerId={playerId} /> : !game.activeQuestion ? (
         <p className="player-status">
           {chooser ? (chooser.id === playerId ? "It’s your turn to select a clue." : `It’s ${chooser.name}’s turn to select a clue.`) : "Waiting for the first turn…"}
         </p>
-      ) : game.activeQuestion?.dailyDouble ? (
+      ) : game.hostless && hasTurn ? <HostlessAnswer game={game} playerId={playerId} /> : game.activeQuestion?.dailyDouble ? (
         game.activeQuestion.dailyPlayerId===playerId ? <DailyWager game={game} playerId={playerId} player={p}/> : <p className="player-status">A Daily Double is in play.</p>
       ) : (
         <>
@@ -637,7 +655,9 @@ function Player({ game, playerId }) {
                     : `${buzzed.name} has buzzed in at ${formatBuzzTime(game.buzzedAtMs)}.`
                   : game.buzzerOpen
                     ? "Buzz in!"
-                    : "Wait for the host to open buzzers."}
+                    : game.hostless
+                      ? "Buzzers open automatically in 10 seconds."
+                      : "Wait for the host to open buzzers."}
           </p>
           <button
             className={"buzzer " + (game.buzzerOpen ? "ready" : "")}
@@ -757,7 +777,7 @@ function App() {
     return (
       <>
         <Display game={game} host onAction={action} />
-        <a
+        {!game.hostless && <a
           className="controller-link"
           onClick={() => {
             sessionStorage.hostCode = game.code;
@@ -765,7 +785,7 @@ function App() {
           }}
         >
           Open host controller ↗
-        </a>
+        </a>}
       </>
     );
   return <Player game={game} playerId={playerId} />;
