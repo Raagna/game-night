@@ -281,13 +281,14 @@ function Setup({ onCreate }) {
   );
 }
 
-function Scores({ players }) {
+function Scores({ players, onAdjust }) {
   return (
     <div className="scores">
       {players.map((p) => (
         <div key={p.id}>
           <b>{p.name}</b>
           <span>${p.score.toLocaleString()}</span>
+          {onAdjust && <div className="score-card-adjustment"><button aria-label={`Add score to ${p.name}`} onClick={() => onAdjust(p.id, 1)}>+</button><button aria-label={`Subtract score from ${p.name}`} onClick={() => onAdjust(p.id, -1)}>−</button></div>}
         </div>
       ))}
     </div>
@@ -311,6 +312,8 @@ function Display({ game, host = false, onAction }) {
   const buzzed = game.players.find((p) => p.id === game.buzzedPlayer);
   const chooser = game.players.find((p) => p.id === game.turnPlayerId);
   const boardDone = game.board?.every((c) => c.questions.every((q) => q.used));
+  const [scoreIncrement, setScoreIncrement] = useState("100");
+  const scoreAmount = Math.max(1, Math.trunc(Number(scoreIncrement) || 0));
   useClueMusic(Boolean(game.activeQuestion && game.buzzerOpen));
   useEffect(() => {
     if (game.lastEvent?.type === "reveal") tone(1047, .55, "sine", .16);
@@ -396,16 +399,15 @@ function Display({ game, host = false, onAction }) {
               )}
             </div>
           )}
-          {host && game.hostless && <DisplayScoreCorrections game={game} onAction={onAction} />}
         </>
       )}
-      <Scores players={game.players} />
+      <Scores players={game.players} onAdjust={host && game.hostless ? (playerId, direction) => onAction("adjustScore", { playerId, amount: direction * scoreAmount }) : undefined} />
+      {host && game.hostless && <HostlessScoreControls game={game} amount={scoreIncrement} setAmount={setScoreIncrement} onAction={onAction} />}
     </main>
   );
 }
-function DisplayScoreCorrections({ game, onAction }) {
-  const [amount,setAmount]=useState("100"); const value=Math.max(1,Math.trunc(Number(amount)||0));
-  return <section className="display-score-corrections"><p>Score corrections</p><input type="number" min="1" value={amount} onChange={(event)=>setAmount(event.target.value)} />{game.players.map((player)=><div key={player.id}><span>{player.name} · ${player.score}</span><button onClick={()=>onAction("adjustScore",{playerId:player.id,amount:value})}>+${value}</button><button onClick={()=>onAction("adjustScore",{playerId:player.id,amount:-value})}>−${value}</button></div>)}</section>
+function HostlessScoreControls({ game, amount, setAmount, onAction }) {
+  return <section className="display-score-controls"><label>Score increment <input aria-label="Score increment" type="number" min="1" step="1" value={amount} onChange={(event)=>setAmount(event.target.value)} /></label><div className="display-kicks">{game.players.map((player)=><button className="kick-player" key={player.id} onClick={()=>onAction("kickPlayer",{playerId:player.id})}>Kick {player.name}</button>)}</div></section>
 }
 function ControllerPlayerTools({ player, onAction }) {
   const [name, setName] = useState(player.name), [amount, setAmount] = useState("100");
@@ -693,8 +695,9 @@ function Join({ onJoined }) {
         onChange={(e) => setName(e.target.value)}
       />
       <button className="primary" onClick={join}>
-        Join lobby
+        Join game
       </button>
+      <p className="muted">Games allow up to 6 players, even after they’ve started.</p>
       {error && <p className="notice">{error}</p>}
       <a href="?host">Hosting a game?</a>
     </main>

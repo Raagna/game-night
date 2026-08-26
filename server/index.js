@@ -7,6 +7,7 @@ const httpServer = createServer(app)
 const io = new Server(httpServer, { cors: { origin: '*' } })
 const games = new Map()
 const gameTimers = new Map()
+const MAX_PLAYERS = 6
 
 const id = () => Math.random().toString(36).slice(2, 8).toUpperCase()
 const clone = (x) => JSON.parse(JSON.stringify(x))
@@ -89,7 +90,8 @@ io.on('connection', (socket) => {
       ack?.({ ok: true, playerId: returning.id, game: publicGame(game), rejoined: true }); emitGame(game)
       return
     }
-    if (game.status !== 'lobby') return ack?.({ ok: false, error: 'This game has already started. Re-enter the room code on the device you used to join.' })
+    if (!['lobby', 'playing'].includes(game.status)) return ack?.({ ok: false, error: 'This game is no longer accepting new players.' })
+    if (game.players.size >= MAX_PLAYERS) return ack?.({ ok: false, error: `This game already has the maximum of ${MAX_PLAYERS} players.` })
     const clean = String(name || '').trim().slice(0, 20); if (!clean) return ack?.({ ok: false, error: 'Enter a name' })
     const player = { id: id(), name: clean, score: 0, socketId: socket.id }
     game.players.set(player.id, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
