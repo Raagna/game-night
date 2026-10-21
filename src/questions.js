@@ -68,9 +68,9 @@ export async function loadSeasonIndex() {
 }
 function expandSeason({ season, categories, finals }) {
   const questions = []
-  categories.forEach(([category, airDate, roundNumber, clues], c) => {
+  categories.forEach(([category, airDate, roundNumber, clues, topics = []], c) => {
     const round = roundNumber === 2 ? 'Double Jeopardy!' : 'Jeopardy!', step = roundNumber === 2 ? 400 : 200
-    clues.forEach(([question, answer], i) => questions.push({ id: `s${season}-${c}-${i}`, category, question, answer, value: (i + 1) * step, round, airDate, season }))
+    clues.forEach(([question, answer], i) => questions.push({ id: `s${season}-${c}-${i}`, category, question, answer, value: (i + 1) * step, round, airDate, season, topics }))
   })
   finals.forEach(([category, airDate, question, answer], i) => questions.push({ id: `s${season}-f${i}`, category, question, answer, round: 'Final Jeopardy!', airDate, season }))
   return questions

@@ -14,6 +14,7 @@ import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
 import "./styles.css";
+import topicList from "./topics.json";
 
 const SERVER =
   import.meta.env.VITE_SERVER_URL ||
@@ -59,6 +60,11 @@ const makeCategory = ([, qs], boardIndex) => ({
     .map((q, i) => ({ ...q, value: (i + 1) * (boardIndex === 0 ? 200 : 400) })),
 });
 const uid = () => Math.random().toString(36).slice(2);
+const TOPICS = topicList.map(({ id, label, aliases }) => ({ id, label, names: [label.toLowerCase(), ...aliases] }));
+const TOPIC_LABEL = Object.fromEntries(TOPICS.map((topic) => [topic.id, topic.label]));
+// Topics a search refers to: "sport" or "sports" means the Sports topic, "movie" means Movies & TV, and so on.
+const topicsForQuery = (query) =>
+  query.length < 3 ? [] : TOPICS.filter((topic) => topic.names.some((name) => name.startsWith(query))).map((topic) => topic.id);
 
 function Setup({ onCreate }) {
   const [questions, setQuestions] = useState(fallbackQuestions),
@@ -71,6 +77,7 @@ function Setup({ onCreate }) {
     [seasons, setSeasons] = useState([]),
     [source, setSource] = useState(""),
     [loading, setLoading] = useState(true),
+    [topic, setTopic] = useState(null),
     [visibleCount, setVisibleCount] = useState(60);
   const showSeason = async (season) => {
     setSource(String(season));
@@ -90,16 +97,20 @@ function Setup({ onCreate }) {
       .catch((err) => { setLoading(false); setNotice(`${err.message} You can still import a file.`); });
   }, []);
   const allCategories = useMemo(() => byCategory(questions), [questions]);
-  const categories = useMemo(
-    () =>
-      allCategories.filter(
-        ([, qs]) =>
-          qs[0].round === (board === 0 ? "Jeopardy!" : "Double Jeopardy!") &&
-          hasBoardValues(qs, board) &&
-          qs[0].category.includes(search.toUpperCase()),
-      ),
-    [allCategories, search, board],
-  );
+  const hasTopics = useMemo(() => questions.some((q) => q.topics?.length), [questions]);
+  const query = search.trim().toLowerCase();
+  const queryTopics = useMemo(() => topicsForQuery(query), [query]);
+  const categories = useMemo(() => {
+    const nameMatches = [], topicMatches = [];
+    for (const entry of allCategories) {
+      const first = entry[1][0];
+      if (first.round !== (board === 0 ? "Jeopardy!" : "Double Jeopardy!") || !hasBoardValues(entry[1], board)) continue;
+      if (topic && !first.topics?.includes(topic)) continue;
+      if (!query || first.category.toLowerCase().includes(query)) nameMatches.push(entry);
+      else if (first.topics?.some((id) => queryTopics.includes(id))) topicMatches.push(entry);
+    }
+    return [...nameMatches, ...topicMatches];
+  }, [allCategories, board, topic, query, queryTopics]);
   const select = (entry) =>
     setPicked((p) =>
       p.map((b, i) =>
@@ -128,7 +139,7 @@ function Setup({ onCreate }) {
           : b,
       ),
     );
-  useEffect(() => setVisibleCount(60), [search, questions, board]);
+  useEffect(() => setVisibleCount(60), [search, questions, board, topic]);
   const start = () => {
     if (picked[0].length !== 6 || picked[1].length !== 6)
       return setNotice("Choose six categories for each board.");
@@ -201,9 +212,11 @@ function Setup({ onCreate }) {
             <div className="archive-controls">
               <input
                 className="search"
+                type="search"
+                aria-label="Search categories or topics"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search categories…"
+                placeholder="Search categories or topics, e.g. sports"
               />
               <select
                 aria-label="Question set"
@@ -220,6 +233,21 @@ function Setup({ onCreate }) {
                 ))}
               </select>
             </div>
+            {hasTopics && (
+              <div className="topic-chips" role="group" aria-label="Filter by topic">
+                <button aria-pressed={topic === null} onClick={() => setTopic(null)}>All topics</button>
+                {TOPICS.map((t) => (
+                  <button key={t.id} aria-pressed={topic === t.id} onClick={() => setTopic(topic === t.id ? null : t.id)}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {query && queryTopics.length > 0 && (
+              <p className="search-hint">
+                Showing names with “{search.trim()}” plus categories about {queryTopics.map((id) => TOPIC_LABEL[id]).join(", ")}
+              </p>
+            )}
             <div
               className="category-list"
               onScroll={(e) => {
@@ -240,8 +268,8 @@ function Setup({ onCreate }) {
                 >
                   <span>{categoryTitle(entry)}</span>
                   <small>
-                    {entry[1][0].airDate || "Undated"} ·{" "}
-                    {entry[1][0].round || "Jeopardy!"}
+                    {entry[1][0].airDate || "Undated"}
+                    {entry[1][0].topics?.length ? ` · ${entry[1][0].topics.slice(0, 2).map((id) => TOPIC_LABEL[id]).join(", ")}` : ""}
                   </small>
                 </button>
               ))}

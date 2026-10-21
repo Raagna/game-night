@@ -4,12 +4,17 @@ Usage:  python3 scripts/build-question-data.py path/to/jeopardy_dataset_seasons_
 Writes: public/data/seasons.json and public/data/season<N>.json
 
 Each season file is {"season": N, "categories": [...], "finals": [...]}:
-  categories: [category, air_date, round (1 = Jeopardy!, 2 = Double Jeopardy!), [[clue, response] x5]]
-              (the five clues are in board order, lowest value first)
+  categories: [category, air_date, round (1 = Jeopardy!, 2 = Double Jeopardy!), [[clue, response] x5], [topic ids]]
+              (the five clues are in board order, lowest value first; topic ids come from src/topics.json)
   finals:     [category, air_date, clue, response]
 
 Only complete five-clue categories are kept, and categories whose clues depend on a picture,
 video or audio the game can't show ("seen here", "Clue Crew", ...) are left out.
+
+Topics: each category gets up to three broad topics (Sports, Science, ...) so searching "sports"
+finds sports categories whose names don't say so. A keyword in the category name counts 5 points,
+each clue that mentions a topic keyword counts 1; topics scoring at least 2 and at least 40% of
+the best score are kept. Edit src/topics.json to tune the keyword lists, then re-run this script.
 """
 import csv
 import io
@@ -21,7 +26,32 @@ from collections import defaultdict
 from pathlib import Path
 
 MEDIA = re.compile(r"seen here|shown here|heard here|pictured here|clue crew|\(video|\[video|\(audio|this sound|you hear|on the monitor", re.I)
-OUT = Path(__file__).resolve().parent.parent / "public" / "data"
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "public" / "data"
+TOPICS = json.loads((ROOT / "src" / "topics.json").read_text(encoding="utf-8"))
+
+
+def word_pattern(words):
+    alternatives = "|".join(re.escape(w.lower()) for w in sorted(words, key=len, reverse=True))
+    return re.compile(r"(?<![a-z0-9])(?:" + alternatives + r")(?:s|es)?(?![a-z0-9])")
+
+
+TOPIC_PATTERNS = [(t["id"], word_pattern(t["keywords"]), word_pattern(t["aliases"] + [t["label"]])) for t in TOPICS]
+
+
+def classify(name, clues):
+    name = name.lower()
+    scores = {}
+    for topic_id, keywords, aliases in TOPIC_PATTERNS:
+        score = 5 if (aliases.search(name) or keywords.search(name)) else 0
+        score += sum(1 for clue, response in clues if keywords.search(f"{clue} {response}".lower()))
+        if score:
+            scores[topic_id] = score
+    if not scores or max(scores.values()) < 2:
+        return []
+    best = max(scores.values())
+    ranked = sorted(scores.items(), key=lambda item: -item[1])
+    return [topic_id for topic_id, score in ranked if score >= max(2, 0.4 * best)][:3]
 
 
 def tidy(text):
@@ -60,7 +90,8 @@ def build(zf, name, season):
         if any(MEDIA.search(clue) for _, clue, _ in clues):
             continue
         clues.sort()
-        categories.append([category, air_date, round_number, [[clue, response] for _, clue, response in clues]])
+        pairs = [[clue, response] for _, clue, response in clues]
+        categories.append([category, air_date, round_number, pairs, classify(category, pairs)])
     categories.sort(key=lambda c: (c[1], c[2]), reverse=True)
     finals.sort(key=lambda f: f[1], reverse=True)
     return {"season": season, "categories": categories, "finals": finals}
