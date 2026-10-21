@@ -670,7 +670,24 @@ function Player({ game, playerId }) {
           </button>
         </>
       )}
+      {game.status === "playing" && <SkipVote game={game} playerId={playerId} />}
     </main>
+  );
+}
+function SkipVote({ game, playerId }) {
+  const active = game.activeQuestion;
+  if (!game.hostless || !active || active.final || active.dailyDouble || game.reveal) return null;
+  const votes = game.skipVotes || [];
+  const needed = game.players.filter((player) => player.connected && !game.incorrectPlayerIds?.includes(player.id));
+  const voted = votes.includes(playerId);
+  const count = needed.filter((player) => votes.includes(player.id)).length;
+  return (
+    <div className="skip-vote">
+      <button className={"skip-button" + (voted ? " voted" : "")} onClick={() => socket.emit("player:skip", { code: game.code, playerId })}>
+        {voted ? "Undo skip" : "Skip clue"}
+      </button>
+      <small>{count}/{needed.length} want to skip{voted && count < needed.length ? " — waiting for everyone" : ""}</small>
+    </div>
   );
 }
 function Join({ onJoined }) {
