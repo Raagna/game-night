@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { io } from "socket.io-client";
+import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer } from "./shared";
 import {
   fallbackQuestions,
   loadSeason,
@@ -15,22 +15,15 @@ import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
 import "./styles.css";
 import topicList from "./topics.json";
+import BoardEditor from "./BoardEditor";
+import MyBoards from "./MyBoards";
+import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
+import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
 
-const SERVER =
-  import.meta.env.VITE_SERVER_URL ||
-  `${location.protocol}//${location.hostname}:3001`;
-const JOIN_URL = "raagna.github.io/jeopardy-party";
-const socket = io(SERVER, { autoConnect: true });
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
-const CloseIcon = () => (
-  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-);
-let soundContext;
 let dailyDoubleAudio, dailyDoubleStop;
-function tone(frequency, duration = .16, type = "sine", volume = .12) { try { const Audio=window.AudioContext||window.webkitAudioContext; soundContext ||= new Audio(); if(soundContext.state === "suspended") soundContext.resume(); const osc=soundContext.createOscillator(), gain=soundContext.createGain(); osc.type=type;osc.frequency.value=frequency;gain.gain.setValueAtTime(volume,soundContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,soundContext.currentTime+duration);osc.connect(gain).connect(soundContext.destination);osc.start();osc.stop(soundContext.currentTime+duration) } catch {} }
 function playDailyDouble() { try { dailyDoubleAudio ||= new Audio(`${import.meta.env.BASE_URL}audio/daily-double.mp3`); clearTimeout(dailyDoubleStop); dailyDoubleAudio.pause(); dailyDoubleAudio.currentTime=0; dailyDoubleAudio.play().catch(()=>{}); dailyDoubleStop=setTimeout(()=>{ dailyDoubleAudio.pause(); dailyDoubleAudio.currentTime=0 },4000) } catch {} }
-function useClueMusic(active) { useEffect(()=>{ if(!active) return; let step=0; const notes=[262,330,392,330,294,349,440,349]; const play=()=>tone(notes[step++%notes.length],.3,"triangle",.035); play(); const id=setInterval(play,420); return()=>clearInterval(id) },[active]) }
 const byCategory = (questions) =>
   Object.entries(
     questions
@@ -67,6 +60,14 @@ const topicsForQuery = (query) =>
   query.length < 3 ? [] : TOPICS.filter((topic) => topic.names.some((name) => name.startsWith(query))).map((topic) => topic.id);
 
 function Setup({ onCreate }) {
+  const [mode, setMode] = useState("archive"),
+    [boards, setBoards] = useState(loadBoards),
+    [selectedId, setSelectedId] = useState(null),
+    [editing, setEditing] = useState(null),
+    [storageOk, setStorageOk] = useState(true),
+    [includeFinal, setIncludeFinal] = useState(true),
+    [fastMoney, setFastMoney] = useState(false),
+    [status, setStatus] = useState("");
   const [questions, setQuestions] = useState(fallbackQuestions),
     [search, setSearch] = useState(""),
     [board, setBoard] = useState(0),
@@ -140,16 +141,53 @@ function Setup({ onCreate }) {
       ),
     );
   useEffect(() => setVisibleCount(60), [search, questions, board, topic]);
-  const start = () => {
-    if (picked[0].length !== 6 || picked[1].length !== 6)
-      return setNotice("Choose six categories for each board.");
-    const finalPool = questions.filter((q) => q.round === "Final Jeopardy!");
-    const finalQ =
-      final ||
-      finalPool[Math.floor(Math.random() * finalPool.length)] ||
-      questions[Math.floor(Math.random() * questions.length)];
-    onCreate({ boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), final: finalQ, hostless });
+  const chosenBoard = boards.find((b) => b.id === selectedId);
+  const randomArchiveFinal = () => {
+    const pool = questions.filter((q) => q.round === "Final Jeopardy!");
+    return pool[Math.floor(Math.random() * pool.length)] || null;
   };
+  const start = () => {
+    setNotice("");
+    let config;
+    if (mode === "archive") {
+      if (picked[0].length !== 6 || picked[1].length !== 6) return setNotice("Choose six categories for each round.");
+      config = { boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), roundNames: ["Jeopardy!", "Double Jeopardy!"] };
+    } else {
+      if (!chosenBoard) return setNotice("Pick one of your boards, or make a new one.");
+      config = boardToConfig(chosenBoard);
+    }
+    let finalClue = null;
+    if (includeFinal) {
+      finalClue = mode === "archive" ? final || randomArchiveFinal() : hasFinal(chosenBoard) ? chosenBoard.final : randomArchiveFinal();
+      if (!finalClue) return setNotice("There’s no Final Jeopardy clue to use. Add one to the board, or turn Final Jeopardy off.");
+    }
+    let fastMoneyConfig = null;
+    if (fastMoney) {
+      const own = mode === "custom" ? fastMoneyFromBoard(chosenBoard) : [];
+      const clues = [...own, ...pickFastMoneyClues(questions)].slice(0, 5);
+      if (!clues.length) return setNotice("Fast Money needs clues. Add some to the board, or wait for the archive to load.");
+      fastMoneyConfig = { clues };
+    }
+    onCreate({ ...config, final: finalClue, fastMoney: fastMoneyConfig, hostless }, setNotice);
+  };
+  const saveEdited = (board) => {
+    const result = saveBoard(boards, board);
+    setBoards(result.boards); setStorageOk(result.stored); setSelectedId(board.id); setEditing(null); setMode("custom"); setNotice("");
+    setStatus(result.stored ? `Saved “${board.title}”.` : `“${board.title}” is ready for this session, but this browser won’t keep it. Export it to save a copy.`);
+  };
+  const removeBoard = (id) => {
+    const result = deleteBoard(boards, id);
+    setBoards(result.boards); setStorageOk(result.stored); if (selectedId === id) setSelectedId(null); setStatus("Board deleted.");
+  };
+  if (editing)
+    return (
+      <main className="setup">
+        <div className="brand">JEOPARDY! <span>local game night</span></div>
+        <section className="setup-card">
+          <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
+        </section>
+      </main>
+    );
   return (
     <main className="setup">
       <div className="brand">
@@ -160,10 +198,12 @@ function Setup({ onCreate }) {
           <div>
             <h1>Build your game board</h1>
             <p className="muted">
-              Every season of the show is built in. Pick six categories per round, or fill the rest randomly.
+              {mode === "archive"
+                ? "Every season of the show is built in. Pick six categories per round, or fill the rest randomly."
+                : "Play a board you made yourself or imported. Boards are saved in this browser."}
             </p>
           </div>
-          <label className="upload">
+          {mode === "archive" && <label className="upload">
             Import questions (JSON, CSV or season ZIP)
             <input
               type="file"
@@ -187,8 +227,26 @@ function Setup({ onCreate }) {
                 }
               }}
             />
-          </label>
+          </label>}
         </div>
+        <div className="mode-switch" role="tablist" aria-label="Where the clues come from">
+          <button role="tab" aria-selected={mode === "archive"} onClick={() => { setMode("archive"); setStatus(""); }}>Archive categories</button>
+          <button role="tab" aria-selected={mode === "custom"} onClick={() => { setMode("custom"); setStatus(""); }}>
+            My boards{boards.length ? ` (${boards.length})` : ""}
+          </button>
+        </div>
+        {mode === "custom" ? (
+          <MyBoards
+            boards={boards}
+            selectedId={selectedId}
+            storageOk={storageOk}
+            onSelect={setSelectedId}
+            onNew={() => setEditing({ board: newBoard(), notes: "" })}
+            onEdit={(board) => setEditing({ board, notes: "" })}
+            onDelete={removeBoard}
+            onImported={(board, notes) => setEditing({ board, notes })}
+          />
+        ) : <>
         <div className="tabs">
           <button
             className={board === 0 ? "active" : ""}
@@ -206,7 +264,6 @@ function Setup({ onCreate }) {
             Fill remaining randomly
           </button>
         </div>
-        <label className="game-mode"><input type="checkbox" checked={hostless} onChange={(event) => setHostless(event.target.checked)} /> <span><b>Play without a host</b><small>Players select clues, buzz automatically, and type their own responses.</small></span></label>
         <div className="builder">
           <div>
             <div className="archive-controls">
@@ -293,30 +350,40 @@ function Setup({ onCreate }) {
             ))}
           </div>
         </div>
+        </>}
+        <section className="game-options" aria-labelledby="game-options-title">
+          <h2 id="game-options-title">Game options</h2>
+          <label className="game-mode"><input type="checkbox" checked={hostless} onChange={(event) => setHostless(event.target.checked)} /> <span><b>Play without a host</b><small>Players select clues, buzz automatically, and type their own responses.</small></span></label>
+          <label className="game-mode"><input type="checkbox" checked={includeFinal} onChange={(event) => setIncludeFinal(event.target.checked)} /> <span><b>Final Jeopardy</b><small>
+            {mode === "archive" ? "One last wagered clue after the final round." : chosenBoard && !hasFinal(chosenBoard) ? "This board has no Final clue, so a random archive one is used." : "Uses the board’s own Final Jeopardy clue."}
+          </small></span></label>
+          {includeFinal && mode === "archive" && (
+            <label className="field option-field">
+              <span>Final Jeopardy clue</span>
+              <select value={final?.id || ""} onChange={(e) => setFinal(questions.find((q) => q.id === e.target.value) || null)}>
+                <option value="">Random Final Jeopardy clue</option>
+                {questions
+                  .filter((q) => q.round === "Final Jeopardy!")
+                  .map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.airDate} · {q.category}: {q.question.slice(0, 52)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+          <label className="game-mode"><input type="checkbox" checked={fastMoney} onChange={(event) => setFastMoney(event.target.checked)} /> <span><b>Fast Money finale</b><small>The top two players race the clock through the same five quick clues: $1,000 per right answer, and a $5,000 bonus each if they get 8 of 10 between them.</small></span></label>
+        </section>
         <div className="final-row">
-          <label className="field">
-            <span>Final Jeopardy clue</span>
-            <select
-              value={final?.id || ""}
-              onChange={(e) =>
-                setFinal(questions.find((q) => q.id === e.target.value) || null)
-              }
-            >
-              <option value="">Random Final Jeopardy clue</option>
-              {questions
-                .filter((q) => q.round === "Final Jeopardy!")
-                .map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.airDate} · {q.category}: {q.question.slice(0, 52)}
-                  </option>
-                ))}
-            </select>
-          </label>
+          <p className="muted start-summary">
+            {mode === "custom" ? (chosenBoard ? `Playing “${chosenBoard.title || "Untitled board"}”` : "No board chosen yet") : `${picked[0].length + picked[1].length} of 12 categories chosen`}
+          </p>
           <button className="primary" onClick={start}>
             Create lobby
           </button>
         </div>
-        {notice && <p className="notice">{notice}</p>}
+        {notice && <p className="notice" role="alert">{notice}</p>}
+        {status && !notice && <p className="status-line" role="status">{status}</p>}
       </section>
     </main>
   );
@@ -336,19 +403,10 @@ function Scores({ players, turnPlayerId }) {
     </ul>
   );
 }
-function ClueTimer({ deadline, serverNow }) {
-  const [remaining, setRemaining] = useState(0);
-  useEffect(() => {
-    if (!deadline) return;
-    const startedAt=Date.now(), startRemaining=Math.max(0,deadline-serverNow);
-    const update=()=>setRemaining(Math.max(0,startRemaining-(Date.now()-startedAt)));
-    update(); const timer = setInterval(update, 250);
-    return () => clearInterval(timer);
-  }, [deadline,serverNow]);
-  if (!deadline) return null;
-  const seconds = Math.ceil(remaining / 1000);
-  return <div className={"clue-timer" + (seconds <= 5 ? " is-low" : "")} role="timer" aria-label={`${seconds} seconds left`}>{seconds}</div>;
-}
+// What comes after the current board: the next round, Final Jeopardy, Fast Money, or nothing (the game ends).
+const nextStage = (game) =>
+  game.boardIndex < (game.boardCount || 2) - 1 ? game.roundNames?.[game.boardIndex + 1] || "the next round"
+    : game.final ? "Final Jeopardy" : game.hasFastMoney ? "Fast Money" : null;
 const formatBuzzTime = (milliseconds) => `${(Math.max(0, milliseconds || 0) / 1000).toFixed(3)}s`;
 function Display({ game, host = false, onAction }) {
   const q = game.activeQuestion?.question;
@@ -356,7 +414,8 @@ function Display({ game, host = false, onAction }) {
   const chooser = game.players.find((p) => p.id === game.turnPlayerId);
   const boardDone = game.board?.every((c) => c.questions.every((q) => q.used));
   const dailyPending = game.activeQuestion?.dailyDouble && !game.activeQuestion.dailyReady;
-  useClueMusic(Boolean(game.activeQuestion && game.buzzerOpen));
+  useClueMusic(Boolean((game.activeQuestion && game.buzzerOpen) || game.fastMoney?.phase === "playing"));
+  const next = nextStage(game);
   useEffect(() => {
     if (game.lastEvent?.type === "reveal") tone(1047, .55, "sine", .16);
     if (game.lastEvent?.type === "daily") playDailyDouble();
@@ -370,7 +429,7 @@ function Display({ game, host = false, onAction }) {
             Join at <b>{JOIN_URL}</b> <span className="code-chip">{game.code}</span>
           </p>
         )}
-        <ClueTimer deadline={game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} />
+        <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} />
       </header>
       {game.status === "lobby" ? (
         <div className="lobby">
@@ -384,6 +443,8 @@ function Display({ game, host = false, onAction }) {
             </button>
           )}
         </div>
+      ) : game.status === "fastmoney" ? (
+        <FastMoneyDisplay game={game} host={host} onAction={onAction} />
       ) : game.activeQuestion ? (
         <div className="clue-screen">
           <p className="clue-meta">
@@ -401,11 +462,11 @@ function Display({ game, host = false, onAction }) {
       ) : (
         <>
           <div className="round-title">
-            {game.boardIndex === 0 ? "Jeopardy!" : "Double Jeopardy!"}
+            {game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeopardy!" : "Double Jeopardy!")}
           </div>
-          <div className="board">
+          <div className="board" style={{ "--cols": game.board.length, "--cols-small": Math.min(3, game.board.length) }}>
             {game.board.map((c, ci) => (
-              <div className="column" key={c.name}>
+              <div className="column" key={ci}>
                 <div className="cat">{c.name}</div>
                 {c.questions.map((q, qi) => (
                   <button
@@ -429,15 +490,8 @@ function Display({ game, host = false, onAction }) {
           {chooser && <p className="turn-note">{chooser.name} picks the next clue</p>}
           {host && boardDone && (
             <div className="host-bottom">
-              <button
-                className="primary"
-                onClick={() =>
-                  onAction(game.boardIndex === 0 ? "nextBoard" : "final")
-                }
-              >
-                {game.boardIndex === 0
-                  ? "Start Double Jeopardy"
-                  : "Final Jeopardy"}
+              <button className="primary" onClick={() => onAction("nextBoard")}>
+                {next ? `Start ${next}` : "Finish game"}
               </button>
             </div>
           )}
@@ -487,8 +541,17 @@ function ControllerPlayerTools({ player, onAction }) {
 }
 function Controller({ game, onAction }) {
   const buzzed = game.players.find((p) => p.id === game.buzzedPlayer),
-    finalMode = game.status === "final";
-  const skip = () => onAction(game.boardIndex === 0 ? "nextBoard" : "final");
+    finalMode = game.status === "final", next = nextStage(game);
+  if (game.status === "fastmoney")
+    return (
+      <main className="controller">
+        <header className="controller-bar">
+          <span className="brand">JEOPARDY!</span>
+          <span className="code-chip">{game.code}</span>
+        </header>
+        <FastMoneyController game={game} onAction={onAction} />
+      </main>
+    );
   return (
     <main className="controller">
       <header className="controller-bar">
@@ -555,7 +618,7 @@ function Controller({ game, onAction }) {
             );
           })}
           <button className="close" onClick={() => onAction("close")}>
-            Finish game
+            {game.hasFastMoney ? "Go to Fast Money" : "Finish game"}
           </button>
         </>
       ) : game.activeQuestion ? (
@@ -609,10 +672,8 @@ function Controller({ game, onAction }) {
         </p>
       )}
       {game.status === "playing" && (
-        <button className="skip-controller" onClick={skip}>
-          {game.boardIndex === 0
-            ? "Skip to Double Jeopardy"
-            : "Skip to Final Jeopardy"}
+        <button className="skip-controller" onClick={() => onAction("nextBoard")}>
+          {next ? `Skip to ${next}` : "End the game now"}
         </button>
       )}
       <section className="controller-players">
@@ -673,13 +734,13 @@ function FinalPlayer({ game, playerId, p }) {
   );
 }
 function DailyWager({ game, playerId, player }) {
-  const [wager,setWager]=useState("5"); const max=Math.max(player.score,game.boardIndex===0?1000:2000,5)
+  const [wager,setWager]=useState("5"); const max=Math.max(player.score,...(game.board||[]).flatMap((c)=>c.questions.map((q)=>q.value||0)),5)
   if(game.activeQuestion.dailyReady) return <><p className="status-card">Wager locked: ${game.activeQuestion.dailyWager.toLocaleString()}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : game.hostless ? "Your buzzer opens in 10 seconds." : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
   return <div className="final-form"><p className="daily-title">Daily Double!</p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
 }
 function HostlessBoard({ game, playerId }) {
   const chooser=game.players.find((player)=>player.id===game.turnPlayerId), canSelect=chooser?.id===playerId;
-  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board">{game.board.map((category,categoryIndex)=><div className="column" key={category.name}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
+  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
 }
 function HostlessAnswer({ game, playerId }) {
   const [response,setResponse]=useState("");
@@ -696,7 +757,7 @@ function Player({ game, playerId }) {
   const personalBuzzTime = game.buzzTimes?.[playerId];
   const canRecordBuzz = !game.activeQuestion?.dailyDouble && game.buzzInputDeadline > game.serverNow && personalBuzzTime == null && !lockedOut;
   const [showPersonalBuzzTime, setShowPersonalBuzzTime] = useState(false);
-  useClueMusic(game.buzzerOpen || game.status === "final");
+  useClueMusic(game.buzzerOpen || game.status === "final" || game.fastMoney?.phase === "playing");
   useEffect(() => {
     if (personalBuzzTime == null) { setShowPersonalBuzzTime(false); return; }
     setShowPersonalBuzzTime(true);
@@ -716,6 +777,8 @@ function Player({ game, playerId }) {
       {clue && !game.activeQuestion.dailyDouble && <p className="player-clue-meta">{clue.category} · ${clue.value?.toLocaleString()}</p>}
       {game.status === "lobby" ? (
         <p className="player-status">{game.hostless ? "Waiting for the game to start…" : "Waiting for the host to start…"}</p>
+      ) : game.status === "fastmoney" ? (
+        <FastMoneyPlayer game={game} playerId={playerId} />
       ) : game.status === "final" ? (
         <FinalPlayer game={game} playerId={playerId} p={p} />
       ) : !game.activeQuestion && game.hostless ? <HostlessBoard game={game} playerId={playerId} /> : !game.activeQuestion ? (
@@ -917,8 +980,10 @@ function App() {
     if (host)
       return (
         <Setup
-          onCreate={(config) =>
-            socket.emit("host:create", config, (r) => {
+          onCreate={(config, fail) =>
+            socket.timeout(10000).emit("host:create", config, (err, r) => {
+              if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
+              if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
               sessionStorage.displayCode = r.code;
               setGame(r.game);
               history.replaceState({}, "", "?host");
