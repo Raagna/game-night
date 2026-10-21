@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { io } from "socket.io-client";
 import {
   fallbackQuestions,
+  loadSeason,
+  loadSeasonIndex,
   parseJeopardyJson,
   parseKaggleCsv,
   parseSeasonZip,
@@ -66,30 +68,37 @@ function Setup({ onCreate }) {
     [final, setFinal] = useState(null),
     [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
-    [openYear, setOpenYear] = useState("All dates"),
+    [seasons, setSeasons] = useState([]),
+    [source, setSource] = useState(""),
+    [loading, setLoading] = useState(true),
     [visibleCount, setVisibleCount] = useState(60);
+  const showSeason = async (season) => {
+    setSource(String(season));
+    setLoading(true);
+    setNotice("");
+    try {
+      setQuestions(await loadSeason(Number(season)));
+    } catch (err) {
+      setNotice(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadSeasonIndex()
+      .then((list) => { setSeasons(list); if (list.length) return showSeason(list[0].season); setLoading(false); })
+      .catch((err) => { setLoading(false); setNotice(`${err.message} You can still import a file.`); });
+  }, []);
   const allCategories = useMemo(() => byCategory(questions), [questions]);
-  const years = useMemo(
-    () =>
-      [
-        ...new Set(
-          allCategories
-            .map(([, qs]) => qs[0].airDate?.slice(0, 4))
-            .filter(Boolean),
-        ),
-      ].sort((a, b) => b.localeCompare(a)),
-    [allCategories],
-  );
   const categories = useMemo(
     () =>
       allCategories.filter(
         ([, qs]) =>
           qs[0].round === (board === 0 ? "Jeopardy!" : "Double Jeopardy!") &&
           hasBoardValues(qs, board) &&
-          (openYear === "All dates" || qs[0].airDate?.startsWith(openYear)) &&
           qs[0].category.includes(search.toUpperCase()),
       ),
-    [allCategories, openYear, search, board],
+    [allCategories, search, board],
   );
   const select = (entry) =>
     setPicked((p) =>
@@ -119,7 +128,7 @@ function Setup({ onCreate }) {
           : b,
       ),
     );
-  useEffect(() => setVisibleCount(60), [search, openYear, questions]);
+  useEffect(() => setVisibleCount(60), [search, questions, board]);
   const start = () => {
     if (picked[0].length !== 6 || picked[1].length !== 6)
       return setNotice("Choose six categories for each board.");
@@ -140,7 +149,7 @@ function Setup({ onCreate }) {
           <div>
             <h1>Build your game board</h1>
             <p className="muted">
-              Pick six categories for each round, or fill the rest randomly.
+              Every season of the show is built in. Pick six categories per round, or fill the rest randomly.
             </p>
           </div>
           <label className="upload">
@@ -160,8 +169,8 @@ function Setup({ onCreate }) {
                   setQuestions(q);
                   setPicked([[], []]);
                   setFinal(null);
-                  setOpenYear("All dates");
-                  setNotice(`${q.length.toLocaleString()} clues loaded.`);
+                  setSource("import");
+                  setNotice(`${q.length.toLocaleString()} clues loaded from ${file.name}.`);
                 } catch (err) {
                   setNotice(err.message);
                 }
@@ -197,12 +206,17 @@ function Setup({ onCreate }) {
                 placeholder="Search categories…"
               />
               <select
-                value={openYear}
-                onChange={(e) => setOpenYear(e.target.value)}
+                aria-label="Question set"
+                value={source}
+                disabled={loading}
+                onChange={(e) => showSeason(e.target.value)}
               >
-                <option>All dates</option>
-                {years.map((year) => (
-                  <option key={year}>{year}</option>
+                {source === "import" && <option value="import">Imported file</option>}
+                {!seasons.length && source !== "import" && <option value="">Built-in questions</option>}
+                {seasons.map((s) => (
+                  <option key={s.season} value={s.season}>
+                    Season {s.season} ({s.from.slice(0, 4)}–{s.to.slice(2, 4)})
+                  </option>
                 ))}
               </select>
             </div>
@@ -214,7 +228,9 @@ function Setup({ onCreate }) {
                   setVisibleCount((n) => Math.min(n + 60, categories.length));
               }}
             >
-              {categories.slice(0, visibleCount).map((entry) => (
+              {loading && <div className="load-more">Loading questions…</div>}
+              {!loading && !categories.length && <div className="load-more">No categories match.</div>}
+              {!loading && categories.slice(0, visibleCount).map((entry) => (
                 <button
                   key={entry[0]}
                   className={
@@ -229,7 +245,7 @@ function Setup({ onCreate }) {
                   </small>
                 </button>
               ))}
-              {visibleCount < categories.length && (
+              {!loading && visibleCount < categories.length && (
                 <div className="load-more">Scroll for more categories…</div>
               )}
             </div>

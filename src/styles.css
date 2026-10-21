@@ -220,7 +220,7 @@ input, textarea, select { caret-color: var(--gold); }
 
 .builder { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
 .archive-controls { display: flex; gap: 8px; }
-.archive-controls select { width: 150px; flex-shrink: 0; }
+.archive-controls select { width: 210px; flex-shrink: 0; }
 .category-list {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
   margin-top: 12px; max-height: 340px; overflow: auto;
