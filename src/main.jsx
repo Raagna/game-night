@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { io } from "socket.io-client";
 import {
   fallbackQuestions,
+  loadSeason,
+  loadSeasonIndex,
   parseJeopardyJson,
   parseKaggleCsv,
   parseSeasonZip,
@@ -12,6 +14,7 @@ import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
 import "./styles.css";
+import topicList from "./topics.json";
 
 const SERVER =
   import.meta.env.VITE_SERVER_URL ||
@@ -57,6 +60,11 @@ const makeCategory = ([, qs], boardIndex) => ({
     .map((q, i) => ({ ...q, value: (i + 1) * (boardIndex === 0 ? 200 : 400) })),
 });
 const uid = () => Math.random().toString(36).slice(2);
+const TOPICS = topicList.map(({ id, label, aliases }) => ({ id, label, names: [label.toLowerCase(), ...aliases] }));
+const TOPIC_LABEL = Object.fromEntries(TOPICS.map((topic) => [topic.id, topic.label]));
+// Topics a search refers to: "sport" or "sports" means the Sports topic, "movie" means Movies & TV, and so on.
+const topicsForQuery = (query) =>
+  query.length < 3 ? [] : TOPICS.filter((topic) => topic.names.some((name) => name.startsWith(query))).map((topic) => topic.id);
 
 function Setup({ onCreate }) {
   const [questions, setQuestions] = useState(fallbackQuestions),
@@ -66,31 +74,43 @@ function Setup({ onCreate }) {
     [final, setFinal] = useState(null),
     [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
-    [openYear, setOpenYear] = useState("All dates"),
+    [seasons, setSeasons] = useState([]),
+    [source, setSource] = useState(""),
+    [loading, setLoading] = useState(true),
+    [topic, setTopic] = useState(null),
     [visibleCount, setVisibleCount] = useState(60);
+  const showSeason = async (season) => {
+    setSource(String(season));
+    setLoading(true);
+    setNotice("");
+    try {
+      setQuestions(await loadSeason(Number(season)));
+    } catch (err) {
+      setNotice(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadSeasonIndex()
+      .then((list) => { setSeasons(list); if (list.length) return showSeason(list[0].season); setLoading(false); })
+      .catch((err) => { setLoading(false); setNotice(`${err.message} You can still import a file.`); });
+  }, []);
   const allCategories = useMemo(() => byCategory(questions), [questions]);
-  const years = useMemo(
-    () =>
-      [
-        ...new Set(
-          allCategories
-            .map(([, qs]) => qs[0].airDate?.slice(0, 4))
-            .filter(Boolean),
-        ),
-      ].sort((a, b) => b.localeCompare(a)),
-    [allCategories],
-  );
-  const categories = useMemo(
-    () =>
-      allCategories.filter(
-        ([, qs]) =>
-          qs[0].round === (board === 0 ? "Jeopardy!" : "Double Jeopardy!") &&
-          hasBoardValues(qs, board) &&
-          (openYear === "All dates" || qs[0].airDate?.startsWith(openYear)) &&
-          qs[0].category.includes(search.toUpperCase()),
-      ),
-    [allCategories, openYear, search, board],
-  );
+  const hasTopics = useMemo(() => questions.some((q) => q.topics?.length), [questions]);
+  const query = search.trim().toLowerCase();
+  const queryTopics = useMemo(() => topicsForQuery(query), [query]);
+  const categories = useMemo(() => {
+    const nameMatches = [], topicMatches = [];
+    for (const entry of allCategories) {
+      const first = entry[1][0];
+      if (first.round !== (board === 0 ? "Jeopardy!" : "Double Jeopardy!") || !hasBoardValues(entry[1], board)) continue;
+      if (topic && !first.topics?.includes(topic)) continue;
+      if (!query || first.category.toLowerCase().includes(query)) nameMatches.push(entry);
+      else if (first.topics?.some((id) => queryTopics.includes(id))) topicMatches.push(entry);
+    }
+    return [...nameMatches, ...topicMatches];
+  }, [allCategories, board, topic, query, queryTopics]);
   const select = (entry) =>
     setPicked((p) =>
       p.map((b, i) =>
@@ -119,7 +139,7 @@ function Setup({ onCreate }) {
           : b,
       ),
     );
-  useEffect(() => setVisibleCount(60), [search, openYear, questions]);
+  useEffect(() => setVisibleCount(60), [search, questions, board, topic]);
   const start = () => {
     if (picked[0].length !== 6 || picked[1].length !== 6)
       return setNotice("Choose six categories for each board.");
@@ -140,7 +160,7 @@ function Setup({ onCreate }) {
           <div>
             <h1>Build your game board</h1>
             <p className="muted">
-              Pick six categories for each round, or fill the rest randomly.
+              Every season of the show is built in. Pick six categories per round, or fill the rest randomly.
             </p>
           </div>
           <label className="upload">
@@ -160,8 +180,8 @@ function Setup({ onCreate }) {
                   setQuestions(q);
                   setPicked([[], []]);
                   setFinal(null);
-                  setOpenYear("All dates");
-                  setNotice(`${q.length.toLocaleString()} clues loaded.`);
+                  setSource("import");
+                  setNotice(`${q.length.toLocaleString()} clues loaded from ${file.name}.`);
                 } catch (err) {
                   setNotice(err.message);
                 }
@@ -192,20 +212,42 @@ function Setup({ onCreate }) {
             <div className="archive-controls">
               <input
                 className="search"
+                type="search"
+                aria-label="Search categories or topics"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search categories…"
+                placeholder="Search categories or topics, e.g. sports"
               />
               <select
-                value={openYear}
-                onChange={(e) => setOpenYear(e.target.value)}
+                aria-label="Question set"
+                value={source}
+                disabled={loading}
+                onChange={(e) => showSeason(e.target.value)}
               >
-                <option>All dates</option>
-                {years.map((year) => (
-                  <option key={year}>{year}</option>
+                {source === "import" && <option value="import">Imported file</option>}
+                {!seasons.length && source !== "import" && <option value="">Built-in questions</option>}
+                {seasons.map((s) => (
+                  <option key={s.season} value={s.season}>
+                    Season {s.season} ({s.from.slice(0, 4)}–{s.to.slice(2, 4)})
+                  </option>
                 ))}
               </select>
             </div>
+            {hasTopics && (
+              <div className="topic-chips" role="group" aria-label="Filter by topic">
+                <button aria-pressed={topic === null} onClick={() => setTopic(null)}>All topics</button>
+                {TOPICS.map((t) => (
+                  <button key={t.id} aria-pressed={topic === t.id} onClick={() => setTopic(topic === t.id ? null : t.id)}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {query && queryTopics.length > 0 && (
+              <p className="search-hint">
+                Showing names with “{search.trim()}” plus categories about {queryTopics.map((id) => TOPIC_LABEL[id]).join(", ")}
+              </p>
+            )}
             <div
               className="category-list"
               onScroll={(e) => {
@@ -214,7 +256,9 @@ function Setup({ onCreate }) {
                   setVisibleCount((n) => Math.min(n + 60, categories.length));
               }}
             >
-              {categories.slice(0, visibleCount).map((entry) => (
+              {loading && <div className="load-more">Loading questions…</div>}
+              {!loading && !categories.length && <div className="load-more">No categories match.</div>}
+              {!loading && categories.slice(0, visibleCount).map((entry) => (
                 <button
                   key={entry[0]}
                   className={
@@ -224,12 +268,12 @@ function Setup({ onCreate }) {
                 >
                   <span>{categoryTitle(entry)}</span>
                   <small>
-                    {entry[1][0].airDate || "Undated"} ·{" "}
-                    {entry[1][0].round || "Jeopardy!"}
+                    {entry[1][0].airDate || "Undated"}
+                    {entry[1][0].topics?.length ? ` · ${entry[1][0].topics.slice(0, 2).map((id) => TOPIC_LABEL[id]).join(", ")}` : ""}
                   </small>
                 </button>
               ))}
-              {visibleCount < categories.length && (
+              {!loading && visibleCount < categories.length && (
                 <div className="load-more">Scroll for more categories…</div>
               )}
             </div>
