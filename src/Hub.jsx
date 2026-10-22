@@ -1,6 +1,6 @@
-// Game Night: the host's starting page, where they pick which game to set up.
-import React from "react";
-import { JOIN_URL } from "./shared";
+// Game Night: the site's main page. Hosts pick a game to set up; players with a code can join from here
+// (most players skip this page entirely by scanning the QR code on the host's screen).
+import React, { useState } from "react";
 
 const GAMES = [
   {
@@ -20,7 +20,38 @@ const GAMES = [
 ];
 
 export function BackToHub() {
-  return <a className="back-to-hub" href="?host">← All games</a>;
+  return <a className="back-to-hub" href="./">← Game Night</a>;
+}
+
+function JoinBox() {
+  const [code, setCode] = useState("");
+  const go = (event) => {
+    event.preventDefault();
+    if (code.trim()) location.assign(`?join=${encodeURIComponent(code.trim())}`);
+  };
+  return (
+    <form className="hub-join" onSubmit={go}>
+      <label htmlFor="hub-code">
+        <b>Joining a game?</b>
+        <span>Scan the QR code on the main screen, or type its code.</span>
+      </label>
+      <div className="hub-join-row">
+        <input
+          id="hub-code"
+          className="code-input"
+          value={code}
+          maxLength="6"
+          placeholder="CODE"
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck="false"
+          enterKeyHint="go"
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+        />
+        <button className="primary" disabled={!code.trim()}>Join</button>
+      </div>
+    </form>
+  );
 }
 
 export default function Hub() {
@@ -28,8 +59,11 @@ export default function Hub() {
     <main className="hub">
       <header className="hub-header">
         <div className="brand hub-brand">GAME NIGHT</div>
-        <p className="muted">Pick a game to host. Everyone else joins on their phone at <b>{JOIN_URL}</b>.</p>
+        <p className="muted">Party games for a TV and everyone’s phones.</p>
       </header>
+      <JoinBox />
+      <h2 className="hub-section">Host a game</h2>
+      <p className="muted hub-section-note">Open this on the screen everyone can see, then players scan the QR code to join.</p>
       <ul className="hub-games">
         {GAMES.map((game) => (
           <li key={game.id}>

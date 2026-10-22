@@ -1,6 +1,7 @@
 // Survey Says! screens: host setup, the shared TV display, players' phones, the host controller and the final scores.
 import React, { useEffect, useRef, useState } from "react";
-import { socket, JOIN_URL, tone, ClueTimer } from "../shared";
+import { socket, tone, ClueTimer } from "../shared";
+import { LobbyJoin, JoinCorner } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import SURVEYS from "../surveys.json";
 import "./survey.css";
@@ -278,8 +279,7 @@ function Lobby({ game, onAction }) {
   return (
     <div className="lobby sv-lobby">
       <h1>Join the game</h1>
-      <p className="lobby-url">Open <b>{JOIN_URL}</b> on your phone and enter</p>
-      <div className="lobby-code">{game.code}</div>
+      <LobbyJoin code={game.code} />
       <div className="sv-lobby-teams">
         {[0, 1].map((team) => (
           <section key={team} className={`sv-lobby-team team-${team}`}>
@@ -314,7 +314,7 @@ export function SurveyDisplay({ game, onAction }) {
       <header className="display-bar">
         <div className="brand survey-brand">SURVEY SAYS!</div>
         {game.status !== "lobby" ? (
-          <p className="join-hint">Join at <b>{JOIN_URL}</b> <span className="code-chip">{game.code}</span></p>
+          <JoinCorner code={game.code} />
         ) : <span />}
         <ClueTimer deadline={timed ? round.deadline : null} serverNow={game.serverNow} />
       </header>
@@ -591,7 +591,7 @@ export function SurveyEnd({ game, host, onAction }) {
       {host ? (
         <div className="sv-end-buttons">
           <button className="primary" onClick={playAgain}>Play again with new questions</button>
-          <a href="?host" onClick={() => sessionStorage.removeItem("displayCode")}>Back to Game Night</a>
+          <a href="./" onClick={() => sessionStorage.removeItem("displayCode")}>Back to Game Night</a>
         </div>
       ) : (
         <div className="player-end"><p>Thanks for playing!</p><button className="primary" onClick={() => { clearPlayerSession(); location.assign("./"); }}>Join another game</button></div>

@@ -1,5 +1,6 @@
 import express from 'express'
 import { createServer } from 'node:http'
+import { networkInterfaces } from 'node:os'
 import { Server } from 'socket.io'
 import { importJeopardyLabs } from './jeopardylabs.js'
 import { NUMBER_WORDS, numberWordPattern, editDistance } from './text.js'
@@ -395,6 +396,13 @@ io.on('connection', (socket) => {
 })
 
 app.get('/health', (_, res) => res.json({ ok: true, games: games.size }))
+// When the host screen runs on localhost, phones can't reach "localhost". The host page asks for this
+// computer's Wi-Fi/LAN address so the join QR code points somewhere a phone on the same network can open.
+app.get('/lan', (_, res) => {
+  res.set('Access-Control-Allow-Origin', '*')
+  const addresses=Object.values(networkInterfaces()).flat().filter((net)=>net && net.family==='IPv4' && !net.internal).map((net)=>net.address)
+  res.json({ addresses })
+})
 const importLog = new Map()
 app.get('/import/jeopardylabs', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*')
