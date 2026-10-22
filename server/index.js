@@ -2,6 +2,8 @@ import express from 'express'
 import { createServer } from 'node:http'
 import { Server } from 'socket.io'
 import { importJeopardyLabs } from './jeopardylabs.js'
+import { NUMBER_WORDS, numberWordPattern, editDistance } from './text.js'
+import { createSurveyGames } from './survey.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -9,6 +11,9 @@ const io = new Server(httpServer, { cors: { origin: '*' } })
 const games = new Map()
 const gameTimers = new Map()
 const MAX_PLAYERS = 6
+const isSurvey = (game) => game?.kind === 'survey'
+// Jeopardy-only events ignore Survey Says! games, which share the same code space.
+const jGame = (code) => { const game=games.get(code); return isSurvey(game) ? undefined : game }
 // Phones drop their connection when the screen locks or the browser is backgrounded. Give them this long to come back before the game moves on without them.
 const RECONNECT_GRACE_MS = 20000
 const leaveTimers = new Map()
@@ -24,24 +29,12 @@ function cancelLeave(code, playerId) { const key=leaveKey(code,playerId); clearT
 
 const id = () => Math.random().toString(36).slice(2, 8).toUpperCase()
 const clone = (x) => JSON.parse(JSON.stringify(x))
-const NUMBER_WORDS = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90, hundred: 100 }
-const numberWordPattern = new RegExp(`\\b(${Object.keys(NUMBER_WORDS).join('|')})\\b`, 'g')
 // Lowercases, strips accents, a leading "what is"/"who's" and leading articles (a/an/the), turns number words into digits ("four" = "4"), then drops spaces and punctuation.
 const normalizeAnswer = (value) => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/&/g,' and ').replace(/[’'`]/g,"'").trim()
   .replace(/^(what|who|where|when|why|how)('s|\s+(is|are|was|were))\s+/,'')
   .replace(/^(a|an|the)\s+/,'')
   .replace(numberWordPattern,(word)=>String(NUMBER_WORDS[word]))
   .replace(/[^a-z0-9]/g,'')
-// Damerau-Levenshtein distance: one inserted, missing, wrong or swapped letter counts as 1.
-function editDistance(a, b) {
-  const d=Array.from({length:a.length+1},(_,i)=>[i, ...Array(b.length).fill(0)])
-  for(let j=1;j<=b.length;j++) d[0][j]=j
-  for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++) {
-    d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1))
-    if(i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j]=Math.min(d[i][j], d[i-2][j-2]+1)
-  }
-  return d[a.length][b.length]
-}
 // Accepted spellings of the correct answer: as written, and with any "(optional)" part removed, e.g. "(Frank) Sinatra".
 const answerVariants = (answer) => { const raw=String(answer || ''); return [...new Set([raw, raw.replace(/\([^)]*\)/g,' '), raw.replace(/[()]/g,' ')].map(normalizeAnswer).filter(Boolean))] }
 function answersMatch(response, answer) {
@@ -69,6 +62,7 @@ function assignLowestConnected(game) {
 }
 
 function publicGame(game) {
+  if(isSurvey(game)) return survey.publicGame(game)
   const activeQuestion=game.activeQuestion ? clone(game.activeQuestion) : null
   const board=game.hostless ? clone(game.boards[game.boardIndex]) : game.boards[game.boardIndex]
   if(game.hostless) board?.forEach((category)=>category.questions.forEach((question)=>delete question.answer))
@@ -87,6 +81,7 @@ function publicGame(game) {
 function emitGame(game) { io.to(game.code).emit('game:update', publicGame(game)) }
 function clearGameTimers(game) { const timers=gameTimers.get(game.code)||{}; for(const timer of Object.values(timers)) clearTimeout(timer); gameTimers.set(game.code,{}) }
 function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||{}; clearTimeout(timers[name]); timers[name]=setTimeout(fn, ms); gameTimers.set(game.code,timers) }
+const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, gameTimers, cancelLeave })
 function markUsed(game) { const active=game.activeQuestion; if (!active || active.final) return; const question=game.boards[game.boardIndex]?.[active.categoryIndex]?.questions?.[active.questionIndex]; if(question) question.used=true }
 function startFinal(game) { clearGameTimers(game); clearHolds(game, true); game.status='final'; game.activeQuestion={final:true,question:clone(game.final)}; game.preBuzzDeadline=null; game.clueDeadline=null; game.answerDeadline=null; game.finalDeadline=Date.now()+50000; game.reveal=false; game.buzzerOpen=false; schedule(game,'final',50000,()=>revealFinal(game)); emitGame(game) }
 function returnToBoard(game) { clearGameTimers(game); markUsed(game); game.activeQuestion=null; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen=false; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal=false; game.incorrectPlayerIds=[]; game.skipVotes=[]; const boardDone=game.boards[game.boardIndex]?.every((category)=>category.questions.every((question)=>question.used)); if(game.hostless && boardDone) return nextBoard(game); emitGame(game) }
@@ -258,7 +253,7 @@ function makeGame(code, rawConfig) {
 io.on('connection', (socket) => {
   socket.on('host:create', (config, ack) => {
     let code; do { code = id() } while (games.has(code))
-    let game; try { game = makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
+    let game; try { game = config?.game === 'survey' ? survey.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
     game.hostSocketId = socket.id; games.set(code, game)
     socket.join(code); ack?.({ ok: true, code, game: publicGame(game) })
   })
@@ -277,15 +272,17 @@ io.on('connection', (socket) => {
       ack?.({ ok: true, playerId: returning.id, game: publicGame(game), rejoined: true }); emitGame(game)
       return
     }
+    const maxPlayers = isSurvey(game) ? survey.MAX_PLAYERS : MAX_PLAYERS
     if (!['lobby', 'playing'].includes(game.status)) return ack?.({ ok: false, error: 'This game is no longer accepting new players.' })
-    if (game.players.size >= MAX_PLAYERS) return ack?.({ ok: false, error: `This game already has the maximum of ${MAX_PLAYERS} players.` })
+    if (game.players.size >= maxPlayers) return ack?.({ ok: false, error: `This game already has the maximum of ${maxPlayers} players.` })
     const clean = String(name || '').trim().slice(0, 20); if (!clean) return ack?.({ ok: false, error: 'Enter a name' })
     const player = { id: id(), name: clean, score: 0, socketId: socket.id }
-    game.players.set(player.id, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
+    game.players.set(player.id, player); if (isSurvey(game)) survey.playerJoined(game, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
     ack?.({ ok: true, playerId: player.id, game: publicGame(game) }); emitGame(game)
   })
   socket.on('host:action', ({ code, action, payload }) => {
     const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return
+    if (isSurvey(game)) return survey.hostAction(game, action, payload || {})
     if (action === 'start') { game.status = 'playing'; const players=connectedPlayers(game); game.turnPlayerId=players[Math.floor(Math.random()*players.length)]?.id || null }
     if (action === 'select') {
       beginClue(game, payload.categoryIndex, payload.questionIndex); return
@@ -336,7 +333,7 @@ io.on('connection', (socket) => {
     emitGame(game)
   })
   socket.on('player:buzz', ({ code, playerId }) => {
-    const game = games.get(code), player=games.get(code)?.players.get(playerId), active=game?.activeQuestion, daily=active?.dailyDouble
+    const game = jGame(code), player=jGame(code)?.players.get(playerId), active=game?.activeQuestion, daily=active?.dailyDouble
     if (!game || !player?.socketId || game.incorrectPlayerIds.includes(playerId)) return
     const reactionTime=Math.max(0,Date.now()-(game.buzzerOpenedAt||Date.now()))
     if (game.buzzedPlayer) { if(!daily && game.buzzInputDeadline && Date.now()<=game.buzzInputDeadline && game.buzzTimes[playerId] == null) { game.buzzTimes[playerId]=reactionTime; emitGame(game) }; return }
@@ -344,7 +341,7 @@ io.on('connection', (socket) => {
     game.buzzedAtMs=daily ? null : reactionTime; game.buzzTimes=daily ? {} : { [playerId]: reactionTime }; game.buzzInputDeadline=daily ? null : Date.now()+2000; game.lastEvent={type:'buzz',playerId,at:Date.now()}; openAnswerWindow(game, playerId)
   })
   socket.on('player:dailyWager', ({ code, playerId, wager }) => {
-    const game=games.get(code), active=game?.activeQuestion, player=game?.players.get(playerId)
+    const game=jGame(code), active=game?.activeQuestion, player=game?.players.get(playerId)
     if(!game||!active?.dailyDouble||active.dailyPlayerId!==playerId||active.dailyReady||!player)return
     const top=Math.max(0, ...game.boards[game.boardIndex].flatMap((category)=>category.questions.map((question)=>question.value)))
     const max=Math.max(player.score, top, 5); const value=Math.max(5,Math.min(Number(wager)||5,max))
@@ -353,7 +350,7 @@ io.on('connection', (socket) => {
     emitGame(game)
   })
   socket.on('player:finalSubmit', ({ code, playerId, wager, response }, ack) => {
-    const game = games.get(code); const player = game?.players.get(playerId)
+    const game = jGame(code); const player = game?.players.get(playerId)
     if (!game || !player || player.score < 1 || game.status !== 'final' || game.finalResponses.has(playerId)) return ack?.({ ok: false, error: 'Final response is not available.' })
     const amount = Math.max(0, Math.min(Number(wager) || 0, Math.max(0, player.score)))
     const text = String(response || '').trim().slice(0, 500)
@@ -363,26 +360,27 @@ io.on('connection', (socket) => {
     ack?.({ ok: true }); const eligible=connectedPlayers(game).filter((p)=>p.score>=1); if(eligible.length && eligible.every((p)=>game.finalResponses.has(p.id))) revealFinal(game); else emitGame(game)
   })
   socket.on('player:select', ({ code, playerId, categoryIndex, questionIndex }) => {
-    const game=games.get(code); if(!game?.hostless || game.status!=='playing' || game.turnPlayerId!==playerId || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game?.hostless || game.status!=='playing' || game.turnPlayerId!==playerId || !game.players.get(playerId)?.socketId) return
     beginClue(game,categoryIndex,questionIndex)
   })
   socket.on('player:holdClock', ({ code, playerId, hold }) => {
-    const game=games.get(code); if(!game || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !game.players.get(playerId)?.socketId) return
     if(hold) holdClock(game, playerId); else releaseClock(game, playerId)
   })
   socket.on('player:answer', ({ code, playerId, response }) => {
-    const game=games.get(code); if(!game?.hostless) return
+    const game=jGame(code); if(!game?.hostless) return
     resolveHostlessAnswer(game,playerId,String(response || '').slice(0,500))
   })
   socket.on('player:fastMoney', ({ code, playerId, response, pass }) => {
-    const game=games.get(code); if(!game || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !game.players.get(playerId)?.socketId) return
     answerFastMoney(game, playerId, response, pass)
   })
   socket.on('player:skip', ({ code, playerId }) => {
-    const game=games.get(code); if(!game || !canSkip(game) || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !canSkip(game) || !game.players.get(playerId)?.socketId) return
     game.skipVotes=game.skipVotes.includes(playerId) ? game.skipVotes.filter((id)=>id!==playerId) : [...game.skipVotes, playerId]
     if(!checkSkip(game)) emitGame(game)
   })
+  survey.register(socket)
   socket.on('disconnect', () => {
     for (const game of games.values()) {
       if (game.hostSocketId === socket.id) { game.hostSocketId = null; emitGame(game) }
@@ -390,7 +388,7 @@ io.on('connection', (socket) => {
         player.socketId = null
         emitGame(game)
         const key=leaveKey(game.code,pid); clearTimeout(leaveTimers.get(key))
-        leaveTimers.set(key, setTimeout(() => { leaveTimers.delete(key); const current=games.get(game.code); if (current) playerLeft(current, pid) }, RECONNECT_GRACE_MS))
+        leaveTimers.set(key, setTimeout(() => { leaveTimers.delete(key); const current=games.get(game.code); if (current) (isSurvey(current) ? survey.playerLeft : playerLeft)(current, pid) }, RECONNECT_GRACE_MS))
       }
     }
   })

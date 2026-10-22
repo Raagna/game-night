@@ -19,6 +19,8 @@ import BoardEditor from "./BoardEditor";
 import MyBoards from "./MyBoards";
 import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
 import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
+import Hub, { BackToHub } from "./Hub";
+import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -182,6 +184,7 @@ function Setup({ onCreate }) {
   if (editing)
     return (
       <main className="setup">
+        <BackToHub />
         <div className="brand">JEOPARDY! <span>local game night</span></div>
         <section className="setup-card">
           <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
@@ -190,6 +193,7 @@ function Setup({ onCreate }) {
     );
   return (
     <main className="setup">
+      <BackToHub />
       <div className="brand">
         JEOPARDY! <span>local game night</span>
       </div>
@@ -867,7 +871,7 @@ function Join({ onJoined, initialError }) {
   };
   return (
     <main className="join">
-      <div className="brand">JEOPARDY!</div>
+      <div className="brand hub-brand">GAME NIGHT</div>
       <h1>Join a game</h1>
       <form onSubmit={join}>
         <label className="field">
@@ -896,7 +900,7 @@ function Join({ onJoined, initialError }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Up to 6 players can join, even after the game starts.</p>
+      <p className="muted">Jeopardy! takes up to 6 players and Survey Says! up to 12. You can join after a game starts.</p>
       <a href="?host">Hosting a game?</a>
     </main>
   );
@@ -992,21 +996,21 @@ function App() {
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   if (!game) {
     if (restoring || controller)
-      return <main className="join"><div className="brand">JEOPARDY!</div>{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
-    if (host)
-      return (
-        <Setup
-          onCreate={(config, fail) =>
-            socket.timeout(10000).emit("host:create", config, (err, r) => {
+      return <main className="join"><div className="brand hub-brand">GAME NIGHT</div>{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
+    if (host) {
+      const create = (config, fail) =>
+        socket.timeout(10000).emit("host:create", config, (err, r) => {
               if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
               if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
               sessionStorage.displayCode = r.code;
               setGame(r.game);
               history.replaceState({}, "", "?host");
-            })
-          }
-        />
-      );
+            });
+      const pick = params.get("game");
+      if (pick === "survey") return <SurveySetup onCreate={create} />;
+      if (pick === "jeopardy") return <Setup onCreate={create} />;
+      return <Hub />;
+    }
     return (
       <Join
         initialError={joinError}
@@ -1019,6 +1023,12 @@ function App() {
         }}
       />
     );
+  }
+  if (game.kind === "survey") {
+    if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} onAction={action} /></>;
+    if (controller) return <>{banner}<SurveyController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<SurveyDisplay game={game} onAction={action} /></>;
+    return <>{banner}<SurveyPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} /></>;
