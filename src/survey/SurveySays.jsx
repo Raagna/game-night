@@ -249,7 +249,7 @@ function TeamTools({ game, onAction }) {
             {membersOf(game, team).map((player) => (
               <li key={player.id}>
                 <span>{player.name}{!player.connected && <small> · away</small>}</span>
-                <button className="chip-btn" onClick={() => onAction("movePlayer", { playerId: player.id, team: 1 - team })}>Move to {teamName(game, 1 - team)}</button>
+                <button className="chip-btn" aria-label={`Move ${player.name} to ${teamName(game, 1 - team)}`} onClick={() => onAction("movePlayer", { playerId: player.id, team: 1 - team })}>Switch team</button>
                 <button className="chip-btn danger" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Kick</button>
               </li>
             ))}

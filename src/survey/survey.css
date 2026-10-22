@@ -113,10 +113,10 @@
 .sv-host-tools { max-width: 760px; }
 .sv-round-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 4px; justify-content: center; }
 .sv-round-controls .danger { margin-left: auto; }
-.sv-team-tools { display: grid; gap: 14px; padding: 8px 16px 16px; text-align: left; }
+.sv-team-tools { display: grid; gap: 14px; padding: 8px 16px 16px; text-align: left; min-width: 0; }
 .sv-team-tools .inline-field { padding: 6px 0 0; }
 .sv-tool-team { border-top: 4px solid var(--team); background: var(--field); border-radius: 10px; padding: 10px 12px; }
-.sv-tool-team-head { display: flex; align-items: center; gap: 8px; }
+.sv-tool-team-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sv-tool-team-head input { flex: 1; min-width: 0; min-height: 38px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); font-weight: 700; font-size: 16px; }
 .sv-tool-team-head .money { font: 1.15rem var(--display); color: var(--team); min-width: 3ch; text-align: right; }
 .sv-tool-team ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
@@ -167,7 +167,7 @@
 .controller.survey .sv-slot-text, .controller.survey .sv-slot-points { font-size: 1rem; }
 .controller.survey .sv-slot:not(.is-revealed) { background: #0f2477; }
 .controller.survey .sv-slot.is-revealed button { opacity: 0.85; }
-.controller.survey .sv-slot.is-revealed .sv-slot-text::after { content: " ✓"; color: var(--green-text); }
+.controller.survey .sv-slot.is-revealed .sv-slot-text::after { content: "✓"; margin-left: 8px; color: var(--green-text); }
 .sv-strike-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .sv-strike-btn svg { width: 22px; height: 22px; }
 .sv-buzz-pick button { background: var(--panel-raised) !important; border: 1px solid var(--line-strong); }
@@ -193,3 +193,7 @@
   .sv-q-round { width: auto; display: flex; gap: 8px; }
   .sv-board { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
 }
+
+.controller.survey .sv-team-tools { padding: 8px 0 0; }
+.controller.survey .sv-team-tools .inline-field { padding: 0; }
+.sv-tool-team-head input { flex-basis: 140px; }

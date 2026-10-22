@@ -1,0 +1,7434 @@
+[
+  {
+    "id": "s001",
+    "question": "Name something people do right after they wake up.",
+    "answers": [
+      {
+        "text": "Brush Teeth",
+        "points": 30,
+        "alts": [
+          "teeth",
+          "brushing teeth",
+          "toothbrush"
+        ]
+      },
+      {
+        "text": "Check Phone",
+        "points": 24,
+        "alts": [
+          "look at phone",
+          "phone",
+          "check email",
+          "scroll",
+          "social media"
+        ]
+      },
+      {
+        "text": "Use Bathroom",
+        "points": 14,
+        "alts": [
+          "pee",
+          "toilet",
+          "restroom",
+          "bathroom"
+        ]
+      },
+      {
+        "text": "Make Coffee",
+        "points": 10,
+        "alts": [
+          "coffee",
+          "drink coffee",
+          "brew coffee"
+        ]
+      },
+      {
+        "text": "Shower",
+        "points": 8,
+        "alts": [
+          "take a shower",
+          "bathe",
+          "wash up",
+          "bath"
+        ]
+      },
+      {
+        "text": "Stretch",
+        "points": 6,
+        "alts": [
+          "stretching",
+          "yawn",
+          "loosen up"
+        ]
+      },
+      {
+        "text": "Eat Breakfast",
+        "points": 4,
+        "alts": [
+          "breakfast",
+          "eat",
+          "food"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s002",
+    "question": "Name something you might find under a couch cushion.",
+    "answers": [
+      {
+        "text": "Coins",
+        "points": 32,
+        "alts": [
+          "change",
+          "money",
+          "quarter",
+          "penny",
+          "loose change",
+          "dime"
+        ]
+      },
+      {
+        "text": "Crumbs",
+        "points": 20,
+        "alts": [
+          "food",
+          "chip",
+          "cracker"
+        ]
+      },
+      {
+        "text": "Remote",
+        "points": 16,
+        "alts": [
+          "tv remote",
+          "remote control",
+          "clicker",
+          "controller"
+        ]
+      },
+      {
+        "text": "Toy",
+        "points": 9,
+        "alts": [
+          "lego",
+          "kid toy",
+          "action figure",
+          "doll"
+        ]
+      },
+      {
+        "text": "Pen",
+        "points": 7,
+        "alts": [
+          "pencil",
+          "marker",
+          "crayon"
+        ]
+      },
+      {
+        "text": "Hair Tie",
+        "points": 5,
+        "alts": [
+          "hair band",
+          "scrunchie",
+          "elastic",
+          "ponytail holder"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s003",
+    "question": "Name a reason you might be late for work.",
+    "answers": [
+      {
+        "text": "Traffic",
+        "points": 38,
+        "alts": [
+          "car traffic",
+          "stuck in traffic",
+          "jam",
+          "rush hour",
+          "gridlock"
+        ]
+      },
+      {
+        "text": "Overslept",
+        "points": 25,
+        "alts": [
+          "slept in",
+          "oversleep",
+          "alarm",
+          "woke up late",
+          "snooze"
+        ]
+      },
+      {
+        "text": "Car Trouble",
+        "points": 11,
+        "alts": [
+          "flat tire",
+          "car broke down",
+          "car wont start",
+          "breakdown",
+          "dead battery"
+        ]
+      },
+      {
+        "text": "Kids",
+        "points": 8,
+        "alts": [
+          "children",
+          "child",
+          "daycare",
+          "school drop off",
+          "baby"
+        ]
+      },
+      {
+        "text": "Weather",
+        "points": 6,
+        "alts": [
+          "snow",
+          "rain",
+          "storm",
+          "ice"
+        ]
+      },
+      {
+        "text": "Bus Was Late",
+        "points": 5,
+        "alts": [
+          "bus",
+          "train",
+          "missed bus",
+          "transit",
+          "subway"
+        ]
+      },
+      {
+        "text": "Lost Keys",
+        "points": 3,
+        "alts": [
+          "keys",
+          "cant find keys",
+          "misplaced keys"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s004",
+    "question": "Name something you bring to the beach.",
+    "answers": [
+      {
+        "text": "Towel",
+        "points": 30,
+        "alts": [
+          "beach towel",
+          "towl",
+          "bath towel"
+        ]
+      },
+      {
+        "text": "Sunscreen",
+        "points": 25,
+        "alts": [
+          "sunblock",
+          "suntan lotion",
+          "lotion",
+          "spf",
+          "sun screen"
+        ]
+      },
+      {
+        "text": "Umbrella",
+        "points": 12,
+        "alts": [
+          "beach umbrella",
+          "parasol",
+          "umbrela"
+        ]
+      },
+      {
+        "text": "Cooler",
+        "points": 9,
+        "alts": [
+          "drinks",
+          "snacks",
+          "ice chest",
+          "food",
+          "lunch"
+        ]
+      },
+      {
+        "text": "Chair",
+        "points": 8,
+        "alts": [
+          "beach chair",
+          "lawn chair",
+          "folding chair",
+          "seat"
+        ]
+      },
+      {
+        "text": "Sunglasses",
+        "points": 6,
+        "alts": [
+          "shades",
+          "glasses",
+          "sun glasses"
+        ]
+      },
+      {
+        "text": "Swimsuit",
+        "points": 4,
+        "alts": [
+          "bathing suit",
+          "bikini",
+          "trunks",
+          "swim suit"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s005",
+    "question": "Name a food that's messy to eat.",
+    "answers": [
+      {
+        "text": "Spaghetti",
+        "points": 28,
+        "alts": [
+          "pasta",
+          "noodles",
+          "spagetti",
+          "spaghetti and meatballs"
+        ]
+      },
+      {
+        "text": "Ribs",
+        "points": 22,
+        "alts": [
+          "bbq ribs",
+          "barbecue",
+          "spare ribs",
+          "bbq"
+        ]
+      },
+      {
+        "text": "Tacos",
+        "points": 16,
+        "alts": [
+          "mexican food",
+          "tostada",
+          "fajita",
+          "burrito"
+        ]
+      },
+      {
+        "text": "Wings",
+        "points": 12,
+        "alts": [
+          "chicken wings",
+          "buffalo wings",
+          "hot wings"
+        ]
+      },
+      {
+        "text": "Pizza",
+        "points": 8,
+        "alts": [
+          "slice",
+          "pizza slice",
+          "pepperoni"
+        ]
+      },
+      {
+        "text": "Ice Cream",
+        "points": 6,
+        "alts": [
+          "ice cream cone",
+          "cone",
+          "popsicle",
+          "melting ice cream"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s006",
+    "question": "Name something a lot of people are afraid of.",
+    "answers": [
+      {
+        "text": "Spiders",
+        "points": 30,
+        "alts": [
+          "tarantula",
+          "bugs",
+          "insects",
+          "spidres"
+        ]
+      },
+      {
+        "text": "Snakes",
+        "points": 22,
+        "alts": [
+          "serpent",
+          "reptile",
+          "python"
+        ]
+      },
+      {
+        "text": "Heights",
+        "points": 18,
+        "alts": [
+          "high places",
+          "falling",
+          "being up high",
+          "edge"
+        ]
+      },
+      {
+        "text": "Dying",
+        "points": 10,
+        "alts": [
+          "death",
+          "dead",
+          "die",
+          "mortality"
+        ]
+      },
+      {
+        "text": "Clowns",
+        "points": 7,
+        "alts": [
+          "creepy clowns",
+          "circus",
+          "clows"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s007",
+    "question": "Name something you'd see at a birthday party.",
+    "answers": [
+      {
+        "text": "Cake",
+        "points": 36,
+        "alts": [
+          "birthday cake",
+          "cupcakes",
+          "frosting"
+        ]
+      },
+      {
+        "text": "Balloons",
+        "points": 22,
+        "alts": [
+          "ballon",
+          "baloons",
+          "helium"
+        ]
+      },
+      {
+        "text": "Presents",
+        "points": 15,
+        "alts": [
+          "gift",
+          "wrapping paper",
+          "birthday presents"
+        ]
+      },
+      {
+        "text": "Candles",
+        "points": 9,
+        "alts": [
+          "birthday candles",
+          "blow out candles",
+          "flame"
+        ]
+      },
+      {
+        "text": "Party Hats",
+        "points": 6,
+        "alts": [
+          "hats",
+          "cone hat",
+          "birthday hat"
+        ]
+      },
+      {
+        "text": "Games",
+        "points": 5,
+        "alts": [
+          "party games",
+          "pin the tail",
+          "pinata",
+          "musical chairs"
+        ]
+      },
+      {
+        "text": "Ice Cream",
+        "points": 3,
+        "alts": [
+          "icecream",
+          "scoop",
+          "sundae"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s008",
+    "question": "Name a chore kids hate doing.",
+    "answers": [
+      {
+        "text": "Dishes",
+        "points": 30,
+        "alts": [
+          "washing dishes",
+          "do the dishes",
+          "dishwasher",
+          "load dishwasher"
+        ]
+      },
+      {
+        "text": "Clean Room",
+        "points": 26,
+        "alts": [
+          "cleaning room",
+          "clean bedroom",
+          "tidy room",
+          "pick up toys",
+          "make bed"
+        ]
+      },
+      {
+        "text": "Take Out Trash",
+        "points": 16,
+        "alts": [
+          "trash",
+          "garbage",
+          "take out garbage",
+          "rubbish",
+          "bins"
+        ]
+      },
+      {
+        "text": "Laundry",
+        "points": 9,
+        "alts": [
+          "fold clothes",
+          "wash clothes",
+          "folding laundry",
+          "clothes"
+        ]
+      },
+      {
+        "text": "Vacuum",
+        "points": 7,
+        "alts": [
+          "vacuuming",
+          "vaccum",
+          "sweeping",
+          "sweep"
+        ]
+      },
+      {
+        "text": "Mow Lawn",
+        "points": 5,
+        "alts": [
+          "mowing",
+          "cut grass",
+          "mow the grass",
+          "yard work",
+          "lawn mower"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s009",
+    "question": "Name something you need to make a sandwich.",
+    "answers": [
+      {
+        "text": "Bread",
+        "points": 40,
+        "alts": [
+          "loaf",
+          "slices of bread",
+          "bun",
+          "roll",
+          "toast"
+        ]
+      },
+      {
+        "text": "Meat",
+        "points": 16,
+        "alts": [
+          "ham",
+          "turkey",
+          "deli meat",
+          "lunch meat",
+          "bologna"
+        ]
+      },
+      {
+        "text": "Cheese",
+        "points": 14,
+        "alts": [
+          "cheddar",
+          "swiss",
+          "cheese slice",
+          "american cheese"
+        ]
+      },
+      {
+        "text": "Mayo",
+        "points": 9,
+        "alts": [
+          "mayonnaise",
+          "mayonaise",
+          "spread"
+        ]
+      },
+      {
+        "text": "Peanut Butter",
+        "points": 7,
+        "alts": [
+          "pb",
+          "peanut butter and jelly",
+          "pbj",
+          "nut butter"
+        ]
+      },
+      {
+        "text": "Lettuce",
+        "points": 5,
+        "alts": [
+          "veggies",
+          "vegetables",
+          "greens",
+          "salad"
+        ]
+      },
+      {
+        "text": "Knife",
+        "points": 3,
+        "alts": [
+          "butter knife",
+          "utensil",
+          "cutting"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s010",
+    "question": "Name something people lose all the time.",
+    "answers": [
+      {
+        "text": "Keys",
+        "points": 34,
+        "alts": [
+          "car keys",
+          "house keys",
+          "keychain"
+        ]
+      },
+      {
+        "text": "Phone",
+        "points": 20,
+        "alts": [
+          "cell phone",
+          "cellphone",
+          "mobile"
+        ]
+      },
+      {
+        "text": "Glasses",
+        "points": 12,
+        "alts": [
+          "eyeglasses",
+          "reading glasses",
+          "sunglasses",
+          "specs"
+        ]
+      },
+      {
+        "text": "Remote",
+        "points": 10,
+        "alts": [
+          "tv remote",
+          "clicker",
+          "remote control"
+        ]
+      },
+      {
+        "text": "Wallet",
+        "points": 8,
+        "alts": [
+          "purse",
+          "money",
+          "cash",
+          "billfold"
+        ]
+      },
+      {
+        "text": "Socks",
+        "points": 6,
+        "alts": [
+          "matching sock",
+          "one sock",
+          "missing sock"
+        ]
+      },
+      {
+        "text": "Their Mind",
+        "points": 4,
+        "alts": [
+          "sanity",
+          "temper",
+          "marbles"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s011",
+    "question": "Name an animal you might see on a farm.",
+    "answers": [
+      {
+        "text": "Cow",
+        "points": 32,
+        "alts": [
+          "cattle",
+          "dairy cow",
+          "bull",
+          "calf",
+          "moo"
+        ]
+      },
+      {
+        "text": "Pig",
+        "points": 22,
+        "alts": [
+          "hog",
+          "piglet",
+          "swine",
+          "oink"
+        ]
+      },
+      {
+        "text": "Horse",
+        "points": 14,
+        "alts": [
+          "pony",
+          "stallion",
+          "mare",
+          "foal"
+        ]
+      },
+      {
+        "text": "Chicken",
+        "points": 12,
+        "alts": [
+          "hen",
+          "rooster",
+          "chick"
+        ]
+      },
+      {
+        "text": "Sheep",
+        "points": 8,
+        "alts": [
+          "lamb",
+          "ewe",
+          "ram"
+        ]
+      },
+      {
+        "text": "Goat",
+        "points": 6,
+        "alts": [
+          "billy goat",
+          "kid goat",
+          "nanny goat"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s012",
+    "question": "Name something kids do at a sleepover.",
+    "answers": [
+      {
+        "text": "Watch Movies",
+        "points": 30,
+        "alts": [
+          "movie",
+          "watch a movie",
+          "film",
+          "tv"
+        ]
+      },
+      {
+        "text": "Stay Up Late",
+        "points": 18,
+        "alts": [
+          "stay up",
+          "all nighter",
+          "no sleep",
+          "late night"
+        ]
+      },
+      {
+        "text": "Eat Snacks",
+        "points": 14,
+        "alts": [
+          "junk food",
+          "popcorn",
+          "candy",
+          "pizza"
+        ]
+      },
+      {
+        "text": "Play Games",
+        "points": 12,
+        "alts": [
+          "games",
+          "board games",
+          "video games",
+          "truth or dare"
+        ]
+      },
+      {
+        "text": "Talk",
+        "points": 9,
+        "alts": [
+          "gossip",
+          "chat",
+          "tell secrets",
+          "talking"
+        ]
+      },
+      {
+        "text": "Pillow Fight",
+        "points": 7,
+        "alts": [
+          "pillows",
+          "pillowfight",
+          "pillow war"
+        ]
+      },
+      {
+        "text": "Sleep",
+        "points": 4,
+        "alts": [
+          "sleeping",
+          "nap",
+          "go to bed",
+          "sleeping bag"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s013",
+    "question": "Name something that's hard to do with your eyes closed.",
+    "answers": [
+      {
+        "text": "Walk",
+        "points": 30,
+        "alts": [
+          "walking",
+          "walk straight",
+          "move around",
+          "get around"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 22,
+        "alts": [
+          "reading",
+          "read a book",
+          "book"
+        ]
+      },
+      {
+        "text": "Drive",
+        "points": 18,
+        "alts": [
+          "driving",
+          "car",
+          "steer"
+        ]
+      },
+      {
+        "text": "Cook",
+        "points": 9,
+        "alts": [
+          "cooking",
+          "make food",
+          "use the stove"
+        ]
+      },
+      {
+        "text": "Eat",
+        "points": 7,
+        "alts": [
+          "eating",
+          "feed yourself",
+          "use a fork"
+        ]
+      },
+      {
+        "text": "Put On Makeup",
+        "points": 6,
+        "alts": [
+          "makeup",
+          "mascara",
+          "eyeliner",
+          "lipstick"
+        ]
+      },
+      {
+        "text": "Find Things",
+        "points": 4,
+        "alts": [
+          "search",
+          "look for keys",
+          "find stuff",
+          "locate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s014",
+    "question": "Name a place where you have to be quiet.",
+    "answers": [
+      {
+        "text": "Library",
+        "points": 42,
+        "alts": [
+          "libary",
+          "study hall",
+          "reading room"
+        ]
+      },
+      {
+        "text": "Church",
+        "points": 18,
+        "alts": [
+          "chapel",
+          "mass",
+          "temple",
+          "worship",
+          "service"
+        ]
+      },
+      {
+        "text": "Movie Theater",
+        "points": 12,
+        "alts": [
+          "movies",
+          "cinema",
+          "theatre",
+          "movie theatre"
+        ]
+      },
+      {
+        "text": "Hospital",
+        "points": 9,
+        "alts": [
+          "icu",
+          "doctor",
+          "clinic",
+          "doctors office"
+        ]
+      },
+      {
+        "text": "Funeral",
+        "points": 7,
+        "alts": [
+          "wake",
+          "memorial",
+          "cemetery",
+          "graveyard"
+        ]
+      },
+      {
+        "text": "Classroom",
+        "points": 5,
+        "alts": [
+          "school",
+          "class",
+          "test",
+          "exam"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s015",
+    "question": "Name something that makes a dog bark.",
+    "answers": [
+      {
+        "text": "Doorbell",
+        "points": 32,
+        "alts": [
+          "door bell",
+          "knock",
+          "knocking",
+          "someone at door"
+        ]
+      },
+      {
+        "text": "Mailman",
+        "points": 22,
+        "alts": [
+          "mail carrier",
+          "postman",
+          "mail",
+          "delivery person",
+          "delivery"
+        ]
+      },
+      {
+        "text": "Other Dogs",
+        "points": 16,
+        "alts": [
+          "dog",
+          "another dog",
+          "dogs barking"
+        ]
+      },
+      {
+        "text": "Squirrel",
+        "points": 10,
+        "alts": [
+          "squirel",
+          "rabbit",
+          "critter"
+        ]
+      },
+      {
+        "text": "Strangers",
+        "points": 8,
+        "alts": [
+          "intruder",
+          "burglar",
+          "new person"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s016",
+    "question": "Name something you'd find in a junk drawer.",
+    "answers": [
+      {
+        "text": "Batteries",
+        "points": 28,
+        "alts": [
+          "battery",
+          "aa",
+          "double a"
+        ]
+      },
+      {
+        "text": "Rubber Bands",
+        "points": 18,
+        "alts": [
+          "elastic",
+          "bands",
+          "rubberband",
+          "rubber band ball"
+        ]
+      },
+      {
+        "text": "Pens",
+        "points": 16,
+        "alts": [
+          "pencils",
+          "marker",
+          "sharpie"
+        ]
+      },
+      {
+        "text": "Takeout Menus",
+        "points": 10,
+        "alts": [
+          "menus",
+          "take out menu",
+          "flyers"
+        ]
+      },
+      {
+        "text": "Scissors",
+        "points": 8,
+        "alts": [
+          "sissors",
+          "shears",
+          "cutting"
+        ]
+      },
+      {
+        "text": "Tape",
+        "points": 7,
+        "alts": [
+          "scotch tape",
+          "duct tape",
+          "masking tape"
+        ]
+      },
+      {
+        "text": "Keys",
+        "points": 5,
+        "alts": [
+          "spare key",
+          "old keys",
+          "keyring"
+        ]
+      },
+      {
+        "text": "Twist Ties",
+        "points": 3,
+        "alts": [
+          "twist tie",
+          "bread tie",
+          "zip ties",
+          "ties"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s017",
+    "question": "Name a fruit you'd expect in a fruit salad.",
+    "answers": [
+      {
+        "text": "Grapes",
+        "points": 26,
+        "alts": [
+          "green grapes",
+          "red grapes",
+          "grape"
+        ]
+      },
+      {
+        "text": "Strawberries",
+        "points": 22,
+        "alts": [
+          "strawberry",
+          "berries",
+          "strawberies"
+        ]
+      },
+      {
+        "text": "Melon",
+        "points": 16,
+        "alts": [
+          "cantaloupe",
+          "honeydew",
+          "watermelon"
+        ]
+      },
+      {
+        "text": "Pineapple",
+        "points": 12,
+        "alts": [
+          "pinapple",
+          "pine apple",
+          "pineaple"
+        ]
+      },
+      {
+        "text": "Banana",
+        "points": 9,
+        "alts": [
+          "bananna",
+          "bannana",
+          "banan",
+          "sliced banana"
+        ]
+      },
+      {
+        "text": "Apple",
+        "points": 6,
+        "alts": [
+          "green apple",
+          "red apple",
+          "aple"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s018",
+    "question": "Name something people do on a rainy day.",
+    "answers": [
+      {
+        "text": "Watch TV",
+        "points": 28,
+        "alts": [
+          "tv",
+          "television",
+          "watch movies",
+          "movie",
+          "binge"
+        ]
+      },
+      {
+        "text": "Sleep",
+        "points": 18,
+        "alts": [
+          "nap",
+          "stay in bed",
+          "sleeping",
+          "take a nap"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 16,
+        "alts": [
+          "read a book",
+          "book",
+          "reading"
+        ]
+      },
+      {
+        "text": "Play Games",
+        "points": 12,
+        "alts": [
+          "board games",
+          "video games",
+          "games",
+          "cards"
+        ]
+      },
+      {
+        "text": "Stay Inside",
+        "points": 9,
+        "alts": [
+          "stay home",
+          "indoors",
+          "inside",
+          "dont go out"
+        ]
+      },
+      {
+        "text": "Bake",
+        "points": 6,
+        "alts": [
+          "cook",
+          "cooking",
+          "baking",
+          "cookies"
+        ]
+      },
+      {
+        "text": "Jump In Puddles",
+        "points": 4,
+        "alts": [
+          "puddles",
+          "splash",
+          "play in rain",
+          "puddle jumping"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s019",
+    "question": "Name something you associate with Halloween.",
+    "answers": [
+      {
+        "text": "Candy",
+        "points": 34,
+        "alts": [
+          "chocolate",
+          "treats",
+          "trick or treat",
+          "sweets"
+        ]
+      },
+      {
+        "text": "Costumes",
+        "points": 24,
+        "alts": [
+          "dress up",
+          "mask",
+          "outfit"
+        ]
+      },
+      {
+        "text": "Pumpkins",
+        "points": 16,
+        "alts": [
+          "jack o lantern",
+          "jackolantern",
+          "carve pumpkins"
+        ]
+      },
+      {
+        "text": "Ghosts",
+        "points": 8,
+        "alts": [
+          "spirits",
+          "haunted house",
+          "boo"
+        ]
+      },
+      {
+        "text": "Witches",
+        "points": 6,
+        "alts": [
+          "broom",
+          "broomstick",
+          "witch hat"
+        ]
+      },
+      {
+        "text": "Skeletons",
+        "points": 4,
+        "alts": [
+          "bones",
+          "skull",
+          "skelton"
+        ]
+      },
+      {
+        "text": "Bats",
+        "points": 3,
+        "alts": [
+          "vampire bat",
+          "flying bat",
+          "cave"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s020",
+    "question": "Name something you might do on a first date.",
+    "answers": [
+      {
+        "text": "Dinner",
+        "points": 38,
+        "alts": [
+          "restaurant",
+          "eat",
+          "go out to eat",
+          "meal",
+          "food"
+        ]
+      },
+      {
+        "text": "Movies",
+        "points": 22,
+        "alts": [
+          "see a movie",
+          "cinema",
+          "film"
+        ]
+      },
+      {
+        "text": "Coffee",
+        "points": 12,
+        "alts": [
+          "cafe",
+          "coffee shop",
+          "latte"
+        ]
+      },
+      {
+        "text": "Walk",
+        "points": 9,
+        "alts": [
+          "walk in the park",
+          "stroll",
+          "park",
+          "hike"
+        ]
+      },
+      {
+        "text": "Talk",
+        "points": 7,
+        "alts": [
+          "chat",
+          "get to know each other",
+          "conversation"
+        ]
+      },
+      {
+        "text": "Kiss",
+        "points": 5,
+        "alts": [
+          "kissing",
+          "smooch",
+          "peck"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s021",
+    "question": "Name something you'd find in a classroom.",
+    "answers": [
+      {
+        "text": "Desks",
+        "points": 28,
+        "alts": [
+          "tables",
+          "chairs",
+          "seats"
+        ]
+      },
+      {
+        "text": "Whiteboard",
+        "points": 22,
+        "alts": [
+          "chalkboard",
+          "blackboard",
+          "board",
+          "white board"
+        ]
+      },
+      {
+        "text": "Teacher",
+        "points": 16,
+        "alts": [
+          "instructor",
+          "professor",
+          "prof"
+        ]
+      },
+      {
+        "text": "Students",
+        "points": 10,
+        "alts": [
+          "kids",
+          "pupils",
+          "children",
+          "classmates"
+        ]
+      },
+      {
+        "text": "Books",
+        "points": 9,
+        "alts": [
+          "textbooks",
+          "novels",
+          "library books",
+          "reading books"
+        ]
+      },
+      {
+        "text": "Pencils",
+        "points": 7,
+        "alts": [
+          "pens",
+          "crayons",
+          "pencil sharpener",
+          "markers"
+        ]
+      },
+      {
+        "text": "Clock",
+        "points": 4,
+        "alts": [
+          "wall clock",
+          "time",
+          "clok"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s022",
+    "question": "Name a sport played with a ball.",
+    "answers": [
+      {
+        "text": "Soccer",
+        "points": 26,
+        "alts": [
+          "futbol",
+          "socer",
+          "soccor"
+        ]
+      },
+      {
+        "text": "Basketball",
+        "points": 24,
+        "alts": [
+          "hoops",
+          "bball",
+          "basket ball",
+          "nba"
+        ]
+      },
+      {
+        "text": "Football",
+        "points": 18,
+        "alts": [
+          "american football",
+          "nfl",
+          "footbal"
+        ]
+      },
+      {
+        "text": "Baseball",
+        "points": 14,
+        "alts": [
+          "softball",
+          "mlb",
+          "base ball"
+        ]
+      },
+      {
+        "text": "Tennis",
+        "points": 8,
+        "alts": [
+          "tenis",
+          "racquet",
+          "racket"
+        ]
+      },
+      {
+        "text": "Volleyball",
+        "points": 5,
+        "alts": [
+          "volley ball",
+          "beach volleyball",
+          "voleyball"
+        ]
+      },
+      {
+        "text": "Golf",
+        "points": 3,
+        "alts": [
+          "golfing",
+          "mini golf",
+          "golf ball"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s023",
+    "question": "Name something people put on a hot dog.",
+    "answers": [
+      {
+        "text": "Ketchup",
+        "points": 32,
+        "alts": [
+          "catsup",
+          "tomato sauce",
+          "ketchap",
+          "kechup"
+        ]
+      },
+      {
+        "text": "Mustard",
+        "points": 26,
+        "alts": [
+          "yellow mustard",
+          "dijon",
+          "mustad"
+        ]
+      },
+      {
+        "text": "Relish",
+        "points": 14,
+        "alts": [
+          "pickle relish",
+          "pickles",
+          "sweet relish"
+        ]
+      },
+      {
+        "text": "Onions",
+        "points": 10,
+        "alts": [
+          "diced onions",
+          "fried onions",
+          "onyons"
+        ]
+      },
+      {
+        "text": "Chili",
+        "points": 8,
+        "alts": [
+          "chilli",
+          "chili sauce",
+          "chili dog"
+        ]
+      },
+      {
+        "text": "Cheese",
+        "points": 5,
+        "alts": [
+          "nacho cheese",
+          "cheddar",
+          "melted cheese"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s024",
+    "question": "Name something you do before going to bed.",
+    "answers": [
+      {
+        "text": "Brush Teeth",
+        "points": 34,
+        "alts": [
+          "teeth",
+          "toothbrush",
+          "floss"
+        ]
+      },
+      {
+        "text": "Change Clothes",
+        "points": 14,
+        "alts": [
+          "pajamas",
+          "pjs",
+          "get changed",
+          "put on pajamas",
+          "jammies"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 12,
+        "alts": [
+          "read a book",
+          "reading",
+          "book"
+        ]
+      },
+      {
+        "text": "Check Phone",
+        "points": 12,
+        "alts": [
+          "phone",
+          "scroll",
+          "social media",
+          "texting"
+        ]
+      },
+      {
+        "text": "Use Bathroom",
+        "points": 9,
+        "alts": [
+          "pee",
+          "toilet",
+          "bathroom",
+          "restroom"
+        ]
+      },
+      {
+        "text": "Shower",
+        "points": 7,
+        "alts": [
+          "bath",
+          "take a shower",
+          "wash up"
+        ]
+      },
+      {
+        "text": "Pray",
+        "points": 5,
+        "alts": [
+          "prayer",
+          "say prayers",
+          "praying"
+        ]
+      },
+      {
+        "text": "Set Alarm",
+        "points": 3,
+        "alts": [
+          "alarm",
+          "alarm clock",
+          "set alarm clock"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s025",
+    "question": "Name something that's sticky.",
+    "answers": [
+      {
+        "text": "Glue",
+        "points": 28,
+        "alts": [
+          "superglue",
+          "glue stick",
+          "adhesive"
+        ]
+      },
+      {
+        "text": "Honey",
+        "points": 24,
+        "alts": [
+          "hunny",
+          "honeycomb",
+          "honey jar"
+        ]
+      },
+      {
+        "text": "Tape",
+        "points": 14,
+        "alts": [
+          "scotch tape",
+          "duct tape",
+          "sticky tape"
+        ]
+      },
+      {
+        "text": "Syrup",
+        "points": 10,
+        "alts": [
+          "maple syrup",
+          "pancake syrup",
+          "molasses"
+        ]
+      },
+      {
+        "text": "Gum",
+        "points": 9,
+        "alts": [
+          "chewing gum",
+          "bubble gum",
+          "bubblegum"
+        ]
+      },
+      {
+        "text": "Candy",
+        "points": 6,
+        "alts": [
+          "lollipop",
+          "caramel",
+          "cotton candy",
+          "taffy"
+        ]
+      },
+      {
+        "text": "Sap",
+        "points": 4,
+        "alts": [
+          "tree sap",
+          "pine sap",
+          "resin"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s026",
+    "question": "Name a job where you have to wear a uniform.",
+    "answers": [
+      {
+        "text": "Police Officer",
+        "points": 30,
+        "alts": [
+          "police",
+          "cop",
+          "officer",
+          "policeman",
+          "sheriff"
+        ]
+      },
+      {
+        "text": "Nurse",
+        "points": 18,
+        "alts": [
+          "doctor",
+          "scrubs",
+          "medical",
+          "hospital worker"
+        ]
+      },
+      {
+        "text": "Firefighter",
+        "points": 16,
+        "alts": [
+          "fireman",
+          "fire fighter",
+          "firemen"
+        ]
+      },
+      {
+        "text": "Soldier",
+        "points": 12,
+        "alts": [
+          "military",
+          "army",
+          "marine",
+          "navy"
+        ]
+      },
+      {
+        "text": "Fast Food Worker",
+        "points": 8,
+        "alts": [
+          "cashier",
+          "fast food",
+          "burger flipper",
+          "restaurant worker"
+        ]
+      },
+      {
+        "text": "Pilot",
+        "points": 6,
+        "alts": [
+          "airline pilot",
+          "captain",
+          "flight attendant"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s027",
+    "question": "Name something you'd pack for a camping trip.",
+    "answers": [
+      {
+        "text": "Tent",
+        "points": 34,
+        "alts": [
+          "tarp",
+          "shelter",
+          "tent poles"
+        ]
+      },
+      {
+        "text": "Sleeping Bag",
+        "points": 20,
+        "alts": [
+          "sleepingbag",
+          "bedroll",
+          "blanket"
+        ]
+      },
+      {
+        "text": "Flashlight",
+        "points": 14,
+        "alts": [
+          "torch",
+          "lantern",
+          "headlamp",
+          "flash light"
+        ]
+      },
+      {
+        "text": "Marshmallows",
+        "points": 10,
+        "alts": [
+          "smores",
+          "s'mores",
+          "marshmellows"
+        ]
+      },
+      {
+        "text": "Bug Spray",
+        "points": 8,
+        "alts": [
+          "bug repellent",
+          "insect repellent",
+          "deet",
+          "repellent"
+        ]
+      },
+      {
+        "text": "Food",
+        "points": 6,
+        "alts": [
+          "snacks",
+          "cooler",
+          "hot dogs",
+          "groceries"
+        ]
+      },
+      {
+        "text": "Matches",
+        "points": 4,
+        "alts": [
+          "lighter",
+          "fire starter",
+          "firewood"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s028",
+    "question": "Name a reason a baby might be crying.",
+    "answers": [
+      {
+        "text": "Hungry",
+        "points": 38,
+        "alts": [
+          "hunger",
+          "food",
+          "milk",
+          "bottle",
+          "feed"
+        ]
+      },
+      {
+        "text": "Dirty Diaper",
+        "points": 22,
+        "alts": [
+          "diaper",
+          "wet diaper",
+          "poop",
+          "poopy",
+          "needs changing"
+        ]
+      },
+      {
+        "text": "Tired",
+        "points": 16,
+        "alts": [
+          "sleepy",
+          "sleep",
+          "nap",
+          "exhausted"
+        ]
+      },
+      {
+        "text": "Teething",
+        "points": 9,
+        "alts": [
+          "teeth",
+          "tooth",
+          "new teeth"
+        ]
+      },
+      {
+        "text": "Wants Attention",
+        "points": 6,
+        "alts": [
+          "attention",
+          "lonely",
+          "wants to be held",
+          "wants mom"
+        ]
+      },
+      {
+        "text": "Sick",
+        "points": 5,
+        "alts": [
+          "ill",
+          "fever",
+          "not feeling well",
+          "colic"
+        ]
+      },
+      {
+        "text": "Gas",
+        "points": 3,
+        "alts": [
+          "burp",
+          "gassy",
+          "tummy ache"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s029",
+    "question": "Name something people do at the gym.",
+    "answers": [
+      {
+        "text": "Lift Weights",
+        "points": 36,
+        "alts": [
+          "weights",
+          "weightlifting",
+          "weight lifting",
+          "bench press",
+          "lift"
+        ]
+      },
+      {
+        "text": "Run",
+        "points": 20,
+        "alts": [
+          "treadmill",
+          "running",
+          "jog",
+          "jogging"
+        ]
+      },
+      {
+        "text": "Stretch",
+        "points": 10,
+        "alts": [
+          "stretching",
+          "yoga",
+          "warm up"
+        ]
+      },
+      {
+        "text": "Bike",
+        "points": 8,
+        "alts": [
+          "stationary bike",
+          "cycling",
+          "spin class",
+          "spin"
+        ]
+      },
+      {
+        "text": "Swim",
+        "points": 6,
+        "alts": [
+          "swimming",
+          "pool",
+          "laps"
+        ]
+      },
+      {
+        "text": "Sweat",
+        "points": 5,
+        "alts": [
+          "sweating",
+          "get sweaty",
+          "perspire"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s030",
+    "question": "Name something you might see in the sky.",
+    "answers": [
+      {
+        "text": "Clouds",
+        "points": 32,
+        "alts": [
+          "cloudy",
+          "fluffy clouds",
+          "clowds"
+        ]
+      },
+      {
+        "text": "Sun",
+        "points": 24,
+        "alts": [
+          "sunshine",
+          "sunlight",
+          "sunny"
+        ]
+      },
+      {
+        "text": "Birds",
+        "points": 14,
+        "alts": [
+          "seagull",
+          "pigeon",
+          "crow"
+        ]
+      },
+      {
+        "text": "Stars",
+        "points": 11,
+        "alts": [
+          "constellation",
+          "galaxy",
+          "starry"
+        ]
+      },
+      {
+        "text": "Moon",
+        "points": 9,
+        "alts": [
+          "full moon",
+          "crescent",
+          "moonlight"
+        ]
+      },
+      {
+        "text": "Airplane",
+        "points": 6,
+        "alts": [
+          "plane",
+          "jet",
+          "aeroplane",
+          "aircraft"
+        ]
+      },
+      {
+        "text": "Rainbow",
+        "points": 3,
+        "alts": [
+          "rain bow",
+          "arc",
+          "colors"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s031",
+    "question": "Name something people put in their coffee.",
+    "answers": [
+      {
+        "text": "Cream",
+        "points": 36,
+        "alts": [
+          "creamer",
+          "half and half",
+          "coffee creamer"
+        ]
+      },
+      {
+        "text": "Sugar",
+        "points": 32,
+        "alts": [
+          "sweetener",
+          "honey",
+          "sugar cube"
+        ]
+      },
+      {
+        "text": "Milk",
+        "points": 14,
+        "alts": [
+          "whole milk",
+          "oat milk",
+          "almond milk",
+          "skim"
+        ]
+      },
+      {
+        "text": "Ice",
+        "points": 5,
+        "alts": [
+          "ice cubes",
+          "iced",
+          "cold"
+        ]
+      },
+      {
+        "text": "Cinnamon",
+        "points": 4,
+        "alts": [
+          "cinamon",
+          "spice",
+          "pumpkin spice"
+        ]
+      },
+      {
+        "text": "Syrup",
+        "points": 4,
+        "alts": [
+          "flavored syrup",
+          "vanilla",
+          "caramel",
+          "hazelnut"
+        ]
+      },
+      {
+        "text": "Alcohol",
+        "points": 3,
+        "alts": [
+          "whiskey",
+          "liquor",
+          "booze"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s032",
+    "question": "Name a vegetable kids refuse to eat.",
+    "answers": [
+      {
+        "text": "Broccoli",
+        "points": 38,
+        "alts": [
+          "brocoli",
+          "brocolli",
+          "little trees",
+          "broccolli"
+        ]
+      },
+      {
+        "text": "Brussels Sprouts",
+        "points": 20,
+        "alts": [
+          "sprouts",
+          "brussels",
+          "brussles sprouts"
+        ]
+      },
+      {
+        "text": "Spinach",
+        "points": 12,
+        "alts": [
+          "spinich",
+          "leafy greens",
+          "greens"
+        ]
+      },
+      {
+        "text": "Peas",
+        "points": 10,
+        "alts": [
+          "green peas",
+          "sweet peas",
+          "pea pods"
+        ]
+      },
+      {
+        "text": "Green Beans",
+        "points": 7,
+        "alts": [
+          "string beans",
+          "beans",
+          "greenbeans"
+        ]
+      },
+      {
+        "text": "Asparagus",
+        "points": 5,
+        "alts": [
+          "asparagas",
+          "aspargus",
+          "spears"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s033",
+    "question": "Name something you'd find in a hospital.",
+    "answers": [
+      {
+        "text": "Doctors",
+        "points": 30,
+        "alts": [
+          "physician",
+          "surgeon",
+          "doc"
+        ]
+      },
+      {
+        "text": "Nurses",
+        "points": 22,
+        "alts": [
+          "rn",
+          "caregivers",
+          "nursing staff"
+        ]
+      },
+      {
+        "text": "Beds",
+        "points": 14,
+        "alts": [
+          "hospital bed",
+          "stretcher",
+          "gurney"
+        ]
+      },
+      {
+        "text": "Patients",
+        "points": 12,
+        "alts": [
+          "sick people",
+          "the sick",
+          "injured people"
+        ]
+      },
+      {
+        "text": "Needles",
+        "points": 8,
+        "alts": [
+          "syringe",
+          "shots",
+          "injection"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s034",
+    "question": "Name something parents tell their kids to stop doing.",
+    "answers": [
+      {
+        "text": "Fighting",
+        "points": 28,
+        "alts": [
+          "fight",
+          "hitting",
+          "arguing",
+          "bickering"
+        ]
+      },
+      {
+        "text": "Yelling",
+        "points": 18,
+        "alts": [
+          "screaming",
+          "shouting",
+          "being loud",
+          "noise"
+        ]
+      },
+      {
+        "text": "Whining",
+        "points": 14,
+        "alts": [
+          "complaining",
+          "crying",
+          "whine"
+        ]
+      },
+      {
+        "text": "Running",
+        "points": 10,
+        "alts": [
+          "running in the house",
+          "run",
+          "running around"
+        ]
+      },
+      {
+        "text": "Playing Video Games",
+        "points": 8,
+        "alts": [
+          "video games",
+          "gaming",
+          "screens",
+          "screen time"
+        ]
+      },
+      {
+        "text": "Talking Back",
+        "points": 7,
+        "alts": [
+          "backtalk",
+          "sass",
+          "attitude",
+          "being rude"
+        ]
+      },
+      {
+        "text": "Jumping On Bed",
+        "points": 5,
+        "alts": [
+          "jumping",
+          "jump on the bed",
+          "bouncing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s035",
+    "question": "Name something people do when they're nervous.",
+    "answers": [
+      {
+        "text": "Bite Nails",
+        "points": 30,
+        "alts": [
+          "nail biting",
+          "biting nails",
+          "nails",
+          "chew nails"
+        ]
+      },
+      {
+        "text": "Sweat",
+        "points": 20,
+        "alts": [
+          "sweating",
+          "sweaty palms",
+          "sweaty"
+        ]
+      },
+      {
+        "text": "Pace",
+        "points": 12,
+        "alts": [
+          "pacing",
+          "walk around",
+          "walk back and forth"
+        ]
+      },
+      {
+        "text": "Fidget",
+        "points": 10,
+        "alts": [
+          "fidgeting",
+          "tap foot",
+          "shake leg",
+          "tapping"
+        ]
+      },
+      {
+        "text": "Talk Too Much",
+        "points": 8,
+        "alts": [
+          "ramble",
+          "babble",
+          "talk fast",
+          "rambling"
+        ]
+      },
+      {
+        "text": "Laugh",
+        "points": 6,
+        "alts": [
+          "giggle",
+          "nervous laugh",
+          "laughing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s036",
+    "question": "Name a place people go on vacation.",
+    "answers": [
+      {
+        "text": "Beach",
+        "points": 36,
+        "alts": [
+          "ocean",
+          "seaside",
+          "coast",
+          "shore"
+        ]
+      },
+      {
+        "text": "Theme Park",
+        "points": 18,
+        "alts": [
+          "amusement park",
+          "disney",
+          "disneyland",
+          "rides"
+        ]
+      },
+      {
+        "text": "Mountains",
+        "points": 12,
+        "alts": [
+          "ski trip",
+          "skiing",
+          "cabin"
+        ]
+      },
+      {
+        "text": "Cruise",
+        "points": 10,
+        "alts": [
+          "cruise ship",
+          "boat",
+          "ship"
+        ]
+      },
+      {
+        "text": "Europe",
+        "points": 8,
+        "alts": [
+          "paris",
+          "italy",
+          "france",
+          "london"
+        ]
+      },
+      {
+        "text": "Hawaii",
+        "points": 6,
+        "alts": [
+          "hawai",
+          "island",
+          "tropics",
+          "tropical island"
+        ]
+      },
+      {
+        "text": "Las Vegas",
+        "points": 4,
+        "alts": [
+          "vegas",
+          "las vagas",
+          "casino"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s037",
+    "question": "Name something you'd find in a teenager's bedroom.",
+    "answers": [
+      {
+        "text": "Dirty Clothes",
+        "points": 30,
+        "alts": [
+          "clothes",
+          "laundry",
+          "dirty laundry",
+          "clothes on floor"
+        ]
+      },
+      {
+        "text": "Bed",
+        "points": 14,
+        "alts": [
+          "unmade bed",
+          "mattress",
+          "pillow"
+        ]
+      },
+      {
+        "text": "Phone Charger",
+        "points": 12,
+        "alts": [
+          "charger",
+          "cord",
+          "cable",
+          "phone"
+        ]
+      },
+      {
+        "text": "Posters",
+        "points": 12,
+        "alts": [
+          "pictures on wall",
+          "wall art",
+          "poster on wall"
+        ]
+      },
+      {
+        "text": "Mess",
+        "points": 10,
+        "alts": [
+          "messy",
+          "junk",
+          "clutter",
+          "trash"
+        ]
+      },
+      {
+        "text": "Computer",
+        "points": 9,
+        "alts": [
+          "laptop",
+          "gaming console",
+          "tv",
+          "video games"
+        ]
+      },
+      {
+        "text": "Dirty Dishes",
+        "points": 6,
+        "alts": [
+          "dishes",
+          "plates",
+          "cups",
+          "bowls"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s038",
+    "question": "Name something you couldn't live without.",
+    "answers": [
+      {
+        "text": "Phone",
+        "points": 30,
+        "alts": [
+          "cell phone",
+          "cellphone",
+          "smartphone",
+          "mobile"
+        ]
+      },
+      {
+        "text": "Water",
+        "points": 24,
+        "alts": [
+          "drinking water",
+          "h2o",
+          "hydration"
+        ]
+      },
+      {
+        "text": "Food",
+        "points": 18,
+        "alts": [
+          "eating",
+          "snacks",
+          "meals"
+        ]
+      },
+      {
+        "text": "Family",
+        "points": 10,
+        "alts": [
+          "kids",
+          "spouse",
+          "parents",
+          "loved ones"
+        ]
+      },
+      {
+        "text": "Coffee",
+        "points": 8,
+        "alts": [
+          "caffeine",
+          "espresso",
+          "morning coffee"
+        ]
+      },
+      {
+        "text": "Air",
+        "points": 5,
+        "alts": [
+          "oxygen",
+          "breathing",
+          "breath"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s039",
+    "question": "Name something you associate with winter.",
+    "answers": [
+      {
+        "text": "Snow",
+        "points": 40,
+        "alts": [
+          "snowfall",
+          "snowflakes",
+          "snowman",
+          "snowstorm"
+        ]
+      },
+      {
+        "text": "Cold",
+        "points": 18,
+        "alts": [
+          "freezing",
+          "chilly",
+          "cold weather",
+          "frigid"
+        ]
+      },
+      {
+        "text": "Christmas",
+        "points": 14,
+        "alts": [
+          "xmas",
+          "holidays",
+          "santa"
+        ]
+      },
+      {
+        "text": "Hot Chocolate",
+        "points": 8,
+        "alts": [
+          "hot cocoa",
+          "cocoa",
+          "hot choclate"
+        ]
+      },
+      {
+        "text": "Coats",
+        "points": 7,
+        "alts": [
+          "jacket",
+          "parka",
+          "winter coat"
+        ]
+      },
+      {
+        "text": "Skiing",
+        "points": 5,
+        "alts": [
+          "ski",
+          "snowboarding",
+          "sledding",
+          "sled"
+        ]
+      },
+      {
+        "text": "Ice",
+        "points": 3,
+        "alts": [
+          "icicles",
+          "icy",
+          "frozen"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s040",
+    "question": "Name a reason someone might call in sick.",
+    "answers": [
+      {
+        "text": "Flu",
+        "points": 30,
+        "alts": [
+          "influenza",
+          "fever",
+          "flew",
+          "feverish"
+        ]
+      },
+      {
+        "text": "Cold",
+        "points": 22,
+        "alts": [
+          "common cold",
+          "runny nose",
+          "cough",
+          "sniffles",
+          "stuffy nose"
+        ]
+      },
+      {
+        "text": "Stomach Bug",
+        "points": 16,
+        "alts": [
+          "stomach ache",
+          "throwing up",
+          "vomiting",
+          "food poisoning",
+          "upset stomach"
+        ]
+      },
+      {
+        "text": "Headache",
+        "points": 10,
+        "alts": [
+          "migraine",
+          "head ache",
+          "head hurts"
+        ]
+      },
+      {
+        "text": "Hangover",
+        "points": 8,
+        "alts": [
+          "hungover",
+          "partied",
+          "drinking"
+        ]
+      },
+      {
+        "text": "Mental Health Day",
+        "points": 6,
+        "alts": [
+          "mental health",
+          "stress",
+          "burnout",
+          "need a break"
+        ]
+      },
+      {
+        "text": "Sick Kid",
+        "points": 4,
+        "alts": [
+          "kid is sick",
+          "child sick",
+          "kids",
+          "sick child"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s041",
+    "question": "Name something people like to collect.",
+    "answers": [
+      {
+        "text": "Stamps",
+        "points": 26,
+        "alts": [
+          "postage stamps",
+          "philately",
+          "postage"
+        ]
+      },
+      {
+        "text": "Coins",
+        "points": 22,
+        "alts": [
+          "quarters",
+          "money",
+          "currency"
+        ]
+      },
+      {
+        "text": "Cards",
+        "points": 14,
+        "alts": [
+          "trading cards",
+          "baseball cards",
+          "pokemon cards"
+        ]
+      },
+      {
+        "text": "Rocks",
+        "points": 10,
+        "alts": [
+          "stones",
+          "crystals",
+          "gems"
+        ]
+      },
+      {
+        "text": "Shoes",
+        "points": 8,
+        "alts": [
+          "sneakers",
+          "kicks",
+          "heels"
+        ]
+      },
+      {
+        "text": "Magnets",
+        "points": 6,
+        "alts": [
+          "fridge magnets",
+          "souvenir magnets",
+          "magnent"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s042",
+    "question": "Name something you'd find in a kitchen.",
+    "answers": [
+      {
+        "text": "Fridge",
+        "points": 30,
+        "alts": [
+          "refrigerator",
+          "refridgerator",
+          "freezer",
+          "icebox"
+        ]
+      },
+      {
+        "text": "Stove",
+        "points": 22,
+        "alts": [
+          "oven",
+          "range",
+          "cooktop",
+          "burner"
+        ]
+      },
+      {
+        "text": "Sink",
+        "points": 14,
+        "alts": [
+          "faucet",
+          "tap",
+          "kitchen sink"
+        ]
+      },
+      {
+        "text": "Microwave",
+        "points": 10,
+        "alts": [
+          "micro wave",
+          "nuke",
+          "microwaive"
+        ]
+      },
+      {
+        "text": "Dishes",
+        "points": 8,
+        "alts": [
+          "plates",
+          "bowls",
+          "cups"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s043",
+    "question": "Name something people do on New Year's Eve.",
+    "answers": [
+      {
+        "text": "Countdown",
+        "points": 26,
+        "alts": [
+          "count down",
+          "ball drop",
+          "watch the ball drop",
+          "midnight"
+        ]
+      },
+      {
+        "text": "Kiss",
+        "points": 20,
+        "alts": [
+          "kiss at midnight",
+          "smooch",
+          "kissing"
+        ]
+      },
+      {
+        "text": "Party",
+        "points": 18,
+        "alts": [
+          "partying",
+          "celebrate",
+          "house party",
+          "new years party"
+        ]
+      },
+      {
+        "text": "Drink",
+        "points": 14,
+        "alts": [
+          "champagne",
+          "toast",
+          "drinking",
+          "booze"
+        ]
+      },
+      {
+        "text": "Fireworks",
+        "points": 8,
+        "alts": [
+          "sparklers",
+          "fire works",
+          "firework show"
+        ]
+      },
+      {
+        "text": "Make Resolutions",
+        "points": 6,
+        "alts": [
+          "resolutions",
+          "goals",
+          "new years resolution",
+          "set goals"
+        ]
+      },
+      {
+        "text": "Sleep",
+        "points": 3,
+        "alts": [
+          "go to bed early",
+          "fall asleep",
+          "stay home"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s044",
+    "question": "Name a pet that lives in a cage or tank.",
+    "answers": [
+      {
+        "text": "Fish",
+        "points": 34,
+        "alts": [
+          "goldfish",
+          "betta",
+          "fishtank",
+          "aquarium"
+        ]
+      },
+      {
+        "text": "Hamster",
+        "points": 24,
+        "alts": [
+          "hampster",
+          "gerbil",
+          "hamter"
+        ]
+      },
+      {
+        "text": "Bird",
+        "points": 14,
+        "alts": [
+          "parrot",
+          "parakeet",
+          "budgie",
+          "canary"
+        ]
+      },
+      {
+        "text": "Guinea Pig",
+        "points": 10,
+        "alts": [
+          "guineapig",
+          "ginny pig",
+          "cavy"
+        ]
+      },
+      {
+        "text": "Rabbit",
+        "points": 7,
+        "alts": [
+          "bunny",
+          "bunnies",
+          "hare"
+        ]
+      },
+      {
+        "text": "Snake",
+        "points": 6,
+        "alts": [
+          "python",
+          "boa",
+          "corn snake"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s045",
+    "question": "Name something people complain about at work.",
+    "answers": [
+      {
+        "text": "Boss",
+        "points": 30,
+        "alts": [
+          "manager",
+          "supervisor",
+          "bosses"
+        ]
+      },
+      {
+        "text": "Pay",
+        "points": 24,
+        "alts": [
+          "salary",
+          "money",
+          "wages",
+          "low pay",
+          "raise"
+        ]
+      },
+      {
+        "text": "Coworkers",
+        "points": 14,
+        "alts": [
+          "co workers",
+          "colleagues",
+          "team"
+        ]
+      },
+      {
+        "text": "Hours",
+        "points": 10,
+        "alts": [
+          "long hours",
+          "overtime",
+          "schedule",
+          "shifts"
+        ]
+      },
+      {
+        "text": "Meetings",
+        "points": 8,
+        "alts": [
+          "too many meetings",
+          "zoom calls",
+          "meating"
+        ]
+      },
+      {
+        "text": "Workload",
+        "points": 6,
+        "alts": [
+          "too much work",
+          "work load",
+          "busy",
+          "stress"
+        ]
+      },
+      {
+        "text": "Coffee",
+        "points": 4,
+        "alts": [
+          "bad coffee",
+          "break room",
+          "no coffee"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s046",
+    "question": "Name something you'd find at a picnic.",
+    "answers": [
+      {
+        "text": "Blanket",
+        "points": 26,
+        "alts": [
+          "picnic blanket",
+          "tablecloth",
+          "mat"
+        ]
+      },
+      {
+        "text": "Sandwiches",
+        "points": 22,
+        "alts": [
+          "sandwhich",
+          "subs",
+          "hoagies"
+        ]
+      },
+      {
+        "text": "Basket",
+        "points": 14,
+        "alts": [
+          "picnic basket",
+          "wicker basket",
+          "hamper"
+        ]
+      },
+      {
+        "text": "Ants",
+        "points": 12,
+        "alts": [
+          "bugs",
+          "insects",
+          "flies"
+        ]
+      },
+      {
+        "text": "Drinks",
+        "points": 8,
+        "alts": [
+          "lemonade",
+          "juice",
+          "soda",
+          "water"
+        ]
+      },
+      {
+        "text": "Fruit",
+        "points": 7,
+        "alts": [
+          "watermelon",
+          "grapes",
+          "apples"
+        ]
+      },
+      {
+        "text": "Chips",
+        "points": 5,
+        "alts": [
+          "potato chips",
+          "crisps",
+          "snacks"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s047",
+    "question": "Name something that has wheels.",
+    "answers": [
+      {
+        "text": "Car",
+        "points": 38,
+        "alts": [
+          "automobile",
+          "vehicle",
+          "truck",
+          "auto"
+        ]
+      },
+      {
+        "text": "Bike",
+        "points": 22,
+        "alts": [
+          "bicycle",
+          "bycycle",
+          "tricycle",
+          "cycle"
+        ]
+      },
+      {
+        "text": "Skateboard",
+        "points": 12,
+        "alts": [
+          "skate board",
+          "skates",
+          "roller skates",
+          "rollerblades"
+        ]
+      },
+      {
+        "text": "Bus",
+        "points": 8,
+        "alts": [
+          "school bus",
+          "buss",
+          "city bus"
+        ]
+      },
+      {
+        "text": "Shopping Cart",
+        "points": 7,
+        "alts": [
+          "cart",
+          "grocery cart",
+          "trolley"
+        ]
+      },
+      {
+        "text": "Stroller",
+        "points": 5,
+        "alts": [
+          "baby stroller",
+          "pram",
+          "buggy"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s048",
+    "question": "Name a reason people go to the mall.",
+    "answers": [
+      {
+        "text": "Clothes",
+        "points": 34,
+        "alts": [
+          "clothing",
+          "shopping for clothes",
+          "new outfit",
+          "shirts"
+        ]
+      },
+      {
+        "text": "Food Court",
+        "points": 18,
+        "alts": [
+          "food",
+          "eat",
+          "lunch",
+          "pretzel"
+        ]
+      },
+      {
+        "text": "Hang Out",
+        "points": 14,
+        "alts": [
+          "hangout",
+          "socialize",
+          "meet friends",
+          "friends"
+        ]
+      },
+      {
+        "text": "Gifts",
+        "points": 10,
+        "alts": [
+          "presents",
+          "birthday gift",
+          "christmas shopping"
+        ]
+      },
+      {
+        "text": "Shoes",
+        "points": 8,
+        "alts": [
+          "sneakers",
+          "shoe store",
+          "boots"
+        ]
+      },
+      {
+        "text": "Walk",
+        "points": 6,
+        "alts": [
+          "walking",
+          "mall walking",
+          "exercise"
+        ]
+      },
+      {
+        "text": "Movies",
+        "points": 4,
+        "alts": [
+          "movie theater",
+          "cinema",
+          "film"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s049",
+    "question": "Name something you might trip over.",
+    "answers": [
+      {
+        "text": "Shoes",
+        "points": 26,
+        "alts": [
+          "sneakers",
+          "boots",
+          "flip flops"
+        ]
+      },
+      {
+        "text": "Toys",
+        "points": 22,
+        "alts": [
+          "legos",
+          "kids toys",
+          "kids stuff",
+          "blocks"
+        ]
+      },
+      {
+        "text": "Rug",
+        "points": 12,
+        "alts": [
+          "carpet",
+          "rug edge",
+          "mat",
+          "doormat"
+        ]
+      },
+      {
+        "text": "Pet",
+        "points": 10,
+        "alts": [
+          "dog",
+          "cat",
+          "puppy",
+          "kitten"
+        ]
+      },
+      {
+        "text": "Shoelaces",
+        "points": 9,
+        "alts": [
+          "laces",
+          "untied shoes",
+          "shoe laces",
+          "shoestring"
+        ]
+      },
+      {
+        "text": "Curb",
+        "points": 7,
+        "alts": [
+          "sidewalk",
+          "step",
+          "stairs",
+          "crack"
+        ]
+      },
+      {
+        "text": "Cord",
+        "points": 5,
+        "alts": [
+          "cable",
+          "wire",
+          "extension cord",
+          "power cord"
+        ]
+      },
+      {
+        "text": "Own Feet",
+        "points": 3,
+        "alts": [
+          "feet",
+          "foot",
+          "nothing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s050",
+    "question": "Name something you'd see at a wedding.",
+    "answers": [
+      {
+        "text": "Bride",
+        "points": 30,
+        "alts": [
+          "wedding dress",
+          "white dress",
+          "gown"
+        ]
+      },
+      {
+        "text": "Cake",
+        "points": 22,
+        "alts": [
+          "wedding cake",
+          "cupcakes",
+          "frosting"
+        ]
+      },
+      {
+        "text": "Flowers",
+        "points": 14,
+        "alts": [
+          "bouquet",
+          "roses",
+          "flower girl"
+        ]
+      },
+      {
+        "text": "Rings",
+        "points": 10,
+        "alts": [
+          "wedding ring",
+          "wedding bands",
+          "engagement ring"
+        ]
+      },
+      {
+        "text": "Groom",
+        "points": 9,
+        "alts": [
+          "husband",
+          "tuxedo",
+          "tux"
+        ]
+      },
+      {
+        "text": "Dancing",
+        "points": 7,
+        "alts": [
+          "dance",
+          "first dance",
+          "dance floor"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s051",
+    "question": "Name something you need to bake cookies.",
+    "answers": [
+      {
+        "text": "Flour",
+        "points": 28,
+        "alts": [
+          "flower",
+          "all purpose flour",
+          "wheat"
+        ]
+      },
+      {
+        "text": "Sugar",
+        "points": 22,
+        "alts": [
+          "brown sugar",
+          "white sugar",
+          "sweetener"
+        ]
+      },
+      {
+        "text": "Eggs",
+        "points": 14,
+        "alts": [
+          "egg yolk",
+          "egs",
+          "eggz"
+        ]
+      },
+      {
+        "text": "Butter",
+        "points": 12,
+        "alts": [
+          "margarine",
+          "shortening",
+          "oil"
+        ]
+      },
+      {
+        "text": "Chocolate Chips",
+        "points": 10,
+        "alts": [
+          "chocolate",
+          "chips",
+          "choc chips"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s052",
+    "question": "Name something you'd see at the circus.",
+    "answers": [
+      {
+        "text": "Clowns",
+        "points": 34,
+        "alts": [
+          "clown car",
+          "red nose",
+          "clows"
+        ]
+      },
+      {
+        "text": "Elephants",
+        "points": 16,
+        "alts": [
+          "elephent",
+          "elefants",
+          "elephant ride"
+        ]
+      },
+      {
+        "text": "Tent",
+        "points": 12,
+        "alts": [
+          "big top",
+          "circus tent",
+          "bigtop"
+        ]
+      },
+      {
+        "text": "Acrobats",
+        "points": 10,
+        "alts": [
+          "trapeze",
+          "tightrope",
+          "tight rope walker",
+          "gymnasts"
+        ]
+      },
+      {
+        "text": "Lions",
+        "points": 9,
+        "alts": [
+          "lion tamer",
+          "tigers",
+          "big cats"
+        ]
+      },
+      {
+        "text": "Popcorn",
+        "points": 7,
+        "alts": [
+          "cotton candy",
+          "peanuts",
+          "snacks"
+        ]
+      },
+      {
+        "text": "Ringmaster",
+        "points": 5,
+        "alts": [
+          "ring master",
+          "top hat",
+          "announcer"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s053",
+    "question": "Name something that's really hot.",
+    "answers": [
+      {
+        "text": "Sun",
+        "points": 30,
+        "alts": [
+          "sunshine",
+          "sun rays",
+          "sunlight"
+        ]
+      },
+      {
+        "text": "Fire",
+        "points": 22,
+        "alts": [
+          "flames",
+          "bonfire",
+          "campfire",
+          "flame"
+        ]
+      },
+      {
+        "text": "Stove",
+        "points": 14,
+        "alts": [
+          "oven",
+          "burner",
+          "stovetop"
+        ]
+      },
+      {
+        "text": "Coffee",
+        "points": 10,
+        "alts": [
+          "hot coffee",
+          "tea",
+          "cocoa"
+        ]
+      },
+      {
+        "text": "Peppers",
+        "points": 8,
+        "alts": [
+          "hot sauce",
+          "jalapeno",
+          "spicy food",
+          "chili pepper"
+        ]
+      },
+      {
+        "text": "Desert",
+        "points": 6,
+        "alts": [
+          "sahara",
+          "sand",
+          "dessert"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s054",
+    "question": "Name something people are allergic to.",
+    "answers": [
+      {
+        "text": "Peanuts",
+        "points": 30,
+        "alts": [
+          "nuts",
+          "tree nuts",
+          "peanut butter"
+        ]
+      },
+      {
+        "text": "Pollen",
+        "points": 18,
+        "alts": [
+          "hay fever",
+          "flowers",
+          "grass",
+          "spring"
+        ]
+      },
+      {
+        "text": "Cats",
+        "points": 14,
+        "alts": [
+          "cat hair",
+          "cat dander",
+          "kitty"
+        ]
+      },
+      {
+        "text": "Bees",
+        "points": 12,
+        "alts": [
+          "bee stings",
+          "wasps",
+          "insects"
+        ]
+      },
+      {
+        "text": "Dust",
+        "points": 9,
+        "alts": [
+          "dust mites",
+          "dusty",
+          "dust bunnies"
+        ]
+      },
+      {
+        "text": "Shellfish",
+        "points": 7,
+        "alts": [
+          "shrimp",
+          "lobster",
+          "crab",
+          "seafood"
+        ]
+      },
+      {
+        "text": "Medicine",
+        "points": 4,
+        "alts": [
+          "penicillin",
+          "antibiotics",
+          "drugs"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s055",
+    "question": "Name something people do while stopped at a red light.",
+    "answers": [
+      {
+        "text": "Check Phone",
+        "points": 32,
+        "alts": [
+          "phone",
+          "text",
+          "texting",
+          "look at phone"
+        ]
+      },
+      {
+        "text": "Sing",
+        "points": 14,
+        "alts": [
+          "sing along",
+          "singing",
+          "karaoke"
+        ]
+      },
+      {
+        "text": "Change Radio",
+        "points": 12,
+        "alts": [
+          "radio",
+          "change station",
+          "music",
+          "song"
+        ]
+      },
+      {
+        "text": "Wait",
+        "points": 10,
+        "alts": [
+          "sit",
+          "stop",
+          "waiting",
+          "brake"
+        ]
+      },
+      {
+        "text": "Fix Hair",
+        "points": 8,
+        "alts": [
+          "makeup",
+          "mirror",
+          "check mirror",
+          "look in mirror"
+        ]
+      },
+      {
+        "text": "Pick Nose",
+        "points": 7,
+        "alts": [
+          "nose picking",
+          "nose",
+          "booger"
+        ]
+      },
+      {
+        "text": "Eat",
+        "points": 4,
+        "alts": [
+          "snack",
+          "eating",
+          "drink",
+          "sip coffee"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s056",
+    "question": "Name something you associate with pirates.",
+    "answers": [
+      {
+        "text": "Ship",
+        "points": 26,
+        "alts": [
+          "boat",
+          "pirate ship",
+          "vessel"
+        ]
+      },
+      {
+        "text": "Treasure",
+        "points": 22,
+        "alts": [
+          "gold",
+          "treasure chest",
+          "chest",
+          "loot"
+        ]
+      },
+      {
+        "text": "Eye Patch",
+        "points": 18,
+        "alts": [
+          "eyepatch",
+          "patch",
+          "one eye"
+        ]
+      },
+      {
+        "text": "Parrot",
+        "points": 12,
+        "alts": [
+          "bird",
+          "parrot on shoulder",
+          "parot"
+        ]
+      },
+      {
+        "text": "Sword",
+        "points": 8,
+        "alts": [
+          "cutlass",
+          "saber",
+          "sabre"
+        ]
+      },
+      {
+        "text": "Hook",
+        "points": 5,
+        "alts": [
+          "hook hand",
+          "hand hook",
+          "hooks for hands"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s057",
+    "question": "Name a popular breakfast food.",
+    "answers": [
+      {
+        "text": "Eggs",
+        "points": 30,
+        "alts": [
+          "scrambled eggs",
+          "fried eggs",
+          "omelet",
+          "omelette"
+        ]
+      },
+      {
+        "text": "Pancakes",
+        "points": 22,
+        "alts": [
+          "flapjacks",
+          "hotcakes",
+          "pancake stack"
+        ]
+      },
+      {
+        "text": "Bacon",
+        "points": 16,
+        "alts": [
+          "crispy bacon",
+          "bacon strips",
+          "bakon"
+        ]
+      },
+      {
+        "text": "Cereal",
+        "points": 12,
+        "alts": [
+          "bowl of cereal",
+          "cerial",
+          "granola"
+        ]
+      },
+      {
+        "text": "Toast",
+        "points": 8,
+        "alts": [
+          "bread",
+          "bagel",
+          "english muffin"
+        ]
+      },
+      {
+        "text": "Waffles",
+        "points": 6,
+        "alts": [
+          "wafles",
+          "belgian waffle",
+          "waffel"
+        ]
+      },
+      {
+        "text": "Sausage",
+        "points": 4,
+        "alts": [
+          "links",
+          "patty",
+          "sausage links"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s058",
+    "question": "Name something that happens at the dentist.",
+    "answers": [
+      {
+        "text": "Cleaning",
+        "points": 30,
+        "alts": [
+          "teeth cleaning",
+          "clean teeth",
+          "cleaned",
+          "scrape"
+        ]
+      },
+      {
+        "text": "Open Mouth",
+        "points": 24,
+        "alts": [
+          "open wide",
+          "say ah",
+          "mouth open"
+        ]
+      },
+      {
+        "text": "X-Rays",
+        "points": 14,
+        "alts": [
+          "xray",
+          "radiograph",
+          "bite wings"
+        ]
+      },
+      {
+        "text": "Fillings",
+        "points": 10,
+        "alts": [
+          "cavity",
+          "cavities",
+          "drill"
+        ]
+      },
+      {
+        "text": "Rinse",
+        "points": 8,
+        "alts": [
+          "spit",
+          "rinse out",
+          "mouthwash"
+        ]
+      },
+      {
+        "text": "Floss",
+        "points": 6,
+        "alts": [
+          "flossing",
+          "get flossed",
+          "flossed"
+        ]
+      },
+      {
+        "text": "Get A Toothbrush",
+        "points": 5,
+        "alts": [
+          "free toothbrush",
+          "toothbrush",
+          "prize",
+          "sticker"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s059",
+    "question": "Name something that has a lot of buttons.",
+    "answers": [
+      {
+        "text": "Remote",
+        "points": 32,
+        "alts": [
+          "tv remote",
+          "remote control",
+          "clicker"
+        ]
+      },
+      {
+        "text": "Keyboard",
+        "points": 22,
+        "alts": [
+          "computer keyboard",
+          "typewriter",
+          "laptop"
+        ]
+      },
+      {
+        "text": "Phone",
+        "points": 12,
+        "alts": [
+          "telephone",
+          "cell phone",
+          "landline"
+        ]
+      },
+      {
+        "text": "Shirt",
+        "points": 10,
+        "alts": [
+          "dress shirt",
+          "blouse",
+          "cardigan",
+          "coat"
+        ]
+      },
+      {
+        "text": "Calculator",
+        "points": 9,
+        "alts": [
+          "calculater",
+          "calcuator",
+          "adding machine",
+          "scientific calculator"
+        ]
+      },
+      {
+        "text": "Video Game Controller",
+        "points": 6,
+        "alts": [
+          "controller",
+          "game controller",
+          "gamepad",
+          "joystick"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s060",
+    "question": "Name something that comes in pairs.",
+    "answers": [
+      {
+        "text": "Socks",
+        "points": 30,
+        "alts": [
+          "pair of socks",
+          "sox",
+          "stockings"
+        ]
+      },
+      {
+        "text": "Shoes",
+        "points": 26,
+        "alts": [
+          "sneakers",
+          "boots",
+          "slippers"
+        ]
+      },
+      {
+        "text": "Twins",
+        "points": 10,
+        "alts": [
+          "siblings",
+          "twin brothers",
+          "twin sisters"
+        ]
+      },
+      {
+        "text": "Earrings",
+        "points": 9,
+        "alts": [
+          "ear rings",
+          "studs",
+          "earings"
+        ]
+      },
+      {
+        "text": "Gloves",
+        "points": 8,
+        "alts": [
+          "mittens",
+          "mitts",
+          "work gloves"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s061",
+    "question": "Name something you'd find in a bathroom.",
+    "answers": [
+      {
+        "text": "Toilet",
+        "points": 34,
+        "alts": [
+          "commode",
+          "potty",
+          "john"
+        ]
+      },
+      {
+        "text": "Toothbrush",
+        "points": 16,
+        "alts": [
+          "tooth brush",
+          "toothpaste",
+          "tooth paste"
+        ]
+      },
+      {
+        "text": "Shower",
+        "points": 14,
+        "alts": [
+          "bathtub",
+          "tub",
+          "bath tub",
+          "shower curtain"
+        ]
+      },
+      {
+        "text": "Sink",
+        "points": 12,
+        "alts": [
+          "faucet",
+          "basin",
+          "tap"
+        ]
+      },
+      {
+        "text": "Toilet Paper",
+        "points": 10,
+        "alts": [
+          "tp",
+          "tissue",
+          "bathroom tissue",
+          "loo roll"
+        ]
+      },
+      {
+        "text": "Towels",
+        "points": 8,
+        "alts": [
+          "bath towel",
+          "hand towel",
+          "washcloth"
+        ]
+      },
+      {
+        "text": "Mirror",
+        "points": 4,
+        "alts": [
+          "medicine cabinet",
+          "vanity",
+          "miror"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s062",
+    "question": "Name an excuse kids give for not doing homework.",
+    "answers": [
+      {
+        "text": "Dog Ate It",
+        "points": 32,
+        "alts": [
+          "dog",
+          "my dog ate my homework",
+          "pet ate it"
+        ]
+      },
+      {
+        "text": "Forgot",
+        "points": 26,
+        "alts": [
+          "i forgot",
+          "forgot it",
+          "didnt remember",
+          "left it at home"
+        ]
+      },
+      {
+        "text": "Too Busy",
+        "points": 12,
+        "alts": [
+          "busy",
+          "no time",
+          "didnt have time",
+          "practice"
+        ]
+      },
+      {
+        "text": "Sick",
+        "points": 10,
+        "alts": [
+          "was sick",
+          "ill",
+          "not feeling well"
+        ]
+      },
+      {
+        "text": "Didn't Understand",
+        "points": 8,
+        "alts": [
+          "too hard",
+          "confused",
+          "didnt get it",
+          "hard"
+        ]
+      },
+      {
+        "text": "Lost It",
+        "points": 6,
+        "alts": [
+          "lost",
+          "cant find it",
+          "misplaced"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s063",
+    "question": "Name an animal you'd see at the zoo.",
+    "answers": [
+      {
+        "text": "Lions",
+        "points": 26,
+        "alts": [
+          "lioness",
+          "mane",
+          "lyon"
+        ]
+      },
+      {
+        "text": "Monkeys",
+        "points": 22,
+        "alts": [
+          "apes",
+          "gorilla",
+          "chimp",
+          "chimpanzee"
+        ]
+      },
+      {
+        "text": "Elephants",
+        "points": 16,
+        "alts": [
+          "elephent",
+          "trunk",
+          "elefant"
+        ]
+      },
+      {
+        "text": "Giraffes",
+        "points": 12,
+        "alts": [
+          "girafe",
+          "jiraffe",
+          "long neck",
+          "girraffe"
+        ]
+      },
+      {
+        "text": "Zebras",
+        "points": 8,
+        "alts": [
+          "zebra stripes",
+          "zebre",
+          "stripes"
+        ]
+      },
+      {
+        "text": "Penguins",
+        "points": 6,
+        "alts": [
+          "pinguin",
+          "pengiun",
+          "pengin"
+        ]
+      },
+      {
+        "text": "Bears",
+        "points": 4,
+        "alts": [
+          "polar bear",
+          "panda",
+          "grizzly"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s064",
+    "question": "Name something people do to relax.",
+    "answers": [
+      {
+        "text": "Sleep",
+        "points": 26,
+        "alts": [
+          "nap",
+          "take a nap",
+          "rest"
+        ]
+      },
+      {
+        "text": "Take A Bath",
+        "points": 22,
+        "alts": [
+          "bath",
+          "bubble bath",
+          "hot tub",
+          "soak"
+        ]
+      },
+      {
+        "text": "Watch TV",
+        "points": 18,
+        "alts": [
+          "tv",
+          "television",
+          "movies",
+          "netflix"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 12,
+        "alts": [
+          "read a book",
+          "reading",
+          "book"
+        ]
+      },
+      {
+        "text": "Listen To Music",
+        "points": 9,
+        "alts": [
+          "music",
+          "songs",
+          "headphones"
+        ]
+      },
+      {
+        "text": "Meditate",
+        "points": 7,
+        "alts": [
+          "meditation",
+          "yoga",
+          "breathe",
+          "deep breaths"
+        ]
+      },
+      {
+        "text": "Get A Massage",
+        "points": 5,
+        "alts": [
+          "massage",
+          "spa",
+          "back rub"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s065",
+    "question": "Name something fans do at a sports game.",
+    "answers": [
+      {
+        "text": "Cheer",
+        "points": 30,
+        "alts": [
+          "cheering",
+          "yell",
+          "scream",
+          "root"
+        ]
+      },
+      {
+        "text": "Eat Hot Dogs",
+        "points": 18,
+        "alts": [
+          "hot dog",
+          "eat",
+          "food",
+          "nachos"
+        ]
+      },
+      {
+        "text": "Drink Beer",
+        "points": 12,
+        "alts": [
+          "beer",
+          "drink",
+          "soda"
+        ]
+      },
+      {
+        "text": "Do The Wave",
+        "points": 10,
+        "alts": [
+          "the wave",
+          "stand up",
+          "stadium wave"
+        ]
+      },
+      {
+        "text": "Boo",
+        "points": 8,
+        "alts": [
+          "booing",
+          "boo the ref",
+          "heckle"
+        ]
+      },
+      {
+        "text": "Take Pictures",
+        "points": 6,
+        "alts": [
+          "photos",
+          "pictures",
+          "selfies"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s066",
+    "question": "Name something you'd find in a toolbox.",
+    "answers": [
+      {
+        "text": "Hammer",
+        "points": 34,
+        "alts": [
+          "hamer",
+          "mallet",
+          "claw hammer"
+        ]
+      },
+      {
+        "text": "Screwdriver",
+        "points": 26,
+        "alts": [
+          "screw driver",
+          "phillips",
+          "flathead"
+        ]
+      },
+      {
+        "text": "Wrench",
+        "points": 12,
+        "alts": [
+          "rench",
+          "spanner",
+          "socket wrench"
+        ]
+      },
+      {
+        "text": "Nails",
+        "points": 8,
+        "alts": [
+          "screws",
+          "bolts",
+          "nuts"
+        ]
+      },
+      {
+        "text": "Tape Measure",
+        "points": 7,
+        "alts": [
+          "measuring tape",
+          "ruler",
+          "tape"
+        ]
+      },
+      {
+        "text": "Pliers",
+        "points": 6,
+        "alts": [
+          "plyers",
+          "needle nose",
+          "vise grips"
+        ]
+      },
+      {
+        "text": "Level",
+        "points": 3,
+        "alts": [
+          "leveler",
+          "spirit level",
+          "bubble level"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s067",
+    "question": "Name something that might be in a kid's lunchbox.",
+    "answers": [
+      {
+        "text": "Sandwich",
+        "points": 34,
+        "alts": [
+          "pbj",
+          "peanut butter and jelly",
+          "sandwhich",
+          "sub"
+        ]
+      },
+      {
+        "text": "Fruit",
+        "points": 18,
+        "alts": [
+          "apple",
+          "banana",
+          "grapes",
+          "orange"
+        ]
+      },
+      {
+        "text": "Chips",
+        "points": 14,
+        "alts": [
+          "potato chips",
+          "crisps",
+          "pretzels"
+        ]
+      },
+      {
+        "text": "Juice Box",
+        "points": 10,
+        "alts": [
+          "juice",
+          "drink",
+          "water bottle",
+          "milk"
+        ]
+      },
+      {
+        "text": "Cookies",
+        "points": 8,
+        "alts": [
+          "dessert",
+          "treat",
+          "candy"
+        ]
+      },
+      {
+        "text": "Yogurt",
+        "points": 5,
+        "alts": [
+          "yogurt tube",
+          "yoghurt",
+          "gogurt"
+        ]
+      },
+      {
+        "text": "Note From Mom",
+        "points": 4,
+        "alts": [
+          "note",
+          "love note",
+          "napkin note"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s068",
+    "question": "Name something that makes noise at night.",
+    "answers": [
+      {
+        "text": "Crickets",
+        "points": 26,
+        "alts": [
+          "bugs",
+          "insects",
+          "chirping"
+        ]
+      },
+      {
+        "text": "Snoring",
+        "points": 22,
+        "alts": [
+          "snore",
+          "partner snoring",
+          "snorer"
+        ]
+      },
+      {
+        "text": "Dogs Barking",
+        "points": 14,
+        "alts": [
+          "dog",
+          "barking",
+          "bark"
+        ]
+      },
+      {
+        "text": "Owls",
+        "points": 10,
+        "alts": [
+          "hooting",
+          "hoot",
+          "who who"
+        ]
+      },
+      {
+        "text": "Cars",
+        "points": 8,
+        "alts": [
+          "traffic",
+          "sirens",
+          "trucks"
+        ]
+      },
+      {
+        "text": "House Creaking",
+        "points": 6,
+        "alts": [
+          "creaking",
+          "creaky floor",
+          "house settling",
+          "floorboards"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s069",
+    "question": "Name something you do when you can't fall asleep.",
+    "answers": [
+      {
+        "text": "Count Sheep",
+        "points": 28,
+        "alts": [
+          "sheep",
+          "counting sheep",
+          "count"
+        ]
+      },
+      {
+        "text": "Watch TV",
+        "points": 18,
+        "alts": [
+          "tv",
+          "television",
+          "movie"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 14,
+        "alts": [
+          "read a book",
+          "reading",
+          "book"
+        ]
+      },
+      {
+        "text": "Check Phone",
+        "points": 12,
+        "alts": [
+          "phone",
+          "scroll",
+          "social media"
+        ]
+      },
+      {
+        "text": "Toss And Turn",
+        "points": 9,
+        "alts": [
+          "toss",
+          "turn",
+          "roll around",
+          "tossing and turning"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s070",
+    "question": "Name a scary creature you'd see in a horror movie.",
+    "answers": [
+      {
+        "text": "Vampire",
+        "points": 26,
+        "alts": [
+          "bloodsucker",
+          "vampyre",
+          "fangs"
+        ]
+      },
+      {
+        "text": "Zombie",
+        "points": 24,
+        "alts": [
+          "walking dead",
+          "undead",
+          "zombi"
+        ]
+      },
+      {
+        "text": "Werewolf",
+        "points": 14,
+        "alts": [
+          "wolfman",
+          "wolf man",
+          "were wolf"
+        ]
+      },
+      {
+        "text": "Ghost",
+        "points": 12,
+        "alts": [
+          "spirit",
+          "phantom",
+          "poltergeist"
+        ]
+      },
+      {
+        "text": "Mummy",
+        "points": 8,
+        "alts": [
+          "mummies",
+          "bandages",
+          "wrapped",
+          "egypt"
+        ]
+      },
+      {
+        "text": "Alien",
+        "points": 6,
+        "alts": [
+          "martian",
+          "ufo",
+          "space alien"
+        ]
+      },
+      {
+        "text": "Giant Shark",
+        "points": 4,
+        "alts": [
+          "shark",
+          "great white",
+          "killer shark"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s071",
+    "question": "Name something that melts.",
+    "answers": [
+      {
+        "text": "Ice",
+        "points": 32,
+        "alts": [
+          "ice cube",
+          "iceberg",
+          "icicle"
+        ]
+      },
+      {
+        "text": "Ice Cream",
+        "points": 22,
+        "alts": [
+          "icecream",
+          "popsicle",
+          "gelato"
+        ]
+      },
+      {
+        "text": "Snow",
+        "points": 14,
+        "alts": [
+          "snowman",
+          "snowflake",
+          "slush"
+        ]
+      },
+      {
+        "text": "Chocolate",
+        "points": 12,
+        "alts": [
+          "chocolate bar",
+          "candy bar",
+          "choclate"
+        ]
+      },
+      {
+        "text": "Butter",
+        "points": 8,
+        "alts": [
+          "margarine",
+          "stick of butter",
+          "butta"
+        ]
+      },
+      {
+        "text": "Candle",
+        "points": 6,
+        "alts": [
+          "wax",
+          "crayon",
+          "candle wax"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s072",
+    "question": "Name something a teacher might take away from a student.",
+    "answers": [
+      {
+        "text": "Phone",
+        "points": 40,
+        "alts": [
+          "cell phone",
+          "cellphone",
+          "mobile",
+          "smartphone"
+        ]
+      },
+      {
+        "text": "Gum",
+        "points": 16,
+        "alts": [
+          "chewing gum",
+          "bubble gum",
+          "bubblegum"
+        ]
+      },
+      {
+        "text": "Notes",
+        "points": 12,
+        "alts": [
+          "passing notes",
+          "letter",
+          "secret note"
+        ]
+      },
+      {
+        "text": "Toys",
+        "points": 10,
+        "alts": [
+          "fidget spinner",
+          "fidget",
+          "slime"
+        ]
+      },
+      {
+        "text": "Candy",
+        "points": 8,
+        "alts": [
+          "sweets",
+          "snacks",
+          "chocolate"
+        ]
+      },
+      {
+        "text": "Headphones",
+        "points": 6,
+        "alts": [
+          "earbuds",
+          "airpods",
+          "ear buds",
+          "earphones"
+        ]
+      },
+      {
+        "text": "Hat",
+        "points": 4,
+        "alts": [
+          "cap",
+          "baseball cap",
+          "hoodie"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s073",
+    "question": "Name something people do at a carnival or fair.",
+    "answers": [
+      {
+        "text": "Ride Rides",
+        "points": 30,
+        "alts": [
+          "rides",
+          "ferris wheel",
+          "roller coaster",
+          "rollercoaster"
+        ]
+      },
+      {
+        "text": "Eat",
+        "points": 22,
+        "alts": [
+          "food",
+          "funnel cake",
+          "corn dog",
+          "cotton candy"
+        ]
+      },
+      {
+        "text": "Play Games",
+        "points": 18,
+        "alts": [
+          "games",
+          "carnival games",
+          "ring toss",
+          "darts"
+        ]
+      },
+      {
+        "text": "Win Prizes",
+        "points": 10,
+        "alts": [
+          "prize",
+          "stuffed animal",
+          "teddy bear",
+          "win"
+        ]
+      },
+      {
+        "text": "See Animals",
+        "points": 6,
+        "alts": [
+          "petting zoo",
+          "animals",
+          "livestock"
+        ]
+      },
+      {
+        "text": "Watch Shows",
+        "points": 5,
+        "alts": [
+          "show",
+          "concert",
+          "live music"
+        ]
+      },
+      {
+        "text": "Get Sick",
+        "points": 4,
+        "alts": [
+          "throw up",
+          "puke",
+          "vomit",
+          "dizzy"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s074",
+    "question": "Name something you'd order at a fast-food restaurant.",
+    "answers": [
+      {
+        "text": "Burgers",
+        "points": 34,
+        "alts": [
+          "hamburger",
+          "cheeseburger",
+          "burgr"
+        ]
+      },
+      {
+        "text": "Fries",
+        "points": 28,
+        "alts": [
+          "french fries",
+          "frys",
+          "chips"
+        ]
+      },
+      {
+        "text": "Soda",
+        "points": 12,
+        "alts": [
+          "pop",
+          "coke",
+          "soft drink",
+          "fountain drink",
+          "drink"
+        ]
+      },
+      {
+        "text": "Chicken Nuggets",
+        "points": 10,
+        "alts": [
+          "nuggets",
+          "nuggs",
+          "chicken tenders"
+        ]
+      },
+      {
+        "text": "Milkshake",
+        "points": 6,
+        "alts": [
+          "shake",
+          "milk shake",
+          "malt"
+        ]
+      },
+      {
+        "text": "Salad",
+        "points": 5,
+        "alts": [
+          "side salad",
+          "garden salad",
+          "caesar salad",
+          "salad bowl"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s075",
+    "question": "Name something you'd find on an office desk.",
+    "answers": [
+      {
+        "text": "Computer",
+        "points": 32,
+        "alts": [
+          "laptop",
+          "pc",
+          "monitor",
+          "screen"
+        ]
+      },
+      {
+        "text": "Pens",
+        "points": 18,
+        "alts": [
+          "pencils",
+          "markers",
+          "ballpoint",
+          "highlighter"
+        ]
+      },
+      {
+        "text": "Paper",
+        "points": 14,
+        "alts": [
+          "notebook",
+          "notepad",
+          "documents"
+        ]
+      },
+      {
+        "text": "Lamp",
+        "points": 10,
+        "alts": [
+          "desk lamp",
+          "light",
+          "lamb"
+        ]
+      },
+      {
+        "text": "Stapler",
+        "points": 8,
+        "alts": [
+          "staples",
+          "staple",
+          "stapeler"
+        ]
+      },
+      {
+        "text": "Coffee Mug",
+        "points": 7,
+        "alts": [
+          "mug",
+          "coffee",
+          "cup"
+        ]
+      },
+      {
+        "text": "Phone",
+        "points": 5,
+        "alts": [
+          "telephone",
+          "cell phone",
+          "landline"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s076",
+    "question": "Name something that's yellow.",
+    "answers": [
+      {
+        "text": "Banana",
+        "points": 30,
+        "alts": [
+          "bananna",
+          "plantain",
+          "bannana"
+        ]
+      },
+      {
+        "text": "Sun",
+        "points": 24,
+        "alts": [
+          "sunshine",
+          "sunlight",
+          "sunny"
+        ]
+      },
+      {
+        "text": "Lemon",
+        "points": 14,
+        "alts": [
+          "citrus",
+          "lemonade",
+          "lemmon"
+        ]
+      },
+      {
+        "text": "School Bus",
+        "points": 12,
+        "alts": [
+          "bus",
+          "schoolbus",
+          "yellow bus"
+        ]
+      },
+      {
+        "text": "Taxi",
+        "points": 8,
+        "alts": [
+          "cab",
+          "taxi cab",
+          "taxicab"
+        ]
+      },
+      {
+        "text": "Rubber Duck",
+        "points": 6,
+        "alts": [
+          "duck",
+          "ducky",
+          "duckling"
+        ]
+      },
+      {
+        "text": "Corn",
+        "points": 4,
+        "alts": [
+          "corn on the cob",
+          "sweet corn",
+          "maize"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s077",
+    "question": "Name something you associate with Thanksgiving.",
+    "answers": [
+      {
+        "text": "Turkey",
+        "points": 44,
+        "alts": [
+          "turkey dinner",
+          "roast turkey",
+          "gobble"
+        ]
+      },
+      {
+        "text": "Family",
+        "points": 14,
+        "alts": [
+          "relatives",
+          "family dinner",
+          "grandma",
+          "in laws"
+        ]
+      },
+      {
+        "text": "Pie",
+        "points": 12,
+        "alts": [
+          "pumpkin pie",
+          "apple pie",
+          "dessert"
+        ]
+      },
+      {
+        "text": "Stuffing",
+        "points": 9,
+        "alts": [
+          "dressing",
+          "stuffin",
+          "stufing"
+        ]
+      },
+      {
+        "text": "Football",
+        "points": 8,
+        "alts": [
+          "football game",
+          "nfl",
+          "watching football"
+        ]
+      },
+      {
+        "text": "Mashed Potatoes",
+        "points": 5,
+        "alts": [
+          "potatoes",
+          "mashed",
+          "mash",
+          "spuds"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s078",
+    "question": "Name something you'd do if you won the lottery.",
+    "answers": [
+      {
+        "text": "Buy A House",
+        "points": 28,
+        "alts": [
+          "house",
+          "mansion",
+          "new home",
+          "home"
+        ]
+      },
+      {
+        "text": "Quit Job",
+        "points": 20,
+        "alts": [
+          "quit",
+          "retire",
+          "stop working",
+          "leave job"
+        ]
+      },
+      {
+        "text": "Travel",
+        "points": 16,
+        "alts": [
+          "vacation",
+          "trip",
+          "see the world"
+        ]
+      },
+      {
+        "text": "Pay Off Debt",
+        "points": 12,
+        "alts": [
+          "debt",
+          "bills",
+          "pay bills",
+          "mortgage"
+        ]
+      },
+      {
+        "text": "Buy A Car",
+        "points": 10,
+        "alts": [
+          "car",
+          "new car",
+          "sports car"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s079",
+    "question": "Name something you'd find at the bottom of a purse.",
+    "answers": [
+      {
+        "text": "Receipts",
+        "points": 24,
+        "alts": [
+          "old receipts",
+          "paper",
+          "reciepts"
+        ]
+      },
+      {
+        "text": "Gum",
+        "points": 18,
+        "alts": [
+          "gum wrappers",
+          "chewing gum",
+          "candy"
+        ]
+      },
+      {
+        "text": "Lipstick",
+        "points": 14,
+        "alts": [
+          "makeup",
+          "lip balm",
+          "chapstick",
+          "lip gloss"
+        ]
+      },
+      {
+        "text": "Coins",
+        "points": 12,
+        "alts": [
+          "change",
+          "loose change",
+          "pennies",
+          "money"
+        ]
+      },
+      {
+        "text": "Keys",
+        "points": 10,
+        "alts": [
+          "car keys",
+          "keychain",
+          "house keys"
+        ]
+      },
+      {
+        "text": "Pens",
+        "points": 8,
+        "alts": [
+          "pencil",
+          "marker",
+          "ballpoint pen",
+          "sharpie"
+        ]
+      },
+      {
+        "text": "Crumbs",
+        "points": 6,
+        "alts": [
+          "dirt",
+          "lint",
+          "food crumbs"
+        ]
+      },
+      {
+        "text": "Hair Ties",
+        "points": 4,
+        "alts": [
+          "scrunchie",
+          "bobby pins",
+          "ponytail holder"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s080",
+    "question": "Name something that's slippery.",
+    "answers": [
+      {
+        "text": "Ice",
+        "points": 38,
+        "alts": [
+          "icy road",
+          "black ice",
+          "frozen"
+        ]
+      },
+      {
+        "text": "Soap",
+        "points": 18,
+        "alts": [
+          "bar of soap",
+          "soapy",
+          "soap bar"
+        ]
+      },
+      {
+        "text": "Banana Peel",
+        "points": 14,
+        "alts": [
+          "banana",
+          "peel",
+          "banana skin"
+        ]
+      },
+      {
+        "text": "Wet Floor",
+        "points": 10,
+        "alts": [
+          "wet",
+          "water",
+          "floor"
+        ]
+      },
+      {
+        "text": "Fish",
+        "points": 6,
+        "alts": [
+          "wet fish",
+          "eel",
+          "trout"
+        ]
+      },
+      {
+        "text": "Oil",
+        "points": 5,
+        "alts": [
+          "grease",
+          "butter",
+          "cooking oil"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s081",
+    "question": "Name something that needs to be charged.",
+    "answers": [
+      {
+        "text": "Phone",
+        "points": 40,
+        "alts": [
+          "cell phone",
+          "cellphone",
+          "smartphone"
+        ]
+      },
+      {
+        "text": "Laptop",
+        "points": 20,
+        "alts": [
+          "computer",
+          "notebook",
+          "pc"
+        ]
+      },
+      {
+        "text": "Car",
+        "points": 12,
+        "alts": [
+          "electric car",
+          "ev",
+          "hybrid"
+        ]
+      },
+      {
+        "text": "Tablet",
+        "points": 9,
+        "alts": [
+          "ipad",
+          "kindle",
+          "e reader"
+        ]
+      },
+      {
+        "text": "Headphones",
+        "points": 7,
+        "alts": [
+          "earbuds",
+          "airpods",
+          "ear buds"
+        ]
+      },
+      {
+        "text": "Watch",
+        "points": 5,
+        "alts": [
+          "smartwatch",
+          "smart watch",
+          "apple watch"
+        ]
+      },
+      {
+        "text": "Toothbrush",
+        "points": 3,
+        "alts": [
+          "electric toothbrush",
+          "tooth brush",
+          "toothbrsh"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s082",
+    "question": "Name something people do in the shower.",
+    "answers": [
+      {
+        "text": "Sing",
+        "points": 34,
+        "alts": [
+          "singing",
+          "shower singing",
+          "karaoke",
+          "concert"
+        ]
+      },
+      {
+        "text": "Wash Hair",
+        "points": 22,
+        "alts": [
+          "shampoo",
+          "conditioner",
+          "hair"
+        ]
+      },
+      {
+        "text": "Think",
+        "points": 14,
+        "alts": [
+          "thinking",
+          "daydream",
+          "plan the day"
+        ]
+      },
+      {
+        "text": "Shave",
+        "points": 10,
+        "alts": [
+          "shaving",
+          "razor",
+          "shave legs"
+        ]
+      },
+      {
+        "text": "Cry",
+        "points": 6,
+        "alts": [
+          "crying",
+          "sob",
+          "weep"
+        ]
+      },
+      {
+        "text": "Pee",
+        "points": 5,
+        "alts": [
+          "urinate",
+          "tinkle",
+          "go potty"
+        ]
+      },
+      {
+        "text": "Clean",
+        "points": 4,
+        "alts": [
+          "scrub",
+          "wash",
+          "soap up"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s083",
+    "question": "Name something you'd put in a salad.",
+    "answers": [
+      {
+        "text": "Lettuce",
+        "points": 30,
+        "alts": [
+          "greens",
+          "romaine",
+          "iceberg",
+          "leafy greens"
+        ]
+      },
+      {
+        "text": "Tomatoes",
+        "points": 22,
+        "alts": [
+          "cherry tomatoes",
+          "tomatoe",
+          "grape tomatoes"
+        ]
+      },
+      {
+        "text": "Cucumber",
+        "points": 14,
+        "alts": [
+          "cuke",
+          "cucumbr",
+          "cucumber slices",
+          "cukes"
+        ]
+      },
+      {
+        "text": "Dressing",
+        "points": 12,
+        "alts": [
+          "ranch",
+          "vinaigrette",
+          "italian dressing",
+          "caesar"
+        ]
+      },
+      {
+        "text": "Croutons",
+        "points": 8,
+        "alts": [
+          "bread",
+          "toast",
+          "crutons"
+        ]
+      },
+      {
+        "text": "Cheese",
+        "points": 6,
+        "alts": [
+          "parmesan",
+          "feta",
+          "shredded cheese"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s084",
+    "question": "Name something on a farm that isn't an animal.",
+    "answers": [
+      {
+        "text": "Tractor",
+        "points": 36,
+        "alts": [
+          "plow",
+          "farm equipment",
+          "combine"
+        ]
+      },
+      {
+        "text": "Barn",
+        "points": 22,
+        "alts": [
+          "shed",
+          "silo",
+          "stable"
+        ]
+      },
+      {
+        "text": "Crops",
+        "points": 12,
+        "alts": [
+          "corn",
+          "wheat",
+          "fields",
+          "plants"
+        ]
+      },
+      {
+        "text": "Hay",
+        "points": 10,
+        "alts": [
+          "hay bales",
+          "haystack",
+          "straw"
+        ]
+      },
+      {
+        "text": "Farmer",
+        "points": 9,
+        "alts": [
+          "farmhand",
+          "overalls",
+          "farm worker",
+          "rancher"
+        ]
+      },
+      {
+        "text": "Fence",
+        "points": 6,
+        "alts": [
+          "gate",
+          "wooden fence",
+          "fencing"
+        ]
+      },
+      {
+        "text": "Scarecrow",
+        "points": 4,
+        "alts": [
+          "scare crow",
+          "scarcrow",
+          "dummy"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s085",
+    "question": "Name something you'd hate to find in your food.",
+    "answers": [
+      {
+        "text": "Hair",
+        "points": 40,
+        "alts": [
+          "strand of hair",
+          "long hair",
+          "hair strand"
+        ]
+      },
+      {
+        "text": "Bug",
+        "points": 22,
+        "alts": [
+          "fly",
+          "insect",
+          "cockroach",
+          "roach",
+          "worm"
+        ]
+      },
+      {
+        "text": "Mold",
+        "points": 10,
+        "alts": [
+          "mould",
+          "moldy",
+          "fuzz"
+        ]
+      },
+      {
+        "text": "Fingernail",
+        "points": 8,
+        "alts": [
+          "nail",
+          "toenail",
+          "finger nail"
+        ]
+      },
+      {
+        "text": "Bone",
+        "points": 6,
+        "alts": [
+          "chicken bone",
+          "fish bone",
+          "bone fragment"
+        ]
+      },
+      {
+        "text": "Plastic",
+        "points": 5,
+        "alts": [
+          "wrapper",
+          "plastic wrap",
+          "glass"
+        ]
+      },
+      {
+        "text": "Band-Aid",
+        "points": 4,
+        "alts": [
+          "bandaid",
+          "bandage",
+          "used bandage",
+          "plaster"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s086",
+    "question": "Name something people bring to a potluck.",
+    "answers": [
+      {
+        "text": "Casserole",
+        "points": 26,
+        "alts": [
+          "casserol",
+          "hotdish",
+          "bake",
+          "lasagna"
+        ]
+      },
+      {
+        "text": "Salad",
+        "points": 18,
+        "alts": [
+          "pasta salad",
+          "potato salad",
+          "green salad"
+        ]
+      },
+      {
+        "text": "Dessert",
+        "points": 16,
+        "alts": [
+          "cake",
+          "pie",
+          "cookies",
+          "brownies"
+        ]
+      },
+      {
+        "text": "Chips And Dip",
+        "points": 12,
+        "alts": [
+          "chips",
+          "dip",
+          "salsa"
+        ]
+      },
+      {
+        "text": "Mac And Cheese",
+        "points": 10,
+        "alts": [
+          "macaroni",
+          "mac n cheese",
+          "macaroni and cheese"
+        ]
+      },
+      {
+        "text": "Drinks",
+        "points": 7,
+        "alts": [
+          "soda",
+          "lemonade",
+          "punch",
+          "juice"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s087",
+    "question": "Name something you do on your birthday.",
+    "answers": [
+      {
+        "text": "Eat Cake",
+        "points": 32,
+        "alts": [
+          "cake",
+          "birthday cake",
+          "cupcake"
+        ]
+      },
+      {
+        "text": "Open Presents",
+        "points": 24,
+        "alts": [
+          "presents",
+          "gifts",
+          "open gifts",
+          "unwrap"
+        ]
+      },
+      {
+        "text": "Party",
+        "points": 14,
+        "alts": [
+          "have a party",
+          "celebrate",
+          "throw a party"
+        ]
+      },
+      {
+        "text": "Go Out To Eat",
+        "points": 12,
+        "alts": [
+          "dinner",
+          "restaurant",
+          "eat out"
+        ]
+      },
+      {
+        "text": "Blow Out Candles",
+        "points": 8,
+        "alts": [
+          "candles",
+          "make a wish",
+          "wish"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s088",
+    "question": "Name something you'd find in a garage.",
+    "answers": [
+      {
+        "text": "Car",
+        "points": 34,
+        "alts": [
+          "vehicle",
+          "truck",
+          "automobile"
+        ]
+      },
+      {
+        "text": "Tools",
+        "points": 22,
+        "alts": [
+          "toolbox",
+          "hammer",
+          "wrench"
+        ]
+      },
+      {
+        "text": "Bikes",
+        "points": 12,
+        "alts": [
+          "bicycle",
+          "bicycles",
+          "bycicle"
+        ]
+      },
+      {
+        "text": "Lawn Mower",
+        "points": 10,
+        "alts": [
+          "mower",
+          "lawnmower",
+          "lawn mowr"
+        ]
+      },
+      {
+        "text": "Boxes",
+        "points": 8,
+        "alts": [
+          "storage",
+          "junk",
+          "clutter"
+        ]
+      },
+      {
+        "text": "Oil",
+        "points": 5,
+        "alts": [
+          "motor oil",
+          "oil can",
+          "gas can"
+        ]
+      },
+      {
+        "text": "Freezer",
+        "points": 4,
+        "alts": [
+          "extra fridge",
+          "deep freeze",
+          "chest freezer"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s089",
+    "question": "Name something people do at the airport.",
+    "answers": [
+      {
+        "text": "Wait",
+        "points": 28,
+        "alts": [
+          "waiting",
+          "sit",
+          "delay",
+          "layover"
+        ]
+      },
+      {
+        "text": "Security",
+        "points": 22,
+        "alts": [
+          "tsa",
+          "go through security",
+          "pat down",
+          "scanner"
+        ]
+      },
+      {
+        "text": "Check Bags",
+        "points": 14,
+        "alts": [
+          "luggage",
+          "baggage",
+          "check in",
+          "bags"
+        ]
+      },
+      {
+        "text": "Eat",
+        "points": 10,
+        "alts": [
+          "food",
+          "snack",
+          "restaurant"
+        ]
+      },
+      {
+        "text": "Board Plane",
+        "points": 9,
+        "alts": [
+          "board",
+          "boarding",
+          "get on plane",
+          "plane"
+        ]
+      },
+      {
+        "text": "Shop",
+        "points": 5,
+        "alts": [
+          "duty free",
+          "shopping",
+          "buy magazines"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s090",
+    "question": "Name something you associate with summer.",
+    "answers": [
+      {
+        "text": "Swimming",
+        "points": 30,
+        "alts": [
+          "swim",
+          "pool",
+          "swimming pool"
+        ]
+      },
+      {
+        "text": "Beach",
+        "points": 22,
+        "alts": [
+          "ocean",
+          "sand",
+          "seaside"
+        ]
+      },
+      {
+        "text": "Sun",
+        "points": 16,
+        "alts": [
+          "sunny",
+          "sunshine",
+          "sunburn"
+        ]
+      },
+      {
+        "text": "Ice Cream",
+        "points": 10,
+        "alts": [
+          "popsicles",
+          "popsicle",
+          "ice cream truck"
+        ]
+      },
+      {
+        "text": "No School",
+        "points": 8,
+        "alts": [
+          "vacation",
+          "summer break",
+          "out of school",
+          "school out"
+        ]
+      },
+      {
+        "text": "Barbecue",
+        "points": 7,
+        "alts": [
+          "bbq",
+          "grill",
+          "grilling",
+          "cookout"
+        ]
+      },
+      {
+        "text": "Heat",
+        "points": 5,
+        "alts": [
+          "hot",
+          "humid",
+          "heatwave"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s091",
+    "question": "Name something you'd see in a doctor's waiting room.",
+    "answers": [
+      {
+        "text": "Magazines",
+        "points": 32,
+        "alts": [
+          "reading material",
+          "mags",
+          "magazeens"
+        ]
+      },
+      {
+        "text": "Sick People",
+        "points": 20,
+        "alts": [
+          "patients",
+          "sick",
+          "coughing",
+          "people"
+        ]
+      },
+      {
+        "text": "Chairs",
+        "points": 14,
+        "alts": [
+          "seats",
+          "seating",
+          "chiars"
+        ]
+      },
+      {
+        "text": "Receptionist",
+        "points": 10,
+        "alts": [
+          "front desk",
+          "secretary",
+          "nurse"
+        ]
+      },
+      {
+        "text": "TV",
+        "points": 8,
+        "alts": [
+          "television",
+          "tv screen",
+          "tele"
+        ]
+      },
+      {
+        "text": "Clock",
+        "points": 6,
+        "alts": [
+          "wall clock",
+          "time",
+          "clok"
+        ]
+      },
+      {
+        "text": "Fish Tank",
+        "points": 5,
+        "alts": [
+          "aquarium",
+          "fish",
+          "tank"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s092",
+    "question": "Name something people do on their phone when they're bored.",
+    "answers": [
+      {
+        "text": "Social Media",
+        "points": 32,
+        "alts": [
+          "scroll",
+          "instagram",
+          "tiktok",
+          "facebook"
+        ]
+      },
+      {
+        "text": "Play Games",
+        "points": 22,
+        "alts": [
+          "games",
+          "game",
+          "mobile games"
+        ]
+      },
+      {
+        "text": "Text",
+        "points": 16,
+        "alts": [
+          "texting",
+          "message",
+          "chat"
+        ]
+      },
+      {
+        "text": "Watch Videos",
+        "points": 12,
+        "alts": [
+          "videos",
+          "youtube",
+          "reels",
+          "clips"
+        ]
+      },
+      {
+        "text": "Read News",
+        "points": 6,
+        "alts": [
+          "news",
+          "articles",
+          "reddit"
+        ]
+      },
+      {
+        "text": "Take Selfies",
+        "points": 5,
+        "alts": [
+          "selfie",
+          "pictures",
+          "photos"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s093",
+    "question": "Name a reason a dog might wag its tail.",
+    "answers": [
+      {
+        "text": "Happy",
+        "points": 34,
+        "alts": [
+          "happiness",
+          "joy",
+          "glad"
+        ]
+      },
+      {
+        "text": "Owner Came Home",
+        "points": 22,
+        "alts": [
+          "owner",
+          "home",
+          "owner home",
+          "you came home"
+        ]
+      },
+      {
+        "text": "Food",
+        "points": 16,
+        "alts": [
+          "treat",
+          "dinner",
+          "snack",
+          "bone"
+        ]
+      },
+      {
+        "text": "Going For Walk",
+        "points": 12,
+        "alts": [
+          "walk",
+          "walkies",
+          "leash"
+        ]
+      },
+      {
+        "text": "Excited",
+        "points": 8,
+        "alts": [
+          "excitement",
+          "hyper",
+          "thrilled"
+        ]
+      },
+      {
+        "text": "Wants To Play",
+        "points": 6,
+        "alts": [
+          "play",
+          "toy",
+          "ball",
+          "fetch"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s094",
+    "question": "Name something guests sneak home from a hotel room.",
+    "answers": [
+      {
+        "text": "Towels",
+        "points": 34,
+        "alts": [
+          "bath towel",
+          "hand towel",
+          "washcloth"
+        ]
+      },
+      {
+        "text": "Shampoo",
+        "points": 26,
+        "alts": [
+          "toiletries",
+          "soap",
+          "conditioner",
+          "lotion"
+        ]
+      },
+      {
+        "text": "Robe",
+        "points": 14,
+        "alts": [
+          "bathrobe",
+          "bath robe",
+          "slippers"
+        ]
+      },
+      {
+        "text": "Pens",
+        "points": 8,
+        "alts": [
+          "notepad",
+          "stationery",
+          "pen and paper"
+        ]
+      },
+      {
+        "text": "Coffee",
+        "points": 6,
+        "alts": [
+          "coffee pods",
+          "tea",
+          "sugar packets"
+        ]
+      },
+      {
+        "text": "Hangers",
+        "points": 5,
+        "alts": [
+          "coat hangers",
+          "clothes hanger",
+          "hangars"
+        ]
+      },
+      {
+        "text": "Pillow",
+        "points": 4,
+        "alts": [
+          "blanket",
+          "sheets",
+          "pillowcase"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s095",
+    "question": "Name something you'd find in a student's backpack.",
+    "answers": [
+      {
+        "text": "Books",
+        "points": 30,
+        "alts": [
+          "textbooks",
+          "novel",
+          "reading book"
+        ]
+      },
+      {
+        "text": "Notebook",
+        "points": 18,
+        "alts": [
+          "binder",
+          "paper",
+          "folder"
+        ]
+      },
+      {
+        "text": "Pencils",
+        "points": 14,
+        "alts": [
+          "pens",
+          "pencil case",
+          "pencil pouch",
+          "erasers"
+        ]
+      },
+      {
+        "text": "Lunch",
+        "points": 12,
+        "alts": [
+          "lunchbox",
+          "food",
+          "snacks",
+          "sandwich"
+        ]
+      },
+      {
+        "text": "Water Bottle",
+        "points": 9,
+        "alts": [
+          "water",
+          "bottle",
+          "drink"
+        ]
+      },
+      {
+        "text": "Laptop",
+        "points": 7,
+        "alts": [
+          "computer",
+          "chromebook",
+          "tablet"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s096",
+    "question": "Name something that keeps people up at night.",
+    "answers": [
+      {
+        "text": "Stress",
+        "points": 28,
+        "alts": [
+          "worry",
+          "worrying",
+          "anxiety",
+          "work stress"
+        ]
+      },
+      {
+        "text": "Noise",
+        "points": 18,
+        "alts": [
+          "loud neighbors",
+          "neighbors",
+          "traffic",
+          "sirens"
+        ]
+      },
+      {
+        "text": "Snoring",
+        "points": 14,
+        "alts": [
+          "partner snoring",
+          "snore",
+          "spouse"
+        ]
+      },
+      {
+        "text": "Phone",
+        "points": 12,
+        "alts": [
+          "screen",
+          "scrolling",
+          "social media"
+        ]
+      },
+      {
+        "text": "Kids",
+        "points": 10,
+        "alts": [
+          "baby",
+          "crying baby",
+          "children"
+        ]
+      },
+      {
+        "text": "Caffeine",
+        "points": 6,
+        "alts": [
+          "coffee",
+          "energy drink",
+          "soda"
+        ]
+      },
+      {
+        "text": "Bad Dreams",
+        "points": 4,
+        "alts": [
+          "nightmares",
+          "nightmare",
+          "dreams"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s097",
+    "question": "Name something people forget to pack for vacation.",
+    "answers": [
+      {
+        "text": "Toothbrush",
+        "points": 28,
+        "alts": [
+          "tooth brush",
+          "toothpaste",
+          "toiletries"
+        ]
+      },
+      {
+        "text": "Phone Charger",
+        "points": 22,
+        "alts": [
+          "charger",
+          "charging cable",
+          "cord"
+        ]
+      },
+      {
+        "text": "Underwear",
+        "points": 12,
+        "alts": [
+          "undies",
+          "boxers",
+          "socks"
+        ]
+      },
+      {
+        "text": "Sunscreen",
+        "points": 10,
+        "alts": [
+          "sunblock",
+          "lotion",
+          "spf"
+        ]
+      },
+      {
+        "text": "Passport",
+        "points": 9,
+        "alts": [
+          "id",
+          "documents",
+          "visa"
+        ]
+      },
+      {
+        "text": "Medicine",
+        "points": 7,
+        "alts": [
+          "medication",
+          "pills",
+          "prescription"
+        ]
+      },
+      {
+        "text": "Swimsuit",
+        "points": 5,
+        "alts": [
+          "bathing suit",
+          "trunks",
+          "bikini"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s098",
+    "question": "Name something you'd see at a playground.",
+    "answers": [
+      {
+        "text": "Swings",
+        "points": 32,
+        "alts": [
+          "swingset",
+          "swing set",
+          "tire swing"
+        ]
+      },
+      {
+        "text": "Slide",
+        "points": 26,
+        "alts": [
+          "sliding board",
+          "twisty slide",
+          "big slide"
+        ]
+      },
+      {
+        "text": "Kids",
+        "points": 14,
+        "alts": [
+          "children",
+          "toddlers",
+          "little kids"
+        ]
+      },
+      {
+        "text": "Sandbox",
+        "points": 10,
+        "alts": [
+          "sand",
+          "sand box",
+          "sandpit"
+        ]
+      },
+      {
+        "text": "Monkey Bars",
+        "points": 8,
+        "alts": [
+          "monkeybars",
+          "jungle gym",
+          "bars"
+        ]
+      },
+      {
+        "text": "Seesaw",
+        "points": 5,
+        "alts": [
+          "see saw",
+          "teeter totter",
+          "teetertotter"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s099",
+    "question": "Name something people do while waiting in a long line.",
+    "answers": [
+      {
+        "text": "Check Phone",
+        "points": 38,
+        "alts": [
+          "phone",
+          "scroll",
+          "texting",
+          "look at phone"
+        ]
+      },
+      {
+        "text": "Talk",
+        "points": 14,
+        "alts": [
+          "chat",
+          "small talk",
+          "talk to people"
+        ]
+      },
+      {
+        "text": "Complain",
+        "points": 12,
+        "alts": [
+          "grumble",
+          "whine",
+          "sigh"
+        ]
+      },
+      {
+        "text": "People Watch",
+        "points": 10,
+        "alts": [
+          "watch people",
+          "stare",
+          "look around"
+        ]
+      },
+      {
+        "text": "Tap Foot",
+        "points": 8,
+        "alts": [
+          "tap",
+          "fidget",
+          "shuffle"
+        ]
+      },
+      {
+        "text": "Read",
+        "points": 6,
+        "alts": [
+          "magazines",
+          "tabloids",
+          "read magazine"
+        ]
+      },
+      {
+        "text": "Leave",
+        "points": 4,
+        "alts": [
+          "give up",
+          "walk away",
+          "quit"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s100",
+    "question": "Name something kids beg for at the grocery store.",
+    "answers": [
+      {
+        "text": "Candy",
+        "points": 38,
+        "alts": [
+          "sweets",
+          "chocolate",
+          "gum",
+          "lollipop"
+        ]
+      },
+      {
+        "text": "Cereal",
+        "points": 16,
+        "alts": [
+          "sugary cereal",
+          "cerial",
+          "cereal box"
+        ]
+      },
+      {
+        "text": "Toys",
+        "points": 12,
+        "alts": [
+          "ball",
+          "stuffed animal",
+          "toy aisle"
+        ]
+      },
+      {
+        "text": "Cookies",
+        "points": 10,
+        "alts": [
+          "oreos",
+          "biscuits",
+          "cookie jar"
+        ]
+      },
+      {
+        "text": "Chips",
+        "points": 8,
+        "alts": [
+          "potato chips",
+          "crisps",
+          "snacks"
+        ]
+      },
+      {
+        "text": "Ice Cream",
+        "points": 6,
+        "alts": [
+          "icecream",
+          "popsicles",
+          "frozen treats"
+        ]
+      },
+      {
+        "text": "Soda",
+        "points": 4,
+        "alts": [
+          "pop",
+          "juice",
+          "soft drink"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s101",
+    "question": "Name a way people show they're angry.",
+    "answers": [
+      {
+        "text": "Yell",
+        "points": 34,
+        "alts": [
+          "yelling",
+          "scream",
+          "shout",
+          "screaming"
+        ]
+      },
+      {
+        "text": "Slam Door",
+        "points": 18,
+        "alts": [
+          "slam",
+          "door slam",
+          "slamming doors"
+        ]
+      },
+      {
+        "text": "Silent Treatment",
+        "points": 14,
+        "alts": [
+          "silence",
+          "ignore",
+          "ignoring",
+          "dont talk"
+        ]
+      },
+      {
+        "text": "Frown",
+        "points": 10,
+        "alts": [
+          "scowl",
+          "glare",
+          "mad face",
+          "angry face"
+        ]
+      },
+      {
+        "text": "Cry",
+        "points": 8,
+        "alts": [
+          "crying",
+          "tears",
+          "sob"
+        ]
+      },
+      {
+        "text": "Stomp",
+        "points": 7,
+        "alts": [
+          "stomping",
+          "stomp feet",
+          "stamp feet"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s102",
+    "question": "Name something that has a lot of teeth.",
+    "answers": [
+      {
+        "text": "Shark",
+        "points": 36,
+        "alts": [
+          "great white",
+          "shark teeth",
+          "hammerhead"
+        ]
+      },
+      {
+        "text": "Comb",
+        "points": 18,
+        "alts": [
+          "hair comb",
+          "fine tooth comb",
+          "brush"
+        ]
+      },
+      {
+        "text": "Alligator",
+        "points": 14,
+        "alts": [
+          "crocodile",
+          "gator",
+          "croc"
+        ]
+      },
+      {
+        "text": "Saw",
+        "points": 10,
+        "alts": [
+          "chainsaw",
+          "handsaw",
+          "saw blade"
+        ]
+      },
+      {
+        "text": "Zipper",
+        "points": 8,
+        "alts": [
+          "zip",
+          "zip up",
+          "zipr"
+        ]
+      },
+      {
+        "text": "Dog",
+        "points": 6,
+        "alts": [
+          "puppy",
+          "wolf",
+          "canine"
+        ]
+      },
+      {
+        "text": "Gear",
+        "points": 4,
+        "alts": [
+          "cog",
+          "sprocket",
+          "gear wheel"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s103",
+    "question": "Name a place where you'd see lots of babies.",
+    "answers": [
+      {
+        "text": "Hospital",
+        "points": 32,
+        "alts": [
+          "maternity ward",
+          "delivery room",
+          "birthing center"
+        ]
+      },
+      {
+        "text": "Daycare",
+        "points": 28,
+        "alts": [
+          "day care",
+          "childcare",
+          "preschool",
+          "nursery"
+        ]
+      },
+      {
+        "text": "Pediatrician",
+        "points": 12,
+        "alts": [
+          "doctor",
+          "baby doctor",
+          "clinic"
+        ]
+      },
+      {
+        "text": "Park",
+        "points": 10,
+        "alts": [
+          "playground",
+          "stroller",
+          "swings"
+        ]
+      },
+      {
+        "text": "Mall",
+        "points": 6,
+        "alts": [
+          "shopping mall",
+          "store",
+          "supermarket"
+        ]
+      },
+      {
+        "text": "Church",
+        "points": 5,
+        "alts": [
+          "baptism",
+          "christening",
+          "chapel"
+        ]
+      },
+      {
+        "text": "Family Reunion",
+        "points": 4,
+        "alts": [
+          "reunion",
+          "family party",
+          "grandmas house"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s104",
+    "question": "Name something you'd find in almost every fridge.",
+    "answers": [
+      {
+        "text": "Milk",
+        "points": 36,
+        "alts": [
+          "whole milk",
+          "skim milk",
+          "dairy"
+        ]
+      },
+      {
+        "text": "Eggs",
+        "points": 18,
+        "alts": [
+          "dozen eggs",
+          "carton of eggs",
+          "egs"
+        ]
+      },
+      {
+        "text": "Leftovers",
+        "points": 14,
+        "alts": [
+          "old food",
+          "takeout",
+          "last nights dinner"
+        ]
+      },
+      {
+        "text": "Cheese",
+        "points": 10,
+        "alts": [
+          "cheddar",
+          "string cheese",
+          "cheese slices"
+        ]
+      },
+      {
+        "text": "Butter",
+        "points": 8,
+        "alts": [
+          "margarine",
+          "stick of butter",
+          "butta"
+        ]
+      },
+      {
+        "text": "Juice",
+        "points": 6,
+        "alts": [
+          "orange juice",
+          "oj",
+          "apple juice"
+        ]
+      },
+      {
+        "text": "Condiments",
+        "points": 4,
+        "alts": [
+          "ketchup",
+          "mustard",
+          "mayo",
+          "sauces"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s105",
+    "question": "Name something people do on a long road trip.",
+    "answers": [
+      {
+        "text": "Sing",
+        "points": 26,
+        "alts": [
+          "singing",
+          "karaoke",
+          "sing along",
+          "car karaoke"
+        ]
+      },
+      {
+        "text": "Listen To Music",
+        "points": 22,
+        "alts": [
+          "music",
+          "radio",
+          "playlist",
+          "songs"
+        ]
+      },
+      {
+        "text": "Eat Snacks",
+        "points": 16,
+        "alts": [
+          "snacks",
+          "road snacks",
+          "junk food"
+        ]
+      },
+      {
+        "text": "Sleep",
+        "points": 12,
+        "alts": [
+          "nap",
+          "doze",
+          "snooze"
+        ]
+      },
+      {
+        "text": "Play Games",
+        "points": 8,
+        "alts": [
+          "license plate game",
+          "i spy",
+          "car games",
+          "twenty questions"
+        ]
+      },
+      {
+        "text": "Stop For Gas",
+        "points": 6,
+        "alts": [
+          "gas",
+          "get gas",
+          "gas station",
+          "fill up"
+        ]
+      },
+      {
+        "text": "Are We There Yet",
+        "points": 4,
+        "alts": [
+          "there yet",
+          "are we there",
+          "whining"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s106",
+    "question": "Name something you might see in outer space.",
+    "answers": [
+      {
+        "text": "Stars",
+        "points": 34,
+        "alts": [
+          "constellations",
+          "sun",
+          "starz"
+        ]
+      },
+      {
+        "text": "Planets",
+        "points": 22,
+        "alts": [
+          "mars",
+          "saturn",
+          "jupiter"
+        ]
+      },
+      {
+        "text": "Moon",
+        "points": 14,
+        "alts": [
+          "lunar",
+          "full moon",
+          "crescent"
+        ]
+      },
+      {
+        "text": "Astronauts",
+        "points": 10,
+        "alts": [
+          "spaceman",
+          "cosmonaut",
+          "space suit"
+        ]
+      },
+      {
+        "text": "Rocket",
+        "points": 8,
+        "alts": [
+          "spaceship",
+          "space shuttle",
+          "space station"
+        ]
+      },
+      {
+        "text": "Aliens",
+        "points": 6,
+        "alts": [
+          "ufo",
+          "martians",
+          "flying saucer"
+        ]
+      },
+      {
+        "text": "Asteroids",
+        "points": 5,
+        "alts": [
+          "meteor",
+          "comet",
+          "meteorite"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s107",
+    "question": "Name something people do as soon as they get home from work.",
+    "answers": [
+      {
+        "text": "Take Off Shoes",
+        "points": 26,
+        "alts": [
+          "shoes",
+          "kick off shoes",
+          "remove shoes"
+        ]
+      },
+      {
+        "text": "Change Clothes",
+        "points": 20,
+        "alts": [
+          "get changed",
+          "sweatpants",
+          "pajamas",
+          "comfy clothes"
+        ]
+      },
+      {
+        "text": "Sit Down",
+        "points": 14,
+        "alts": [
+          "couch",
+          "sit",
+          "relax",
+          "lay down"
+        ]
+      },
+      {
+        "text": "Eat",
+        "points": 12,
+        "alts": [
+          "snack",
+          "dinner",
+          "make dinner",
+          "food"
+        ]
+      },
+      {
+        "text": "Hug Family",
+        "points": 8,
+        "alts": [
+          "kiss spouse",
+          "hug kids",
+          "greet family",
+          "family"
+        ]
+      },
+      {
+        "text": "Pet The Dog",
+        "points": 6,
+        "alts": [
+          "dog",
+          "pet",
+          "walk dog",
+          "feed pets"
+        ]
+      },
+      {
+        "text": "Have A Drink",
+        "points": 5,
+        "alts": [
+          "drink",
+          "beer",
+          "wine",
+          "glass of wine"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s108",
+    "question": "Name something you'd see in a magician's act.",
+    "answers": [
+      {
+        "text": "Rabbit",
+        "points": 30,
+        "alts": [
+          "bunny",
+          "rabbit in a hat",
+          "white rabbit"
+        ]
+      },
+      {
+        "text": "Top Hat",
+        "points": 20,
+        "alts": [
+          "hat",
+          "magic hat",
+          "tophat"
+        ]
+      },
+      {
+        "text": "Cards",
+        "points": 16,
+        "alts": [
+          "card tricks",
+          "deck of cards",
+          "playing cards",
+          "pick a card"
+        ]
+      },
+      {
+        "text": "Magic Wand",
+        "points": 12,
+        "alts": [
+          "wand",
+          "stick",
+          "magicwand"
+        ]
+      },
+      {
+        "text": "Saw Person In Half",
+        "points": 8,
+        "alts": [
+          "saw in half",
+          "sawing",
+          "saw lady in half"
+        ]
+      },
+      {
+        "text": "Doves",
+        "points": 6,
+        "alts": [
+          "birds",
+          "pigeons",
+          "white dove"
+        ]
+      },
+      {
+        "text": "Cape",
+        "points": 4,
+        "alts": [
+          "cloak",
+          "costume",
+          "black cape"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s109",
+    "question": "If your dog could talk, what's the first thing it would say?",
+    "answers": [
+      {
+        "text": "Feed Me",
+        "points": 30,
+        "alts": [
+          "food",
+          "hungry",
+          "im hungry",
+          "dinner"
+        ]
+      },
+      {
+        "text": "I Love You",
+        "points": 20,
+        "alts": [
+          "love you",
+          "love",
+          "luv you"
+        ]
+      },
+      {
+        "text": "Take Me For A Walk",
+        "points": 18,
+        "alts": [
+          "walk",
+          "walkies",
+          "go for a walk"
+        ]
+      },
+      {
+        "text": "Play With Me",
+        "points": 12,
+        "alts": [
+          "play",
+          "fetch",
+          "throw the ball",
+          "ball"
+        ]
+      },
+      {
+        "text": "Pet Me",
+        "points": 8,
+        "alts": [
+          "belly rub",
+          "rub my belly",
+          "scratch",
+          "pet"
+        ]
+      },
+      {
+        "text": "Squirrel",
+        "points": 6,
+        "alts": [
+          "squirel",
+          "theres a squirrel",
+          "chase"
+        ]
+      },
+      {
+        "text": "Let Me Out",
+        "points": 4,
+        "alts": [
+          "outside",
+          "potty",
+          "i need to pee"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "s110",
+    "question": "Name something you might find in a grandma's purse.",
+    "answers": [
+      {
+        "text": "Tissues",
+        "points": 28,
+        "alts": [
+          "kleenex",
+          "hankie",
+          "handkerchief"
+        ]
+      },
+      {
+        "text": "Candy",
+        "points": 24,
+        "alts": [
+          "hard candy",
+          "peppermints",
+          "mints",
+          "butterscotch"
+        ]
+      },
+      {
+        "text": "Lipstick",
+        "points": 12,
+        "alts": [
+          "makeup",
+          "lip balm",
+          "compact"
+        ]
+      },
+      {
+        "text": "Glasses",
+        "points": 10,
+        "alts": [
+          "reading glasses",
+          "eyeglasses",
+          "spectacles"
+        ]
+      },
+      {
+        "text": "Pictures",
+        "points": 8,
+        "alts": [
+          "photos",
+          "family photos",
+          "grandkid pictures"
+        ]
+      },
+      {
+        "text": "Coupons",
+        "points": 7,
+        "alts": [
+          "discounts",
+          "clippings",
+          "cupons"
+        ]
+      },
+      {
+        "text": "Medicine",
+        "points": 5,
+        "alts": [
+          "pills",
+          "pill box",
+          "aspirin"
+        ]
+      }
+    ]
+  }
+]

@@ -747,7 +747,8 @@ input, textarea, select { caret-color: var(--gold); }
   box-shadow: var(--shadow);
   transition: transform 160ms ease-out, border-color 160ms ease-out;
 }
-.hub-card::after { content: ""; position: absolute; inset: auto -40px -60px auto; width: 190px; height: 190px; border-radius: 50%; opacity: 0.22; pointer-events: none; }
+.hub-card > * { position: relative; z-index: 1; }
+.hub-card::after { content: ""; position: absolute; z-index: 0; inset: auto -70px -90px auto; width: 190px; height: 190px; border-radius: 50%; opacity: 0.1; pointer-events: none; }
 .hub-card:hover { transform: translateY(-3px); border-color: var(--card-accent); }
 .hub-card:active { transform: translateY(0); }
 .hub-card--jeopardy { --card-accent: var(--gold); }
