@@ -694,3 +694,34 @@ input, textarea, select { caret-color: var(--gold); }
   .mode-switch { display: flex; }
   .mode-switch button { flex: 1; }
 }
+
+/* ---------- Confirm before submitting ---------- */
+.confirm-backdrop {
+  position: fixed; inset: 0; z-index: 20;
+  display: grid; place-items: center;
+  padding: 18px calc(18px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
+  background: rgb(3 10 42 / 0.78);
+  backdrop-filter: blur(3px);
+  animation: fade-in 140ms ease-out;
+}
+.confirm {
+  width: min(100%, 420px);
+  display: grid; gap: 14px;
+  padding: 22px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.confirm h2 { font: 1.35rem var(--display); letter-spacing: -0.01em; }
+.confirm-answer { padding: 14px; border-radius: 12px; background: var(--field); font-size: 1.3rem; font-weight: 700; overflow-wrap: anywhere; }
+.confirm-answer.is-blank { font-size: 1rem; color: var(--red-text); }
+.confirm-clock { font-weight: 700; color: var(--gold); }
+.confirm-clock.is-running { color: var(--text-muted); }
+.confirm-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.confirm-buttons > * { min-height: 54px; font-size: 1.05rem; }
+.clue-timer.is-paused { border-style: dashed; color: var(--text-muted); border-color: var(--text-muted); }
+.paused-note { color: var(--text-muted); font-weight: 700; }
+@keyframes fade-in { from { opacity: 0; } }

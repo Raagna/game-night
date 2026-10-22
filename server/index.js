@@ -16,6 +16,10 @@ const leaveKey = (code, playerId) => `${code}:${playerId}`
 // Fast Money finale: the top two players race the clock through the same five clues.
 const FAST_MONEY = { introMs: 7000, betweenMs: 8000, firstMs: 20000, secondMs: 25000, points: 1000, bonus: 5000, hostlessRevealMs: 30000 }
 const DEFAULT_ROUND_NAMES = ['Jeopardy!', 'Double Jeopardy!', 'Triple Jeopardy!']
+// "Are you sure?" before submitting an answer pauses the answer clock. Each pause lasts at most HOLD_LIMIT_MS,
+// and a player gets MAX_HOLDS pauses per clue, so nobody can stall the game indefinitely.
+const HOLD_LIMIT_MS = 15000
+const MAX_HOLDS = 3
 function cancelLeave(code, playerId) { const key=leaveKey(code,playerId); clearTimeout(leaveTimers.get(key)); leaveTimers.delete(key) }
 
 const id = () => Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -77,16 +81,16 @@ function publicGame(game) {
     activeQuestion, reveal: game.reveal, hostConnected: !!game.hostSocketId,
     finalResponses: [...game.finalResponses.entries()].map(([playerId, response]) => ({ playerId, ...response })),
     turnPlayerId: game.turnPlayerId, answeringPlayerId: game.answeringPlayerId, incorrectPlayerIds: game.incorrectPlayerIds,
-    clueDeadline: game.clueDeadline, preBuzzDeadline: game.preBuzzDeadline, answerDeadline: game.answerDeadline, finalDeadline: game.finalDeadline, skipVotes: game.skipVotes || [], serverNow: Date.now(), lastEvent: game.lastEvent
+    clueDeadline: game.clueDeadline, preBuzzDeadline: game.preBuzzDeadline, answerDeadline: game.answerDeadline, finalDeadline: game.finalDeadline, clockPaused: !!game.pausedClock, pausedRemaining: game.pausedRemaining ?? null, holdsUsed: Object.fromEntries(game.holdCounts || []), skipVotes: game.skipVotes || [], serverNow: Date.now(), lastEvent: game.lastEvent
   }
 }
 function emitGame(game) { io.to(game.code).emit('game:update', publicGame(game)) }
 function clearGameTimers(game) { const timers=gameTimers.get(game.code)||{}; for(const timer of Object.values(timers)) clearTimeout(timer); gameTimers.set(game.code,{}) }
 function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||{}; clearTimeout(timers[name]); timers[name]=setTimeout(fn, ms); gameTimers.set(game.code,timers) }
 function markUsed(game) { const active=game.activeQuestion; if (!active || active.final) return; const question=game.boards[game.boardIndex]?.[active.categoryIndex]?.questions?.[active.questionIndex]; if(question) question.used=true }
-function startFinal(game) { clearGameTimers(game); game.status='final'; game.activeQuestion={final:true,question:clone(game.final)}; game.preBuzzDeadline=null; game.clueDeadline=null; game.answerDeadline=null; game.finalDeadline=Date.now()+50000; game.reveal=false; game.buzzerOpen=false; schedule(game,'final',50000,()=>revealFinal(game)); emitGame(game) }
+function startFinal(game) { clearGameTimers(game); clearHolds(game, true); game.status='final'; game.activeQuestion={final:true,question:clone(game.final)}; game.preBuzzDeadline=null; game.clueDeadline=null; game.answerDeadline=null; game.finalDeadline=Date.now()+50000; game.reveal=false; game.buzzerOpen=false; schedule(game,'final',50000,()=>revealFinal(game)); emitGame(game) }
 function returnToBoard(game) { clearGameTimers(game); markUsed(game); game.activeQuestion=null; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen=false; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal=false; game.incorrectPlayerIds=[]; game.skipVotes=[]; const boardDone=game.boards[game.boardIndex]?.every((category)=>category.questions.every((question)=>question.used)); if(game.hostless && boardDone) return nextBoard(game); emitGame(game) }
-function resetClueState(game) { game.activeQuestion=null; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen=false; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal=false; game.incorrectPlayerIds=[]; game.skipVotes=[] }
+function resetClueState(game) { clearHolds(game, true); game.activeQuestion=null; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen=false; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal=false; game.incorrectPlayerIds=[]; game.skipVotes=[] }
 // Move on from the current board: the next round if there is one, otherwise Final Jeopardy, Fast Money or the end.
 function nextBoard(game) { clearGameTimers(game); resetClueState(game); if(game.boardIndex < game.boards.length-1) { game.boardIndex++; emitGame(game) } else endRounds(game) }
 function endRounds(game) { if(game.final) startFinal(game); else afterFinal(game) }
@@ -152,10 +156,46 @@ function answerFastMoney(game, playerId, response, pass) {
 }
 function revealThenReturn(game, eventType='reveal', giveLowestControl=false) { clearGameTimers(game); if(giveLowestControl) assignLowestConnected(game); game.buzzerOpen=false; game.reveal=true; game.answerDeadline=null; game.lastEvent={type:eventType,playerId:game.answeringPlayerId,at:Date.now()}; emitGame(game); schedule(game,'reveal',5000,()=>returnToBoard(game)) }
 function timeoutClue(game) { const active=game.activeQuestion; if(active?.dailyDouble) { const player=game.players.get(active.dailyPlayerId); if(player) player.score-=active.dailyWager; revealThenReturn(game,'reveal',true) } else revealThenReturn(game,'reveal',true) }
-function revealFinal(game) { clearTimeout((gameTimers.get(game.code)||{}).final); game.finalDeadline=null; if(game.hostless) for(const [playerId,response] of game.finalResponses){ if(response.scored) continue; const player=game.players.get(playerId); if(player){ player.score+=response.correct ? response.wager : -response.wager; response.scored=true } } game.reveal=true; if(game.hostless) schedule(game,'finalEnd',15000,()=>afterFinal(game)); emitGame(game) }
+function revealFinal(game) { clearTimeout((gameTimers.get(game.code)||{}).final); clearHolds(game); game.finalDeadline=null; if(game.hostless) for(const [playerId,response] of game.finalResponses){ if(response.scored) continue; const player=game.players.get(playerId); if(player){ player.score+=response.correct ? response.wager : -response.wager; response.scored=true } } game.reveal=true; if(game.hostless) schedule(game,'finalEnd',15000,()=>afterFinal(game)); emitGame(game) }
 function resumeBuzzersAfterIncorrect(game) { const remaining=game.cluePausedRemaining ?? 45000; game.clueDeadline=Date.now()+remaining; game.cluePausedRemaining=null; game.buzzerOpen=true; game.buzzerOpenedAt=Date.now(); game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; schedule(game,'clue',remaining,()=>timeoutClue(game)) }
-function resolveHostlessAnswer(game, playerId, response) { const player=game.players.get(playerId), active=game.activeQuestion; if(!player || !active || game.answeringPlayerId!==playerId) return; clearTimeout((gameTimers.get(game.code)||{}).answer); const value=active.dailyDouble ? active.dailyWager : active.question.value; const correct=answersMatch(response,active.question.answer); game.answeringPlayerId=null; game.answerDeadline=null; game.buzzedPlayer=null; if(correct){ player.score+=value; game.turnPlayerId=playerId; revealThenReturn(game,'correct'); return } player.score-=value; if(!game.incorrectPlayerIds.includes(playerId)) game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; if(active.dailyDouble || game.incorrectPlayerIds.length>=connectedPlayers(game).length) revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } }
-function openAnswerWindow(game, playerId) { game.buzzedPlayer=playerId; game.answeringPlayerId=playerId; game.buzzerOpen=false; game.cluePausedRemaining=game.clueDeadline ? Math.max(0,game.clueDeadline-Date.now()) : game.cluePausedRemaining; game.clueDeadline=null; game.answerDeadline=Date.now()+10000; clearTimeout((gameTimers.get(game.code)||{}).clue); emitGame(game); schedule(game,'answer',10000,()=>{ if(game.hostless) resolveHostlessAnswer(game,playerId,''); else { const p=game.players.get(playerId); if(p&&game.activeQuestion){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) revealThenReturn(game,'reveal',true); else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); emitGame(game) } } } }) }
+function resolveHostlessAnswer(game, playerId, response) { const player=game.players.get(playerId), active=game.activeQuestion; if(!player || !active || game.answeringPlayerId!==playerId) return; clearTimeout((gameTimers.get(game.code)||{}).answer); clearHolds(game); const value=active.dailyDouble ? active.dailyWager : active.question.value; const correct=answersMatch(response,active.question.answer); game.answeringPlayerId=null; game.answerDeadline=null; game.buzzedPlayer=null; if(correct){ player.score+=value; game.turnPlayerId=playerId; revealThenReturn(game,'correct'); return } player.score-=value; if(!game.incorrectPlayerIds.includes(playerId)) game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; if(active.dailyDouble || game.incorrectPlayerIds.length>=connectedPlayers(game).length) revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } }
+function openAnswerWindow(game, playerId) { game.buzzedPlayer=playerId; game.answeringPlayerId=playerId; game.buzzerOpen=false; game.cluePausedRemaining=game.clueDeadline ? Math.max(0,game.clueDeadline-Date.now()) : game.cluePausedRemaining; game.clueDeadline=null; game.answerDeadline=Date.now()+10000; clearTimeout((gameTimers.get(game.code)||{}).clue); game.holdCounts=new Map(); emitGame(game); schedule(game,'answer',10000,()=>answerTimedOut(game,playerId)) }
+function answerTimedOut(game, playerId) { if(game.answeringPlayerId!==playerId) return; if(game.hostless) resolveHostlessAnswer(game,playerId,''); else { const p=game.players.get(playerId); if(p&&game.activeQuestion){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) revealThenReturn(game,'reveal',true); else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); emitGame(game) } } } }
+// ---------- Confirm-before-submit clock holds ----------
+// The clock being held is the answering player's 10-second window, or the shared Final Jeopardy clock.
+function holdClock(game, playerId) {
+  const final=game.status==='final'
+  if(final ? (game.reveal || game.finalResponses.has(playerId) || !(game.players.get(playerId)?.score >= 1)) : (!game.hostless || game.answeringPlayerId!==playerId)) return
+  game.holds ||= new Map(); game.holdCounts ||= new Map()
+  if(game.holds.has(playerId) || (game.holdCounts.get(playerId) || 0) >= MAX_HOLDS) return
+  if(!game.pausedClock) {
+    const deadline=final ? game.finalDeadline : game.answerDeadline
+    if(!deadline) return
+    game.pausedRemaining=Math.max(0, deadline-Date.now()); game.pausedClock=final ? 'final' : 'answer'
+    if(final) game.finalDeadline=null; else game.answerDeadline=null
+    clearTimeout((gameTimers.get(game.code)||{})[final ? 'final' : 'answer'])
+  }
+  game.holdCounts.set(playerId, (game.holdCounts.get(playerId) || 0)+1)
+  game.holds.set(playerId, setTimeout(()=>releaseClock(game, playerId), HOLD_LIMIT_MS))
+  emitGame(game)
+}
+// Resumes the clock from where it stopped once nobody is holding it.
+function releaseClock(game, playerId, quiet=false) {
+  if(!game.holds?.has(playerId)) return
+  clearTimeout(game.holds.get(playerId)); game.holds.delete(playerId)
+  if(!game.holds.size && game.pausedClock) {
+    const ms=game.pausedRemaining, kind=game.pausedClock
+    game.pausedClock=null; game.pausedRemaining=null
+    if(kind==='final') { game.finalDeadline=Date.now()+ms; schedule(game,'final',ms,()=>revealFinal(game)) }
+    else { const answering=game.answeringPlayerId; game.answerDeadline=Date.now()+ms; schedule(game,'answer',ms,()=>answerTimedOut(game,answering)) }
+  }
+  if(!quiet) emitGame(game)
+}
+function clearHolds(game, resetCounts=false) {
+  for(const timer of game.holds?.values() || []) clearTimeout(timer)
+  game.holds?.clear(); game.pausedClock=null; game.pausedRemaining=null
+  if(resetCounts) game.holdCounts=new Map()
+}
 function openHostlessBuzzers(game) { if(!game.hostless || !game.activeQuestion || game.reveal) return; game.preBuzzDeadline=null; game.buzzerOpen=true; game.buzzerOpenedAt=Date.now(); game.clueDeadline=Date.now()+45000; schedule(game,'clue',45000,()=>timeoutClue(game)); emitGame(game) }
 function beginClue(game, categoryIndex, questionIndex) { const q=game.boards[game.boardIndex][categoryIndex]?.questions[questionIndex]; if(game.activeQuestion || !q || q.used) return false; clearGameTimers(game); const dailyPlayer=q.dailyDouble ? (game.players.get(game.turnPlayerId) || connectedPlayers(game)[Math.floor(Math.random()*connectedPlayers(game).length)]) : null; if(dailyPlayer) game.lastEvent={type:'daily',playerId:dailyPlayer.id,at:Date.now()}; game.activeQuestion={categoryIndex,questionIndex,question:clone(q),dailyDouble:!!q.dailyDouble,dailyPlayerId:dailyPlayer?.id||null,dailyWager:null,dailyReady:!q.dailyDouble}; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.incorrectPlayerIds=[]; game.skipVotes=[]; game.buzzerOpen=false; game.reveal=false; if(game.hostless && !q.dailyDouble){ game.preBuzzDeadline=Date.now()+10000; schedule(game,'preBuzz',10000,()=>openHostlessBuzzers(game)) } emitGame(game); return true }
 // Hostless skip: everyone still in the running (connected and not already wrong on this clue) must vote before the clue is skipped.
@@ -318,12 +358,17 @@ io.on('connection', (socket) => {
     const amount = Math.max(0, Math.min(Number(wager) || 0, Math.max(0, player.score)))
     const text = String(response || '').trim().slice(0, 500)
     if (!text) return ack?.({ ok: false, error: 'Enter your response.' })
+    releaseClock(game, playerId, true)
     game.finalResponses.set(playerId, { wager: amount, response: text, revealed: false, correct: game.hostless ? answersMatch(text,game.final.answer) : undefined, scored:false })
     ack?.({ ok: true }); const eligible=connectedPlayers(game).filter((p)=>p.score>=1); if(eligible.length && eligible.every((p)=>game.finalResponses.has(p.id))) revealFinal(game); else emitGame(game)
   })
   socket.on('player:select', ({ code, playerId, categoryIndex, questionIndex }) => {
     const game=games.get(code); if(!game?.hostless || game.status!=='playing' || game.turnPlayerId!==playerId || !game.players.get(playerId)?.socketId) return
     beginClue(game,categoryIndex,questionIndex)
+  })
+  socket.on('player:holdClock', ({ code, playerId, hold }) => {
+    const game=games.get(code); if(!game || !game.players.get(playerId)?.socketId) return
+    if(hold) holdClock(game, playerId); else releaseClock(game, playerId)
   })
   socket.on('player:answer', ({ code, playerId, response }) => {
     const game=games.get(code); if(!game?.hostless) return

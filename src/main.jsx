@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer } from "./shared";
+import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer, ConfirmSubmit } from "./shared";
 import {
   fallbackQuestions,
   loadSeason,
@@ -429,7 +429,7 @@ function Display({ game, host = false, onAction }) {
             Join at <b>{JOIN_URL}</b> <span className="code-chip">{game.code}</span>
           </p>
         )}
-        <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} />
+        <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} frozenMs={game.clockPaused ? game.pausedRemaining : null} />
       </header>
       {game.status === "lobby" ? (
         <div className="lobby">
@@ -452,6 +452,7 @@ function Display({ game, host = false, onAction }) {
           </p>
           <h1>{dailyPending ? "Wager required" : q.question}</h1>
           {game.reveal && <div className="answer">{q.answer}</div>}
+          {game.clockPaused && <p className="paused-note">Clock paused while {game.status === "final" ? "a player confirms" : `${buzzed?.name || "the player"} confirms`} their answer</p>}
           {buzzed && <div className="buzzed">{game.activeQuestion.dailyDouble ? `${buzzed.name} buzzed in` : `${buzzed.name} buzzed in at ${formatBuzzTime(game.buzzedAtMs)}`}</div>}
         </div>
       ) : game.status === "final" ? (
@@ -687,7 +688,8 @@ function Controller({ game, onAction }) {
 function FinalPlayer({ game, playerId, p }) {
   const [wager, setWager] = useState("0"),
     [response, setResponse] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [confirming, setConfirming] = useState(false);
   const submitted = game.finalResponses.find((x) => x.playerId === playerId);
   if (p.score < 1)
     return <p className="status-card">You need a positive score to play Final Jeopardy.</p>;
@@ -699,11 +701,17 @@ function FinalPlayer({ game, playerId, p }) {
         Response locked in · wager ${submitted.wager}
       </p>
     );
+  const hold = (on) => socket.emit("player:holdClock", { code: game.code, playerId, hold: on });
+  const ask = () => {
+    if (!response.trim()) return setError("Type your response first.");
+    setError(""); setConfirming(true); hold(true);
+  };
+  const cancel = () => { setConfirming(false); hold(false); };
   const submit = () =>
     socket.emit(
       "player:finalSubmit",
       { code: game.code, playerId, wager, response },
-      (r) => !r.ok && setError(r.error),
+      (r) => { if (!r.ok) { setError(r.error); cancel(); } },
     );
   return (
     <div className="final-form">
@@ -726,10 +734,11 @@ function FinalPlayer({ game, playerId, p }) {
           placeholder="Type your response"
         />
       </label>
-      <button className="primary" onClick={submit}>
+      <button className="primary" onClick={ask}>
         Lock in response
       </button>
       {error && <p className="notice">{error}</p>}
+      {confirming && <ConfirmSubmit game={game} playerId={playerId} answer={response} onConfirm={submit} onCancel={cancel} />}
     </div>
   );
 }
@@ -743,9 +752,16 @@ function HostlessBoard({ game, playerId }) {
   return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
 }
 function HostlessAnswer({ game, playerId }) {
-  const [response,setResponse]=useState("");
+  const [response,setResponse]=useState(""), [confirming,setConfirming]=useState(false);
+  const hold=(on)=>socket.emit("player:holdClock",{code:game.code,playerId,hold:on});
+  const ask=()=>{ if(confirming) return; setConfirming(true); hold(true); };
+  const cancel=()=>{ setConfirming(false); hold(false); };
   const send=()=>socket.emit("player:answer",{code:game.code,playerId,response});
-  return <div className="final-form"><label className="field"><span>You buzzed in — type your response</span><input autoFocus autoComplete="off" autoCapitalize="off" enterKeyHint="send" value={response} onChange={(event)=>setResponse(event.target.value)} placeholder="Your response" onKeyDown={(event)=>event.key==='Enter'&&send()}/></label><button className="primary" onClick={send}>Submit response</button></div>
+  return <div className="final-form">
+    <label className="field"><span>You buzzed in — type your response</span><input autoFocus={!confirming} autoComplete="off" autoCapitalize="off" enterKeyHint="send" value={response} onChange={(event)=>setResponse(event.target.value)} placeholder="Your response" onKeyDown={(event)=>{ if(event.key==='Enter'){ event.preventDefault(); ask(); } }}/></label>
+    <button className="primary" onClick={ask}>Submit response</button>
+    {confirming && <ConfirmSubmit game={game} playerId={playerId} answer={response} onConfirm={send} onCancel={cancel} />}
+  </div>
 }
 function Player({ game, playerId }) {
   const p = game.players.find((p) => p.id === playerId);
