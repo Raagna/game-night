@@ -19,6 +19,9 @@ import BoardEditor from "./BoardEditor";
 import MyBoards from "./MyBoards";
 import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
 import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
+import Hub, { BackToHub } from "./Hub";
+import { LobbyJoin, JoinCorner } from "./JoinQR";
+import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -182,6 +185,7 @@ function Setup({ onCreate }) {
   if (editing)
     return (
       <main className="setup">
+        <BackToHub />
         <div className="brand">JEOPARDY! <span>local game night</span></div>
         <section className="setup-card">
           <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
@@ -190,6 +194,7 @@ function Setup({ onCreate }) {
     );
   return (
     <main className="setup">
+      <BackToHub />
       <div className="brand">
         JEOPARDY! <span>local game night</span>
       </div>
@@ -424,18 +429,13 @@ function Display({ game, host = false, onAction }) {
     <main className="display">
       <header className="display-bar">
         <div className="brand">JEOPARDY!</div>
-        {game.status !== "lobby" && (
-          <p className="join-hint">
-            Join at <b>{JOIN_URL}</b> <span className="code-chip">{game.code}</span>
-          </p>
-        )}
+        {game.status !== "lobby" && <JoinCorner code={game.code} />}
         <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} frozenMs={game.clockPaused ? game.pausedRemaining : null} />
       </header>
       {game.status === "lobby" ? (
         <div className="lobby">
           <h1>Join the game</h1>
-          <p className="lobby-url">Open <b>{JOIN_URL}</b> on your phone and enter</p>
-          <div className="lobby-code">{game.code}</div>
+          <LobbyJoin code={game.code} />
           {game.players.length ? <Scores players={game.players} /> : <p className="muted">No players yet.</p>}
           {host && (
             <button className="primary" onClick={() => onAction("start")}>
@@ -851,8 +851,10 @@ function SkipVote({ game, playerId }) {
     </div>
   );
 }
-function Join({ onJoined, initialError }) {
-  const [code, setCode] = useState(""),
+// Opened from a QR code (?join=CODE), the code is already filled in and only the name is asked for.
+function Join({ onJoined, initialError, presetCode = "" }) {
+  const [code, setCode] = useState(presetCode),
+    [editCode, setEditCode] = useState(!presetCode),
     [name, setName] = useState(sessionStorage.playerName || ""),
     [error, setError] = useState(initialError || ""),
     [busy, setBusy] = useState(false);
@@ -862,15 +864,23 @@ function Join({ onJoined, initialError }) {
     socket.timeout(8000).emit("player:join", { code: code.trim(), name, returningPlayerId: sessionStorage.playerId }, (err, r) => {
       setBusy(false);
       if (err) return setError("Couldn’t reach the game server. Check your connection and try again.");
-      r.ok ? onJoined(r.game, r.playerId) : setError(r.error);
+      if (r.ok) return onJoined(r.game, r.playerId);
+      setError(r.error === "Game not found" ? `There’s no game with the code ${code.trim() || "—"}. Check the code on the main screen.` : r.error);
+      if (r.error === "Game not found") setEditCode(true);
     });
   };
   return (
     <main className="join">
-      <div className="brand">JEOPARDY!</div>
-      <h1>Join a game</h1>
+      <div className="brand hub-brand">GAME NIGHT</div>
+      <h1>{editCode ? "Join a game" : "What’s your name?"}</h1>
       <form onSubmit={join}>
-        <label className="field">
+        {!editCode && (
+          <p className="join-code-line">
+            Joining game <span className="code-chip">{code}</span>
+            <button type="button" className="link-btn" onClick={() => setEditCode(true)}>Different code?</button>
+          </p>
+        )}
+        {editCode && <label className="field">
           <span>Game code</span>
           <input
             className="code-input"
@@ -881,10 +891,12 @@ function Join({ onJoined, initialError }) {
             spellCheck="false"
             onChange={(e) => setCode(e.target.value.toUpperCase())}
           />
-        </label>
+        </label>}
         <label className="field">
           <span>Your name</span>
           <input
+            autoFocus={!editCode}
+            enterKeyHint="go"
             value={name}
             maxLength="20"
             autoComplete="nickname"
@@ -896,8 +908,8 @@ function Join({ onJoined, initialError }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Up to 6 players can join, even after the game starts.</p>
-      <a href="?host">Hosting a game?</a>
+      <p className="muted">Jeopardy! takes up to 6 players and Survey Says! up to 12. You can join after a game starts.</p>
+      <a href="./">← Game Night</a>
     </main>
   );
 }
@@ -910,7 +922,7 @@ function EndGame({ game, host }) {
       <div className="podium">{top.map((p,i)=><div className={`place place-${i+1}`} key={p.id}><span className="rank">{i+1}</span><b>{p.name}</b><strong className="money">${p.score.toLocaleString()}</strong></div>)}</div>
       {rest.length>0&&<ol className="remaining-players" start="4">{rest.map((p)=><li key={p.id}><span>{p.name}</span><b className="money">${p.score.toLocaleString()}</b></li>)}</ol>}
       {host ? (
-        <button className="primary" onClick={() => { sessionStorage.removeItem("displayCode"); location.assign("?host"); }}>
+        <button className="primary" onClick={() => { sessionStorage.removeItem("displayCode"); location.assign("./"); }}>
           New game
         </button>
       ) : (
@@ -922,7 +934,13 @@ function EndGame({ game, host }) {
 function App() {
   const params = new URLSearchParams(location.search),
     host = params.has("host"),
-    controller = params.has("controller");
+    controller = params.has("controller"),
+    joining = params.has("join"),
+    joinCode = (params.get("join") || "").trim().toUpperCase().slice(0, 6);
+  // Choosing a game to set up starts fresh, rather than reopening a game this tab hosted earlier.
+  if (host && params.has("game")) sessionStorage.removeItem("displayCode");
+  // A QR code for a different game replaces this phone's saved session instead of reconnecting to the old one.
+  if (joinCode && sessionStorage.gameCode && sessionStorage.gameCode !== joinCode) clearPlayerSession();
   const [game, setGame] = useState(null),
     [playerId, setPlayerId] = useState(sessionStorage.playerId),
     [connected, setConnected] = useState(socket.connected),
@@ -992,33 +1010,42 @@ function App() {
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   if (!game) {
     if (restoring || controller)
-      return <main className="join"><div className="brand">JEOPARDY!</div>{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
-    if (host)
-      return (
-        <Setup
-          onCreate={(config, fail) =>
-            socket.timeout(10000).emit("host:create", config, (err, r) => {
+      return <main className="join"><div className="brand hub-brand">GAME NIGHT</div>{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
+    if (host) {
+      const create = (config, fail) =>
+        socket.timeout(10000).emit("host:create", config, (err, r) => {
               if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
               if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
               sessionStorage.displayCode = r.code;
               setGame(r.game);
               history.replaceState({}, "", "?host");
-            })
-          }
-        />
-      );
+            });
+      const pick = params.get("game");
+      if (pick === "survey") return <SurveySetup onCreate={create} />;
+      if (pick === "jeopardy") return <Setup onCreate={create} />;
+      return <Hub />;
+    }
+    if (!joining && !joinError) return <Hub />;
     return (
       <Join
         initialError={joinError}
+        presetCode={joinCode}
         onJoined={(g, p) => {
           sessionStorage.playerId = p;
           sessionStorage.gameCode = g.code;
           sessionStorage.playerName = g.players.find((player) => player.id === p)?.name || "";
           setPlayerId(p);
           setGame(g);
+          history.replaceState({}, "", location.pathname);
         }}
       />
     );
+  }
+  if (game.kind === "survey") {
+    if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} onAction={action} /></>;
+    if (controller) return <>{banner}<SurveyController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<SurveyDisplay game={game} onAction={action} /></>;
+    return <>{banner}<SurveyPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} /></>;
