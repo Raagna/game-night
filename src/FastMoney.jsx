@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ClueTimer, socket, tone } from "./shared";
+import { ClueTimer, clockText, socket, tone } from "./shared";
 
 const money = (amount) => `$${(amount || 0).toLocaleString()}`;
 const nameOf = (game, id) => game.players.find((p) => p.id === id)?.name || "Player";
@@ -16,11 +16,13 @@ function Progress({ statuses, current }) {
   );
 }
 
+// "2:30" for five clues at 30 seconds each.
+const turnTime = (fm) => clockText(Math.round((fm.turnMs || 0) / 1000));
 function rules(fm, game) {
-  const [first, second] = fm.playerIds;
+  const [first, second] = fm.playerIds, time = turnTime(fm);
   return second
-    ? `${nameOf(game, first)} goes first with 20 seconds, then ${nameOf(game, second)} gets 25 seconds for the same ${fm.clueCount} clues. ${money(fm.points)} per right answer; ${fm.target} right between them wins a ${money(fm.bonus)} bonus each.`
-    : `${nameOf(game, first)} plays solo: ${fm.clueCount} clues in 20 seconds, ${money(fm.points)} per right answer, and a ${money(fm.bonus)} bonus for ${fm.target} right.`;
+    ? `${nameOf(game, first)} goes first, then ${nameOf(game, second)} plays the same ${fm.clueCount} clues. Each gets ${time} (30 seconds a clue). ${money(fm.points)} per right answer; ${fm.target} right between them wins a ${money(fm.bonus)} bonus each.`
+    : `${nameOf(game, first)} plays solo: ${fm.clueCount} clues in ${time}, ${money(fm.points)} per right answer, and a ${money(fm.bonus)} bonus for ${fm.target} right.`;
 }
 
 function Results({ game, judge }) {
@@ -96,7 +98,7 @@ export function FastMoneyDisplay({ game, host, onAction }) {
       {fm.phase === "intro" && <p className="fm-lede">{rules(fm, game)}</p>}
       {fm.phase === "between" && (
         <>
-          <p className="fm-lede"><b>{nameOf(game, active)}</b>, you’re up! 25 seconds for the same clues.</p>
+          <p className="fm-lede"><b>{nameOf(game, active)}</b>, you’re up! {turnTime(fm)} for the same clues.</p>
           <p className="muted">{nameOf(game, first)}’s answers stay hidden until the end.</p>
         </>
       )}
@@ -156,7 +158,7 @@ export function FastMoneyPlayer({ game, playerId }) {
   if (fm.phase === "playing" && active === playerId && fm.current) return <AnswerBox key={`${fm.current.index}-${fm.progress[playerId].join()}`} game={game} playerId={playerId} />;
   let message;
   if (fm.phase === "intro") message = playing ? (playerId === first ? "You’re in Fast Money and you go first. Get ready!" : "You’re in Fast Money and you go second. Don’t look at the screen while the first player answers!") : `Fast Money: ${fm.playerIds.map((id) => nameOf(game, id)).join(" and ")} are playing.`;
-  else if (fm.phase === "between") message = active === playerId ? "You’re up! 25 seconds. Get ready…" : `${nameOf(game, active)} is up next.`;
+  else if (fm.phase === "between") message = active === playerId ? `You’re up! ${turnTime(fm)} on the clock. Get ready…` : `${nameOf(game, active)} is up next.`;
   else message = playerId === second && active === first ? "No peeking! Look away from the screen until it’s your turn." : `${nameOf(game, active)} is playing Fast Money.`;
   return <p className="player-status fm-wait">{message}</p>;
 }

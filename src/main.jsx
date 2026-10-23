@@ -451,6 +451,7 @@ function Display({ game, host = false, onAction }) {
             {dailyPending ? "Daily Double" : <>{q.category} <span>{q.value ? `$${q.value.toLocaleString()}` : "Final Jeopardy"}</span></>}
           </p>
           <h1>{dailyPending ? "Wager required" : q.question}</h1>
+          {game.status === "final" && !game.hostless && <FinalReveals game={game} />}
           {game.reveal && <div className="answer">{q.answer}</div>}
           {game.clockPaused && <p className="paused-note">Clock paused while {game.status === "final" ? "a player confirms" : `${buzzed?.name || "the player"} confirms`} their answer</p>}
           {buzzed && <div className="buzzed">{game.activeQuestion.dailyDouble ? `${buzzed.name} buzzed in` : `${buzzed.name} buzzed in at ${formatBuzzTime(game.buzzedAtMs)}`}</div>}
@@ -501,6 +502,23 @@ function Display({ game, host = false, onAction }) {
       {game.status !== "lobby" && <Scores players={game.players} turnPlayerId={game.activeQuestion ? null : game.turnPlayerId} />}
       {host && game.hostless && game.players.length > 0 && <HostTools game={game} onAction={onAction} />}
     </main>
+  );
+}
+// Final Jeopardy with a host: each response appears on the main screen as the host reveals it.
+function FinalReveals({ game }) {
+  const shown = game.finalResponses.filter((r) => r.revealed);
+  if (!game.finalTimeUp) return null;
+  if (!shown.length) return <p className="final-reveal-note">{game.finalResponses.length ? "Time’s up! Let’s see the responses…" : "Time’s up!"}</p>;
+  return (
+    <ul className="final-reveals" aria-live="polite">
+      {shown.map((r) => (
+        <li key={r.playerId}>
+          <span className="final-reveal-name">{game.players.find((p) => p.id === r.playerId)?.name || "Player"}</span>
+          <span className="final-reveal-response">{r.response}</span>
+          <span className="final-reveal-wager">Wager ${r.wager.toLocaleString()}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 function HostTools({ game, onAction }) {
@@ -568,56 +586,7 @@ function Controller({ game, onAction }) {
       </h1>
       {finalMode ? (
         <>
-          <button className="wide" onClick={() => onAction("reveal")}>
-            {game.reveal ? "Hide final answer" : "Reveal final answer"}
-          </button>
-          {game.players.map((p) => {
-            const r = game.finalResponses.find((x) => x.playerId === p.id);
-            return (
-              <div className="judgement" key={p.id}>
-                <h2>
-                  {p.name} <small>{r ? "Submitted" : "Waiting"}</small>
-                </h2>
-                {r && (
-                  <>
-                    <p>
-                      Wager: <b>${r.wager}</b>
-                    </p>
-                    <button
-                      className="wide"
-                      onClick={() =>
-                        onAction("revealFinalPlayer", { playerId: p.id })
-                      }
-                    >
-                      {r.revealed ? "Hide response" : "Reveal response"}
-                    </button>
-                    {r.revealed && (
-                      <p className="final-response">{r.response}</p>
-                    )}
-                    <div className="verdict">
-                      <button
-                        onClick={() =>
-                          onAction("score", { playerId: p.id, amount: r.wager })
-                        }
-                      >
-                        Correct +${r.wager}
-                      </button>
-                      <button
-                        onClick={() =>
-                          onAction("score", {
-                            playerId: p.id,
-                            amount: -r.wager,
-                          })
-                        }
-                      >
-                        Incorrect −${r.wager}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+          <FinalControls game={game} onAction={onAction} />
           <button className="close" onClick={() => onAction("close")}>
             {game.hasFastMoney ? "Go to Fast Money" : "Finish game"}
           </button>
@@ -663,6 +632,7 @@ function Controller({ game, onAction }) {
               </div>
             </div>
           )}
+          <SkipTally game={game} />
           <button className="close" onClick={() => onAction("timeoutClue")}>
             Reveal answer and return to board
           </button>
@@ -685,6 +655,56 @@ function Controller({ game, onAction }) {
     </main>
   );
 }
+// Host's Final Jeopardy controls: while the clock runs, players write. Once time is up the host reveals
+// every response (each one appears on the main screen) and only then can reveal the correct answer.
+function FinalControls({ game, onAction }) {
+  const responses = game.finalResponses, revealedCount = responses.filter((r) => r.revealed).length;
+  const allRevealed = revealedCount === responses.length, timeUp = game.finalTimeUp;
+  return (
+    <>
+      {!timeUp ? (
+        <>
+          <p className="status-note">Players are writing their responses · {responses.length} locked in</p>
+          <button className="wide" onClick={() => onAction("finalStop")}>Stop the clock now</button>
+        </>
+      ) : (
+        <p className="status-note">
+          {game.reveal ? "Correct answer is on the main screen." : allRevealed ? "Every response is revealed. Reveal the correct answer when you’re ready." : `Time’s up. Reveal each player’s response first (${revealedCount} of ${responses.length} shown).`}
+        </p>
+      )}
+      <button className={"wide" + (game.reveal ? " on" : "")} disabled={!game.reveal && !(timeUp && allRevealed)} onClick={() => onAction("reveal")}>
+        {game.reveal ? "Hide final answer" : "Reveal final answer"}
+      </button>
+      <div className="controller-answer">
+        <span>Correct response</span>
+        {game.activeQuestion?.question?.answer}
+      </div>
+      {game.players.map((p) => {
+        const r = responses.find((x) => x.playerId === p.id);
+        return (
+          <div className="judgement" key={p.id}>
+            <h2>
+              {p.name} <small>{r ? (r.revealed ? "Shown on screen" : "Submitted") : timeUp ? "No response" : "Waiting"}</small>
+            </h2>
+            {r && (
+              <>
+                <p>Wager: <b>${r.wager}</b></p>
+                <button className="wide" disabled={!timeUp || (r.revealed && game.reveal)} onClick={() => onAction("revealFinalPlayer", { playerId: p.id })}>
+                  {r.revealed ? "Hide response" : "Reveal response on screen"}
+                </button>
+                {r.revealed && <p className="final-response">{r.response}</p>}
+                <div className="verdict">
+                  <button onClick={() => onAction("score", { playerId: p.id, amount: r.wager })}>Correct +${r.wager}</button>
+                  <button onClick={() => onAction("score", { playerId: p.id, amount: -r.wager })}>Incorrect −${r.wager}</button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 function FinalPlayer({ game, playerId, p }) {
   const [wager, setWager] = useState("0"),
     [response, setResponse] = useState(""),
@@ -699,8 +719,11 @@ function FinalPlayer({ game, playerId, p }) {
     return (
       <p className="status-card">
         Response locked in · wager ${submitted.wager}
+        {!game.hostless && game.finalTimeUp && <><br />{submitted.revealed ? "Your response is on the main screen." : "Waiting for the host to reveal responses."}</>}
       </p>
     );
+  if (game.finalTimeUp || game.reveal)
+    return <p className="status-card">Time’s up! No response was locked in.</p>;
   const hold = (on) => socket.emit("player:holdClock", { code: game.code, playerId, hold: on });
   const ask = () => {
     if (!response.trim()) return setError("Type your response first.");
@@ -835,9 +858,16 @@ function Player({ game, playerId }) {
     </main>
   );
 }
+function SkipTally({ game }) {
+  const votes = game.skipVotes || [];
+  if (game.activeQuestion?.dailyDouble || game.reveal || !votes.length) return null;
+  const needed = game.players.filter((player) => player.connected && !game.incorrectPlayerIds?.includes(player.id));
+  const count = needed.filter((player) => votes.includes(player.id)).length;
+  return <p className="status-note">{count} of {needed.length} players voted to skip this clue. It skips when everyone votes.</p>;
+}
 function SkipVote({ game, playerId }) {
   const active = game.activeQuestion;
-  if (!game.hostless || !active || active.final || active.dailyDouble || game.reveal) return null;
+  if (!active || active.final || active.dailyDouble || game.reveal) return null;
   const votes = game.skipVotes || [];
   const needed = game.players.filter((player) => player.connected && !game.incorrectPlayerIds?.includes(player.id));
   const voted = votes.includes(playerId);

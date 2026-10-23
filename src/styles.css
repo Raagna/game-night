@@ -340,6 +340,21 @@ input, textarea, select { caret-color: var(--gold); }
 }
 .buzzed { padding: 10px 20px; border-radius: 999px; background: var(--gold); color: var(--on-gold); font-weight: 700; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+/* Final Jeopardy (host mode): each response joins the main screen as the host reveals it. */
+.final-reveal-note { color: var(--text-muted); font-weight: 700; font-size: 1.2rem; }
+.final-reveals { list-style: none; margin: 0; padding: 0; width: min(900px, 100%); display: grid; gap: 10px; }
+.final-reveals li {
+  display: grid; grid-template-columns: 9rem 1fr auto; align-items: baseline; gap: 16px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--line); background: rgb(13 27 94 / 0.6);
+  text-align: left; animation: rise 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.final-reveal-name { font-weight: 700; color: var(--text-muted); }
+.final-reveal-response { font: clamp(1.1rem, 2vw, 1.7rem)/1.25 var(--display); overflow-wrap: anywhere; }
+.final-reveal-wager { font-weight: 700; color: var(--gold); white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .final-reveals li { grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .final-reveal-response { grid-column: 1 / -1; grid-row: 2; }
+}
 
 .host-tools {
   max-width: 680px; margin: 28px auto 0;
@@ -722,6 +737,10 @@ input, textarea, select { caret-color: var(--gold); }
 .confirm-clock.is-running { color: var(--text-muted); }
 .confirm-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .confirm-buttons > * { min-height: 54px; font-size: 1.05rem; }
+/* Minute-long clocks ("2:30") need a smaller numeral to fit the circle. */
+.clue-timer.is-long { font-size: 0.95rem; letter-spacing: -0.02em; }
+.fm-phone-top .clue-timer.is-long, .sv-guess-top .clue-timer.is-long { font-size: 0.8rem; }
+@media (max-width: 640px) { .clue-timer.is-long { font-size: 0.8rem; } }
 .clue-timer.is-paused { border-style: dashed; color: var(--text-muted); border-color: var(--text-muted); }
 .paused-note { color: var(--text-muted); font-weight: 700; }
 @keyframes fade-in { from { opacity: 0; } }
