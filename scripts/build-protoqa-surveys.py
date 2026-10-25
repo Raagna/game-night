@@ -179,7 +179,7 @@ def crowdsourced_answers(row):
     scale = 100 / total if total > 100 else 1
     answers = []
     for cluster in clusters:
-        strings = sorted(set(cluster["answers"]), key=lambda s: (len(s) > MAX_ANSWER or bool(garbled(s)), -raw.get(s, 1), len(s)))
+        strings = sorted(set(cluster["answers"]), key=lambda s: (len(s) > MAX_ANSWER or bool(garbled(s)), -raw.get(s, 1), len(s), s))
         label = strings[0]
         # One person's odd answer ("party" in the Fight cluster) shouldn't count as a hit unless it echoes the label.
         alts, seen, label_words = [], {key(label)}, set(words(label))
