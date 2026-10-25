@@ -15,11 +15,30 @@ const MULTIPLIER_NAME = { 2: "Double", 3: "Triple" };
 const readPlayed = () => { try { return JSON.parse(localStorage.getItem(PLAYED_KEY)) || []; } catch { return []; } };
 const rememberPlayed = (ids) => { try { localStorage.setItem(PLAYED_KEY, JSON.stringify([...new Set([...readPlayed(), ...ids])].slice(-400))); } catch {} };
 const shuffle = (list) => list.map((item) => [Math.random(), item]).sort((a, b) => a[0] - b[0]).map(([, item]) => item);
+
+// ---------- Question packs ----------
+// The hand-written pack ships in the bundle. The ProtoQA pack (scripts/build-protoqa-surveys.py) is over a
+// megabyte, so it's fetched from public/data when the host opens Survey Says!
+const PACK_KEY = "gameNight.survey.pack.v1";
+const PACKS = [{ id: "all", label: "Everything" }, { id: "classic", label: "Game Night" }, { id: "protoqa", label: "ProtoQA" }];
+let protoqa = [], protoqaRequest = null;
+export function loadProtoQA() {
+  protoqaRequest ||= fetch(`${import.meta.env.BASE_URL}data/surveys-protoqa.json`)
+    .then((response) => { if (!response.ok) throw new Error("Couldn’t load the ProtoQA questions."); return response.json(); })
+    .then(({ surveys }) => (protoqa = surveys.map(([id, question, answers]) => ({ id, question, answers: answers.map(([text, points, alts = []]) => ({ text, points, alts })) }))))
+    .catch((error) => { protoqaRequest = null; throw error; });
+  return protoqaRequest;
+}
+const readPack = () => { try { return localStorage.getItem(PACK_KEY) || "all"; } catch { return "all"; } };
+const rememberPack = (pack) => { try { localStorage.setItem(PACK_KEY, pack); } catch {} };
+// Until the ProtoQA pack has loaded (or if it can't), every pack falls back to the hand-written questions.
+const surveysIn = (pack) => (pack === "classic" || !protoqa.length ? SURVEYS : pack === "protoqa" ? protoqa : [...SURVEYS, ...protoqa]);
+
 // Questions this browser hasn't played yet come first; once they run out, everything is back in the mix.
-export function pickSurveys(count, exclude = []) {
-  const played = new Set(readPlayed()), skip = new Set(exclude);
-  let pool = SURVEYS.filter((survey) => !played.has(survey.id) && !skip.has(survey.id));
-  if (pool.length < count) pool = SURVEYS.filter((survey) => !skip.has(survey.id));
+export function pickSurveys(count, exclude = [], pack = readPack()) {
+  const all = surveysIn(pack), played = new Set(readPlayed()), skip = new Set(exclude);
+  let pool = all.filter((survey) => !played.has(survey.id) && !skip.has(survey.id));
+  if (pool.length < count) pool = all.filter((survey) => !skip.has(survey.id));
   return shuffle(pool).slice(0, count);
 }
 
@@ -67,17 +86,37 @@ function phaseText(game) {
 export function SurveySetup({ onCreate }) {
   const [teamNames, setTeamNames] = useState(["", ""]),
     [rounds, setRounds] = useState(5),
-    [picks, setPicks] = useState(() => pickSurveys(5)),
+    [pack, setPack] = useState(readPack),
+    [packStatus, setPackStatus] = useState(protoqa.length ? "ready" : "loading"),
+    [picks, setPicks] = useState(() => pickSurveys(5, [], pack)),
     [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  // Once the ProtoQA pack arrives, deal a fresh set, unless the host has already started swapping questions.
+  const edited = useRef(false);
+  useEffect(() => {
+    if (protoqa.length) return;
+    let live = true;
+    loadProtoQA()
+      .then(() => { if (!live) return; setPackStatus("ready"); if (!edited.current) setPicks((list) => pickSurveys(list.length, [], pack)); })
+      .catch(() => live && setPackStatus("failed"));
+    return () => { live = false; };
+  }, []);
   const multipliers = MULTIPLIERS[rounds];
   const changeRounds = (count) => {
     setRounds(count);
-    setPicks((list) => (count <= list.length ? list.slice(0, count) : [...list, ...pickSurveys(count - list.length, list.map((s) => s.id))]));
+    setPicks((list) => (count <= list.length ? list.slice(0, count) : [...list, ...pickSurveys(count - list.length, list.map((s) => s.id), pack)]));
   };
-  const swap = (index) =>
-    setPicks((list) => list.map((survey, i) => (i === index ? pickSurveys(1, list.map((s) => s.id))[0] || survey : survey)));
+  const swap = (index) => {
+    edited.current = true;
+    setPicks((list) => list.map((survey, i) => (i === index ? pickSurveys(1, list.map((s) => s.id), pack)[0] || survey : survey)));
+  };
+  const choosePack = (id) => {
+    setPack(id); rememberPack(id);
+    edited.current = false;
+    setPicks(pickSurveys(rounds, [], id));
+  };
+  const hasProtoqa = pack !== "classic" && packStatus === "ready";
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed(picks.map((survey) => survey.id));
@@ -123,7 +162,12 @@ export function SurveySetup({ onCreate }) {
         </div>
         <div className="sv-questions-head">
           <h2>Questions</h2>
-          <button className="chip-btn" onClick={() => setPicks(pickSurveys(rounds))}>New set</button>
+          <div className="sv-packs" role="radiogroup" aria-label="Question pack">
+            {PACKS.map(({ id, label }) => (
+              <button key={id} role="radio" aria-checked={pack === id} onClick={() => choosePack(id)}>{label}</button>
+            ))}
+          </div>
+          <button className="chip-btn" onClick={() => { edited.current = false; setPicks(pickSurveys(rounds, [], pack)); }}>New set</button>
         </div>
         <ol className="sv-question-list">
           {picks.map((survey, i) => (
@@ -134,7 +178,20 @@ export function SurveySetup({ onCreate }) {
             </li>
           ))}
         </ol>
-        <p className="muted sv-hint">Answers stay hidden here so you can play too. The answers and points are invented for this game, not from a real survey.</p>
+        <p className="muted sv-hint">
+          Answers stay hidden here so you can play too.{" "}
+          {pack === "classic" ? "The answers and points are invented for this game, not from a real survey."
+            : packStatus === "loading" ? "Loading the ProtoQA questions…"
+            : packStatus === "failed" ? "The ProtoQA questions couldn’t be loaded, so these are from the Game Night pack."
+            : pack === "protoqa" ? "ProtoQA boards use real survey counts, so some answers are dated or oddly spelled."
+            : "ProtoQA boards use real survey counts; the Game Night pack’s answers are invented for this game."}
+        </p>
+        {hasProtoqa && (
+          <p className="muted sv-hint sv-credit">
+            ProtoQA questions from <a href="https://github.com/iesl/protoqa-data" target="_blank" rel="noreferrer">Boratko et al., 2020</a>,
+            used under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> and trimmed to each board’s top answers.
+          </p>
+        )}
         <section className="game-options" aria-labelledby="sv-options-title">
           <h2 id="sv-options-title">Game options</h2>
           <label className="game-mode">
@@ -143,7 +200,7 @@ export function SurveySetup({ onCreate }) {
           </label>
         </section>
         <div className="final-row">
-          <p className="muted start-summary">{rounds} rounds · {SURVEYS.length} questions in the pack</p>
+          <p className="muted start-summary">{rounds} rounds · {surveysIn(pack).length.toLocaleString()} questions in the pack</p>
           <button className="primary" disabled={busy} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
         </div>
         {notice && <p className="notice" role="alert">{notice}</p>}
@@ -570,6 +627,8 @@ export function SurveyController({ game, onAction }) {
 // ---------- End of game ----------
 export function SurveyEnd({ game, host, onAction }) {
   const [a, b] = game.teams, winner = a.score === b.score ? null : a.score > b.score ? 0 : 1;
+  // A host who reloaded mid-game hasn't fetched the ProtoQA pack yet; get it in time for "Play again".
+  useEffect(() => { if (host) loadProtoQA().catch(() => {}); }, [host]);
   const playAgain = () => {
     const surveys = pickSurveys(game.roundCount);
     rememberPlayed(surveys.map((s) => s.id));
