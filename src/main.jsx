@@ -20,7 +20,7 @@ import BoardEditor from "./BoardEditor";
 import MyBoards from "./MyBoards";
 import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
 import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
-import Hub, { BackToHub } from "./Hub";
+import Hub, { Arrow, BackToHub } from "./Hub";
 import { LobbyJoin, JoinCorner } from "./JoinQR";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
@@ -966,6 +966,43 @@ function EndGame({ game, host }) {
     </main>
   );
 }
+// ---------- Back to settings ----------
+const CLOSED_MESSAGE = "The host closed that game to change the settings. Scan the new QR code, or enter the new code to join again.";
+// Back to the game's settings, from the lobby or after starting by mistake. It ends this room: every phone is sent
+// back to the join screen, and creating the lobby again makes a new room with a new code.
+function BackToSettings({ game, place, onClosed }) {
+  const dialog = useRef(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const players = game.players.length;
+  const close = () => {
+    setBusy(true); setError("");
+    socket.timeout(6000).emit("host:close", { code: game.code }, (err, r) => {
+      setBusy(false);
+      if (err || !r?.ok) { setError("Couldn’t reach the game server. Check the connection and try again."); if (!dialog.current?.open) dialog.current?.showModal(); return; }
+      dialog.current?.close();
+      onClosed();
+    });
+  };
+  // An empty lobby goes straight back; anything else asks first.
+  const ask = () => (players || game.status !== "lobby" ? dialog.current?.showModal() : close());
+  const what = game.status === "lobby" ? "This closes the lobby" : game.status === "complete" ? "This closes the finished game" : "This ends the game in progress";
+  const who = !players ? "" : ` and sends ${players === 1 ? "the player" : players === 2 ? "both players" : `all ${players} players`} back to the join screen`;
+  return (
+    <>
+      <button className={`back-to-settings is-${place}`} disabled={busy} onClick={ask}><Arrow back /> Back to settings</button>
+      <dialog ref={dialog} className="confirm confirm-dialog" aria-labelledby="back-to-settings-title">
+        <h2 id="back-to-settings-title">Go back to the settings?</h2>
+        <p>{what}{who}. When you create the lobby again, it gets a new code and QR code.</p>
+        {error && <p className="notice" role="alert">{error}</p>}
+        <div className="confirm-buttons">
+          <button className="secondary" onClick={() => dialog.current.close()}>{game.status === "playing" ? "Keep playing" : "Stay here"}</button>
+          <button className="primary" disabled={busy} onClick={close}>{busy ? "Closing…" : "End it and go back"}</button>
+        </div>
+      </dialog>
+    </>
+  );
+}
+const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup };
+
 function App() {
   const params = new URLSearchParams(location.search),
     host = params.has("host"),
@@ -980,10 +1017,34 @@ function App() {
     [playerId, setPlayerId] = useState(sessionStorage.playerId),
     [connected, setConnected] = useState(socket.connected),
     [joinError, setJoinError] = useState(""),
+    [controllerNote, setControllerNote] = useState(""),
+    // The game this TV is set up for. Its setup screen stays mounted (hidden) during the game, so going back to
+    // the settings finds every choice as the host left it.
+    [pick, setPick] = useState(() => (host ? params.get("game") : null)),
     [restoring, setRestoring] = useState(() =>
       host ? Boolean(sessionStorage.displayCode) : controller ? true : Boolean(sessionStorage.playerId && sessionStorage.gameCode));
-  const gameCode = useRef(null);
+  const gameCode = useRef(null), gameKind = useRef(null), lastFail = useRef(null);
   gameCode.current = game?.code;
+  gameKind.current = game ? game.kind || "jeopardy" : gameKind.current;
+  // The host closed the room (from this screen or the other host screen).
+  const roomClosed = useRef(null);
+  roomClosed.current = () => {
+    if (host) {
+      sessionStorage.removeItem("displayCode");
+      lastFail.current?.(""); // the setup's "Creating…" button is ready again
+      setPick((current) => current || gameKind.current);
+      setGame(null);
+    } else if (controller) {
+      sessionStorage.removeItem("hostCode");
+      setControllerNote("The game was closed to change the settings. Open the host controller again from the new lobby on the TV.");
+      setGame(null);
+    } else {
+      clearPlayerSession(); setPlayerId(undefined); setGame(null);
+      setJoinError(CLOSED_MESSAGE);
+      history.replaceState({}, "", location.pathname);
+    }
+  };
+  useEffect(() => { document.body.classList.toggle("is-tv", host && !!game); }, [host, !!game]);
   useEffect(() => {
     // Re-attach this device to its game whenever the connection is (re)established or the page wakes up.
     // Phones drop the socket when locked or backgrounded; without this they stop receiving updates.
@@ -999,6 +1060,7 @@ function App() {
           if (err) return socket.disconnect().connect();
           if (r.ok) setGame(r.game);
           else if (host) { sessionStorage.removeItem("displayCode"); setGame(null); }
+          else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote("That game was closed to change the settings. Open the host controller again from the new lobby on the TV."); }
           setRestoring(false);
         });
         return;
@@ -1010,7 +1072,7 @@ function App() {
         if (r.ok && r.rejoined) { setPlayerId(r.playerId); setGame(r.game); }
         else {
           clearPlayerSession(); setPlayerId(undefined); setGame(null);
-          setJoinError("That game has ended or the server restarted. Enter the code to join again.");
+          setJoinError(r.closed ? CLOSED_MESSAGE : "That game has ended or the server restarted. Enter the code to join again.");
         }
         setRestoring(false);
       });
@@ -1022,8 +1084,10 @@ function App() {
       if (!socket.connected) socket.connect(); else resync();
     };
     const kicked = () => { clearPlayerSession(); location.assign("./"); };
+    const closed = () => roomClosed.current();
     socket.on("game:update", setGame);
     socket.on("player:kicked", kicked);
+    socket.on("game:closed", closed);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     document.addEventListener("visibilitychange", wake);
@@ -1032,7 +1096,7 @@ function App() {
     document.addEventListener("resume", wake);
     if (socket.connected) onConnect();
     return () => {
-      socket.off("game:update", setGame); socket.off("player:kicked", kicked);
+      socket.off("game:update", setGame); socket.off("player:kicked", kicked); socket.off("game:closed", closed);
       socket.off("connect", onConnect); socket.off("disconnect", onDisconnect);
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("pageshow", wake);
@@ -1043,27 +1107,27 @@ function App() {
   const action = (action, payload = {}) =>
     socket.emit("host:action", { code: game.code, action, payload });
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
+  const create = (config, fail) => {
+    lastFail.current = fail;
+    socket.timeout(10000).emit("host:create", config, (err, r) => {
+      if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
+      if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
+      sessionStorage.displayCode = r.code;
+      setGame(r.game);
+      history.replaceState({}, "", "?host");
+    });
+  };
+  const HostSetup = host && SETUPS[pick];
+  // Always the first child, so the setup keeps its state while hidden behind the game.
+  const setupSlot = HostSetup ? <div hidden={!!game || restoring}><HostSetup onCreate={create} /></div> : null;
+  const dock = game && (host || controller) && <BackToSettings game={game} place={host ? "tv" : "controller"} onClosed={() => roomClosed.current()} />;
+  return <>{setupSlot}{dock}{renderScreen()}</>;
+
+  function renderScreen() {
   if (!game) {
     if (restoring || controller)
-      return <main className="join"><div className="brand hub-brand">GAME NIGHT</div>{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
-    if (host) {
-      const create = (config, fail) =>
-        socket.timeout(10000).emit("host:create", config, (err, r) => {
-              if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
-              if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
-              sessionStorage.displayCode = r.code;
-              setGame(r.game);
-              history.replaceState({}, "", "?host");
-            });
-      const pick = params.get("game");
-      if (pick === "survey") return <SurveySetup onCreate={create} />;
-      if (pick === "wheel") return <WheelSetup onCreate={create} />;
-      if (pick === "fib") return <FibSetup onCreate={create} />;
-      if (pick === "price") return <PriceSetup onCreate={create} />;
-      if (pick === "tongue") return <TongueSetup onCreate={create} />;
-      if (pick === "jeopardy") return <Setup onCreate={create} />;
-      return <Hub />;
-    }
+      return <main className="join"><div className="brand hub-brand">GAME NIGHT</div>{controllerNote && !restoring && <p className="player-status" role="status">{controllerNote}</p>}{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
+    if (host) return HostSetup ? null : <Hub />;
     if (!joining && !joinError) return <Hub />;
     return (
       <Join
@@ -1132,5 +1196,6 @@ function App() {
       </>
     );
   return <>{banner}<Player game={game} playerId={playerId} /></>;
+  }
 }
 createRoot(document.getElementById("root")).render(<App />);

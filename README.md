@@ -97,6 +97,8 @@ All six games can be played two ways:
 3. Players scan the QR code with their phone camera, or open the site and type the code under **Joining a game?**, then enter their name.
 4. Start the game from the host screen.
 
+To change something (or after starting by mistake), press **Back to settings** at the bottom of the TV or the top of the host controller. That closes the room: every phone goes back to the join screen with a note saying so, and the setup comes back with your choices as you left them. Creating the lobby again gives a new code and QR code; the old code can't be rejoined.
+
 When you run it yourself, phones must be on the same network as the computer running it. If the host screen is open on `localhost`, the QR code automatically points phones at the computer's network address (it asks the server's `/lan` endpoint for it), because phones can't open `localhost`.
 
 ## Running it locally
@@ -114,7 +116,7 @@ npm run dev
 `npm run dev` starts two things together:
 
 - the Vite dev server for the client on port 5173, listening on `0.0.0.0` so phones on your network can reach it;
-- the game server (`server/index.js`, Express + Socket.IO) on port 3001.
+- the game server (`server/index.js`, Express + Socket.IO) on port 3001, or on `PORT` if that's set.
 
 Open `http://localhost:5173` on the host screen. `npm run client` and `npm run server` start either half on its own.
 
