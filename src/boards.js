@@ -7,7 +7,7 @@ export const MAX_SIZE = 6;
 export const FAST_MONEY_CLUES = 5;
 const STORAGE_KEY = "jeopardyParty.boards.v1";
 const FILE_FORMAT = "jeopardy-party-board";
-const ROUND_NAMES = ["Jeopardy!", "Double Jeopardy!"];
+const ROUND_NAMES = ["Jeoparty!", "Double Jeoparty!"];
 
 const newId = () => `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const str = (value, max = 500) => String(value ?? "").slice(0, max);

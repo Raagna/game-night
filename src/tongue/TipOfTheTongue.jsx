@@ -11,18 +11,20 @@ import "./tongue.css";
 
 // ---------- Dealing the words ----------
 const WORDS_PER_TURN = 7;
-const ROUNDS_KEY = "gameNight.tongue.rounds.v1", GUESSING_KEY = "gameNight.tongue.guessing.v1";
+const ROUNDS_KEY = "gameNight.tongue.rounds.v1", GUESSING_KEY = "gameNight.tongue.guessing.v1", CATEGORIES_KEY = "gameNight.tongue.categories.v1";
+const ALL_CATEGORIES = WORDS.categories.map(([name]) => name);
 const read = (key, allowed, fallback) => { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch { return fallback; } };
 const remember = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
 const shuffle = (list) => list.map((item) => [Math.random(), item]).sort((a, b) => a[0] - b[0]).map(([, item]) => item);
-// Every category, in a random order, each with seven of its words; a word never appears twice in one game.
-function dealCategories() {
+// The host's categories (all of them unless they've switched some off). Players never see a category: turns
+// draw words at random from one shuffled pool of every chosen category's words.
+const readCategories = () => {
+  try { const saved = JSON.parse(localStorage.getItem(CATEGORIES_KEY)); return Array.isArray(saved) && saved.some((n) => ALL_CATEGORIES.includes(n)) ? saved.filter((n) => ALL_CATEGORIES.includes(n)) : ALL_CATEGORIES; } catch { return ALL_CATEGORIES; }
+};
+const wordsIn = (chosen) => WORDS.categories.filter(([name]) => chosen.includes(name)).flatMap(([, words]) => words);
+function dealWords(chosen) {
   const seen = new Set();
-  return shuffle(WORDS.categories).map(([name, words]) => {
-    const fresh = shuffle(words).filter((word) => !seen.has(word.toLowerCase())).slice(0, WORDS_PER_TURN);
-    fresh.forEach((word) => seen.add(word.toLowerCase()));
-    return { name, words: fresh };
-  });
+  return shuffle(wordsIn(chosen)).filter((word) => !seen.has(word.toLowerCase()) && seen.add(word.toLowerCase()));
 }
 const GUESSING = {
   typed: { label: "Type it", note: "The guesser types each guess on their phone and the game checks it. The clue-giver can pass, or own up to a foul." },
@@ -67,12 +69,16 @@ function useTvSounds(game) {
 export function TongueSetup({ onCreate }) {
   const [rounds, setRounds] = useState(() => Number(read(ROUNDS_KEY, ["3", "4", "5"], "3"))),
     [guessing, setGuessing] = useState(() => read(GUESSING_KEY, ["typed", "aloud"], "typed")),
+    [chosen, setChosen] = useState(readCategories),
     [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  const choose = (list) => { setChosen(list); remember(CATEGORIES_KEY, JSON.stringify(list)); };
+  const toggle = (name) => choose(chosen.includes(name) ? chosen.filter((n) => n !== name) : [...chosen, name]);
+  const wordCount = new Set(wordsIn(chosen).map((w) => w.toLowerCase())).size, enough = wordCount >= WORDS_PER_TURN;
   const start = () => {
     setNotice(""); setBusy(true);
-    onCreate({ game: "tongue", categories: dealCategories(), rounds, guessing, hostless }, (e) => { setBusy(false); setNotice(e); });
+    onCreate({ game: "tongue", words: dealWords(chosen), rounds, guessing, hostless }, (e) => { setBusy(false); setNotice(e); });
   };
   return (
     <main className="setup tt-setup">
@@ -99,7 +105,20 @@ export function TongueSetup({ onCreate }) {
           </div>
           <p className="muted sv-hint">{GUESSING[guessing].note}</p>
         </fieldset>
-        <p className="muted sv-hint">A point for every word, and clearing all seven in a category banks a point for every second left. Passes are unlimited; a passed word comes round again. {WORDS.categories.length} categories, written for Game Night.</p>
+        <fieldset className="ws-fieldset tt-cats-field">
+          <legend>Word categories</legend>
+          <p className="muted sv-hint">Words come up at random from every category you leave on. Players never see the category.</p>
+          <div className="tt-cats-tools">
+            <button className="chip-btn" onClick={() => choose(ALL_CATEGORIES)} disabled={chosen.length === ALL_CATEGORIES.length}>All</button>
+            <button className="chip-btn" onClick={() => choose([])} disabled={!chosen.length}>None</button>
+            <span className="muted">{chosen.length} of {ALL_CATEGORIES.length} on · {wordCount} words</span>
+          </div>
+          <div className="tt-cats" role="group" aria-label="Word categories">
+            {ALL_CATEGORIES.map((name) => <button key={name} role="checkbox" aria-checked={chosen.includes(name)} onClick={() => toggle(name)}>{name}</button>)}
+          </div>
+          {!enough && <p className="notice" role="alert">Turn on categories with at least {WORDS_PER_TURN} words between them.</p>}
+        </fieldset>
+        <p className="muted sv-hint">Seven random words a turn. A point for every word, and clearing all seven banks a point for every second left. Passes are unlimited; a passed word comes round again. Words written for Game Night.</p>
         <section className="game-options" aria-labelledby="tt-options-title">
           <h2 id="tt-options-title">Game options</h2>
           <label className="game-mode">
@@ -109,7 +128,7 @@ export function TongueSetup({ onCreate }) {
         </section>
         <div className="final-row">
           <p className="muted start-summary">{rounds} rounds · teams of two · up to 12 players</p>
-          <button className="primary" disabled={busy} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
+          <button className="primary" disabled={busy || !enough} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
         </div>
         {notice && <p className="notice" role="alert">{notice}</p>}
       </section>
@@ -184,16 +203,10 @@ function Stage({ game, onAction }) {
     <div className="fib-center tt-center">
       <p className="sv-round-label">{turnLabel(game)}<em>{team?.name}</em></p>
       {turn.phase === "choose" && <h1 className="tt-headline">{team?.name}: who’s giving the clues?<small>Last round — decide on your phones.</small></h1>}
-      {turn.phase === "pick" && (
-        <>
-          <h1 className="tt-headline">{nameOf(game, giver)} is picking a category</h1>
-          <ul className="tt-board">{turn.choices.map((c) => <li key={c.index}>{c.name}</li>)}</ul>
-        </>
-      )}
+      {turn.phase === "ready" && <h1 className="tt-headline">{nameOf(game, giver)} gives the clues to {names(game, guessersOf(game))}<small>Get ready — the clock starts when {nameOf(game, giver)} taps Start.</small></h1>}
       {turn.phase === "play" && (
         <>
           <h1 className="tt-headline">{nameOf(game, giver)} is giving clues to {names(game, guessersOf(game))}</h1>
-          <p className="dmd-line tt-category">{turn.category}</p>
           <p className="tt-count"><b className="dmd-line">{turn.points}</b> of {turn.total}</p>
           <ul className="tt-got">{turn.got.map((word) => <li key={word}><Check />{word}</li>)}</ul>
           {turn.lastGuess && !turn.lastGuess.correct && game.guessing === "typed" && <p className="tt-miss" key={turn.lastGuess.at}>“{turn.lastGuess.text}”? Nope.</p>}
@@ -202,7 +215,6 @@ function Stage({ game, onAction }) {
       {turn.phase === "done" && (
         <>
           <h1 className="tt-headline">{team?.name} scored {turn.points + turn.bonus}{turn.bonus ? <small>{turn.points} words + {turn.bonus} bonus for the seconds left</small> : null}</h1>
-          <p className="dmd-line tt-category">{turn.category || "No category"}</p>
           {turn.results?.length ? <Results turn={turn} /> : null}
         </>
       )}
@@ -266,7 +278,7 @@ function GuessBox({ game, playerId }) {
   };
   return (
     <form className="final-form sv-guess tt-guess" onSubmit={send}>
-      <div className="sv-guess-top"><span className="sv-guess-label">{nameOf(game, game.turn.clueGiverId)} is cluing · {game.turn.category}</span><ClueTimer deadline={game.turn.deadline} serverNow={game.serverNow} /></div>
+      <div className="sv-guess-top"><span className="sv-guess-label">{nameOf(game, game.turn.clueGiverId)} is cluing</span><ClueTimer deadline={game.turn.deadline} serverNow={game.serverNow} /></div>
       <p className="tt-progress"><b className="dmd-line">{game.turn.points}</b> of {game.turn.total}</p>
       <input autoFocus aria-label="Your guess" autoComplete="off" enterKeyHint="send" maxLength="60" value={guess} onChange={(e) => { setGuess(e.target.value); setResult(null); }} placeholder="Type your guess" />
       {result && !result.correct && <p className="notice" role="status">Not it — keep going!</p>}
@@ -281,20 +293,20 @@ function PlayerAction({ game, playerId }) {
     if (onTurn) return <div className="tt-card-wrap"><p className="player-status is-you">Last round! Who’s giving the clues?</p><button className="primary tt-big" onClick={() => socket.emit("tongue:choose", { code: game.code, playerId })}>I’ll give the clues</button></div>;
     return <p className="player-status">{teamById(game, turn.teamId)?.name} is deciding who gives the clues…</p>;
   }
-  if (turn.phase === "pick") {
+  if (turn.phase === "ready") {
     if (giver)
       return (
         <div className="tt-card-wrap">
-          <div className="sv-guess-top"><span className="sv-guess-label">You’re giving the clues. Pick a category</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
-          <div className="tt-picks">{turn.choices.map((c) => <button key={c.index} onClick={() => socket.emit("tongue:pick", { code: game.code, playerId, index: c.index })}>{c.name}</button>)}</div>
+          <div className="sv-guess-top"><span className="sv-guess-label">You’re giving the clues to {names(game, guessersOf(game))}. Seven words, 45 seconds.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
+          <button className="primary tt-big" onClick={() => socket.emit("tongue:start", { code: game.code, playerId })}>Start</button>
         </div>
       );
-    return <p className="player-status">{onTurn ? `${nameOf(game, turn.clueGiverId)} is picking a category — you’re guessing!` : `${teamById(game, turn.teamId)?.name} is up next`}</p>;
+    return <p className="player-status">{onTurn ? `Get ready to guess — ${nameOf(game, turn.clueGiverId)} is giving the clues!` : `${teamById(game, turn.teamId)?.name} is up next`}</p>;
   }
   if (turn.phase === "play") {
     if (giver) return <ClueCard game={game} playerId={playerId} />;
-    if (onTurn) return game.guessing === "typed" ? <GuessBox game={game} playerId={playerId} /> : <div className="tt-card-wrap"><p className="player-status is-you">Guess out loud!</p><p className="tt-progress"><b className="dmd-line">{turn.points}</b> of {turn.total} · {turn.category}</p></div>;
-    return <p className="player-status">{teamById(game, turn.teamId)?.name} is playing · {turn.category}<br /><small className="muted">No shouting answers!</small></p>;
+    if (onTurn) return game.guessing === "typed" ? <GuessBox game={game} playerId={playerId} /> : <div className="tt-card-wrap"><p className="player-status is-you">Guess out loud!</p><p className="tt-progress"><b className="dmd-line">{turn.points}</b> of {turn.total}</p></div>;
+    return <p className="player-status">{teamById(game, turn.teamId)?.name} is playing<br /><small className="muted">No shouting answers!</small></p>;
   }
   return (
     <div className="fib-my-result">
@@ -305,7 +317,7 @@ function PlayerAction({ game, playerId }) {
 }
 export function TonguePlayer({ game, playerId }) {
   const player = game.players.find((p) => p.id === playerId), turn = game.turn, team = teamOfPlayer(game, playerId);
-  const myMove = turn && ((turn.phase === "pick" || turn.phase === "play") && turn.clueGiverId === playerId || (turn.phase === "choose" && team?.id === turn.teamId));
+  const myMove = turn && ((turn.phase === "ready" || turn.phase === "play") && turn.clueGiverId === playerId || (turn.phase === "choose" && team?.id === turn.teamId));
   useEffect(() => { if (myMove) { try { navigator.vibrate?.(150); } catch {} } }, [myMove, turn?.phase]);
   if (!player) return <main className="player tt"><p className="status-card">You’re no longer in this game.</p></main>;
   return (
@@ -350,12 +362,10 @@ export function TongueController({ game, onAction }) {
     <main className="controller tt">
       {header}
       <p className="player-clue-meta">{turnLabel(game)} · {team?.name}</p>
-      {turn.phase === "pick" && (
-        <div className="judgement"><h2>Pick for {nameOf(game, turn.clueGiverId)}</h2><div className="tt-picks">{turn.choices.map((c) => <button key={c.index} onClick={() => onAction("pick", { index: c.index })}>{c.name}</button>)}</div></div>
-      )}
+      {turn.phase === "ready" && <p className="status-note">{nameOf(game, turn.clueGiverId)} gives the clues to {names(game, guessersOf(game))}. Their clock starts when they tap Start.</p>}
       {turn.phase === "play" && (
         <>
-          <div className="controller-answer"><span>The word · {turn.category}</span>{word || "…"}</div>
+          <div className="controller-answer"><span>The word</span>{word || "…"}</div>
           <p className="tt-progress"><b className="dmd-line">{turn.points}</b> of {turn.total} · {turn.left} left</p>
           <div className="tt-actions">
             <button className="tt-got-btn" onClick={() => onAction("got")}>Got it!</button>
@@ -365,7 +375,7 @@ export function TongueController({ game, onAction }) {
         </>
       )}
       {turn.phase === "done" && turn.results?.length > 0 && <Results turn={turn} />}
-      <button className="wide on" onClick={() => onAction("next")}>{turn.phase === "play" ? "Stop the clock" : turn.phase === "done" ? "Next turn" : "Skip ahead"}</button>
+      <button className="wide on" onClick={() => onAction("next")}>{turn.phase === "play" ? "Stop the clock" : turn.phase === "done" ? "Next turn" : turn.phase === "ready" ? "Start their clock" : "Skip ahead"}</button>
       <div className="sv-round-controls"><button className="chip-btn" onClick={() => onAction("skipTurn")}>Skip this turn</button><button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button></div>
       <section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section>
     </main>
@@ -389,7 +399,7 @@ export function TongueEnd({ game, host, display, onAction }) {
       {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((t) => <li key={t.id}><span>{t.name}</span><b className="money">{t.score}</b></li>)}</ol>}
       {host ? (
         <div className="sv-end-buttons">
-          <button className="primary" onClick={() => onAction("replay", { categories: dealCategories() })}>Play again with new words</button>
+          <button className="primary" onClick={() => onAction("replay", { words: dealWords(readCategories()) })}>Play again with new words</button>
           <a href="./" onClick={() => sessionStorage.removeItem("displayCode")}>Back to Game Night</a>
         </div>
       ) : (

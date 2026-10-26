@@ -6,9 +6,9 @@ import React, { useState } from "react";
 const GAMES = [
   {
     id: "jeopardy",
-    name: "Jeopardy!",
+    name: "Jeoparty!",
     tag: "Up to 6 players",
-    blurb: "Every season of the show built in, plus your own boards. Buzz in from your phone, wager on Daily Doubles, finish with Final Jeopardy or Fast Money.",
+    blurb: "Every season of the show built in, plus your own boards. Buzz in from your phone, wager on Daily Doubles, finish with Final Jeoparty or Fast Money.",
   },
   {
     id: "survey",

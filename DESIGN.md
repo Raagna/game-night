@@ -182,7 +182,7 @@ The system rejects flat, rounded party cards on a purple ground. Depth here come
 A dark cabinet of violet-black glass, lit by one orange plasma display and one lamp colour per table, with chrome around everything that frames.
 
 ### Primary
-- **Table Lamp Gold** (gold): the default lamp colour and Jeopardy!'s money. Lights the start button, selected tabs and chips, the whose-turn plate, focus rings and the connection banner. On other tables, the table's own lamp colour replaces it through `--table`.
+- **Table Lamp Gold** (gold): the default lamp colour and Jeoparty!'s money. Lights the start button, selected tabs and chips, the whose-turn plate, focus rings and the connection banner. On other tables, the table's own lamp colour replaces it through `--table`.
 - **Plasma Orange** (dmd): the dot-matrix display's lit dots. Used only on Doto readouts on their dark grille (dmd-bg), with unlit dots in dmd-dim. When a clock is in its last five seconds it turns Hurry-Up Red (dmd-hurry) and flashes.
 
 ### Secondary
@@ -190,8 +190,8 @@ A dark cabinet of violet-black glass, lit by one orange plasma display and one l
 
 ### Tertiary
 - **House Art** (art-magenta, art-violet, art-night): Game Night's own backglass, a magenta burst over violet night. art-magenta is also the text selection colour; art-night is the outline of the chrome lettering.
-- **Table colours**: each game pairs a lamp, the ink on that lamp and an art field. Jeopardy! is gold on Show Blue (jeopardy-art), Survey Says! is survey-lamp on survey-art, Spin & Solve is wheel-lamp on wheel-art, Fib or Fact is fib-lamp on fib-art, Price Check is price-lamp (sky blue) on price-art, and Tip of the Tongue is tongue-lamp (lime) on tongue-art. Survey teams (#ff6b6b, #4cc9f0) and Spin & Solve contestant colours are game-local and stay in their game stylesheets.
-- **Show Blue Board** (jeopardy-cell, jeopardy-cell-hover, jeopardy-board): Jeopardy!'s board, kept from the show. Survey Says! slots and Fib or Fact options use the same blue family.
+- **Table colours**: each game pairs a lamp, the ink on that lamp and an art field. Jeoparty! is gold on Show Blue (jeopardy-art), Survey Says! is survey-lamp on survey-art, Spin & Solve is wheel-lamp on wheel-art, Fib or Fact is fib-lamp on fib-art, Price Check is price-lamp (sky blue) on price-art, and Tip of the Tongue is tongue-lamp (lime) on tongue-art. Survey teams (#ff6b6b, #4cc9f0) and Spin & Solve contestant colours are game-local and stay in their game stylesheets.
+- **Show Blue Board** (jeopardy-cell, jeopardy-cell-hover, jeopardy-board): Jeoparty!'s board, kept from the show. Survey Says! slots and Fib or Fact options use the same blue family.
 
 ### Neutral
 - **Cabinet** (cabinet, cabinet-deep): the page ground, a vertical fade from cabinet to cabinet-deep under a violet glow at the top.
@@ -300,7 +300,7 @@ Setup choices are inserts. Arrow inserts (question packs, game length, rounds) a
 The strip under the backglass: a 7px chrome-ramp border around near-black glass, holding the code input and the JOIN lamp. The lamp is an orange dome lettered in Doto. It stays unlit (dark, with dots at 0.3 alpha) until a code is keyed.
 
 ### Show Boards
-The Jeopardy! board is a grid of 4px-radius blue cells (a #1029a3 to jeopardy-cell gradient) inside a 6px chrome bezel on jeopardy-board. Values are Archivo Black in gold with a 2px dark drop. Used cells go dark. The Survey Says! answer board is blue slots on navy inside a gold rule, with a white oval rank and gold points. Revealed slots flip in, and a team's colour shows as a 4px inner edge.
+The Jeoparty! board is a grid of 4px-radius blue cells (a #1029a3 to jeopardy-cell gradient) inside a 6px chrome bezel on jeopardy-board. Values are Archivo Black in gold with a 2px dark drop. Used cells go dark. The Survey Says! answer board is blue slots on navy inside a gold rule, with a white oval rank and gold points. Revealed slots flip in, and a team's colour shows as a 4px inner edge.
 
 ## Do's and Don'ts
 
@@ -311,7 +311,7 @@ The Jeopardy! board is a grid of 4px-radius blue cells (a #1029a3 to jeopardy-ce
 - **Do** frame anything that is the machine (boards, the setup apron, the join strip, the TV edge) in the chrome ramp painted into a transparent border.
 - **Do** make unlit states dark glass, not faded colour.
 - **Do** draw icons as inline SVG in the table glyphs' stroke (round caps and joins, 2.6–3px on a 24–48 unit box).
-- **Do** keep Jeopardy!'s blue-and-gold board and the Survey answer board in their show looks inside the cabinet's chrome.
+- **Do** keep Jeoparty!'s blue-and-gold board and the Survey answer board in their show looks inside the cabinet's chrome.
 - **Do** compact the TV layout under 800px tall so a full board and its scores fit at 720p.
 
 ### Don't:

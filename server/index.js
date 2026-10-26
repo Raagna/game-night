@@ -27,7 +27,7 @@ const leaveKey = (code, playerId) => `${code}:${playerId}`
 // Each player gets 30 seconds per clue for their whole turn (2:30 for five clues), spent however they like.
 const FAST_MONEY = { introMs: 7000, betweenMs: 8000, perClueMs: 30000, points: 1000, bonus: 5000, hostlessRevealMs: 30000 }
 const fastMoneyTurnMs = (game) => FAST_MONEY.perClueMs * game.fastMoneyClues.length
-const DEFAULT_ROUND_NAMES = ['Jeopardy!', 'Double Jeopardy!', 'Triple Jeopardy!']
+const DEFAULT_ROUND_NAMES = ['Jeoparty!', 'Double Jeoparty!', 'Triple Jeoparty!']
 // "Are you sure?" before submitting an answer pauses the answer clock. Each pause lasts at most HOLD_LIMIT_MS,
 // and a player gets MAX_HOLDS pauses per clue, so nobody can stall the game indefinitely.
 const HOLD_LIMIT_MS = 15000

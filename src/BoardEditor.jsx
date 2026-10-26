@@ -140,7 +140,7 @@ export default function BoardEditor({ initial, notes, onSave, onCancel }) {
       )}
 
       <section className="editor-section">
-        <h3>Final Jeopardy <small>optional</small></h3>
+        <h3>Final Jeoparty <small>optional</small></h3>
         <div className="editor-fields">
           <label className="field"><span>Category</span><input value={board.final.category} maxLength="80" onChange={(e) => update((next) => { next.final.category = e.target.value; })} /></label>
           <label className="field field-wide"><span>Clue</span><input value={board.final.question} onChange={(e) => update((next) => { next.final.question = e.target.value; })} /></label>
