@@ -1,0 +1,65 @@
+/* Tip of the Tongue — the pinball cabinet's lime table. The word is the one big thing on the clue-giver's phone;
+   the TV shows who's cluing, the category, the clock and the words as they land. --table comes from styles.css. */
+
+/* ---------- TV ---------- */
+.display.tt { padding-bottom: 60px; }
+.tt-center { gap: 14px; }
+.tt-headline { display: grid; gap: 6px; font: clamp(2rem, 4.6vw, 4.4rem)/1.14 var(--display); letter-spacing: -0.015em; text-wrap: balance; max-width: 22ch; }
+.tt-headline small { font: 700 1rem/1.45 "DM Sans", system-ui, sans-serif; letter-spacing: 0; color: var(--text-muted); }
+.tt-category { font-size: 1.5rem; }
+.tt-count { display: flex; align-items: center; gap: 10px; font: 1.5rem var(--display); color: var(--text-muted); }
+.tt-count .dmd-line { font-size: 1.5rem; }
+.tt-board { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.tt-board li {
+  display: grid; place-items: center; min-height: 64px; padding: 10px 14px; border-radius: 999px;
+  background: radial-gradient(90% 130% at 50% 30%, color-mix(in srgb, var(--table) 45%, var(--panel-raised)) 0%, var(--panel-raised) 70%);
+  border: 1px solid var(--line-strong); font: 700 1rem/1.25 "DM Sans", system-ui, sans-serif; text-wrap: balance;
+}
+.tt-got { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 900px; }
+.tt-got li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: var(--table); color: var(--on-table); font: 1.5rem var(--display); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -3px 0 rgb(0 0 0 / 0.2); animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1); }
+.tt .fib-scoreboard li.is-turn { background: color-mix(in srgb, var(--table) 18%, var(--panel-raised)); box-shadow: inset 0 0 0 1px var(--table); }
+.tt-playing { display: block; font: 700 0.875rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--table); }
+.tt-miss { font: 700 1rem/1.45 "DM Sans", system-ui, sans-serif; color: var(--red-text); animation: fib-in 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* The turn's words: got ones lit, the rest dim and labelled, so the result never rests on colour alone. */
+.tt-results { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 640px; display: grid; gap: 6px; text-align: left; }
+.tt-results li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+.tt-results span { font: 1.5rem/1.1 var(--display); }
+.tt-results em { display: inline-flex; align-items: center; gap: 6px; font: 700 0.875rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--text-muted); }
+.tt-results .is-got { background: color-mix(in srgb, var(--table) 20%, var(--panel)); border-color: var(--table); }
+.tt-results .is-got em { color: var(--table); }
+.tt-results .is-foul span, .tt-results .is-missed span, .tt-results .is-passed span { color: var(--text-muted); }
+.tt-results .is-foul span { text-decoration: line-through; text-decoration-thickness: 2px; }
+
+.tt-lobby-teams { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.tt-lobby-teams li { display: grid; gap: 6px; align-content: start; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); text-align: left; }
+.tt-lobby-teams h2 { font: 1rem var(--display); color: var(--table); }
+.tt-lobby-teams button { justify-self: start; min-height: 36px; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--table) 18%, var(--panel-raised)); font-weight: 700; }
+.tt-lobby-teams button:hover { box-shadow: inset 0 0 0 2px var(--table); }
+
+/* ---------- Phone ---------- */
+.player.tt { text-align: center; }
+.tt-team { margin-top: 6px; font-weight: 700; color: var(--text-muted); }
+.tt-card-wrap { display: grid; gap: 14px; margin-top: 16px; text-align: left; }
+.tt-card-wrap .player-status { text-align: center; }
+/* The word: as big as the phone allows, on a lit card the guesser can't mistake for anything else. */
+.tt-word {
+  display: grid; place-items: center; min-height: 160px; padding: 18px; border-radius: 18px; text-align: center;
+  background: radial-gradient(90% 120% at 50% 40%, color-mix(in srgb, var(--table) 40%, var(--chrome-hi)) 0%, var(--table) 60%, color-mix(in srgb, var(--table) 70%, var(--bg-deep)) 100%);
+  color: var(--on-table); font: clamp(2rem, 11vw, 4.4rem)/1.05 var(--display); letter-spacing: -0.015em; overflow-wrap: anywhere;
+  box-shadow: inset 0 3px 0 rgb(255 255 255 / 0.45), inset 0 -6px 0 rgb(0 0 0 / 0.2), 0 0 0 4px #15101e, 0 0 0 6px var(--chrome-lo), 0 0 0 7px var(--chrome);
+}
+.tt-progress { display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: 700; color: var(--text-muted); }
+.tt-progress .dmd-line { font-size: 1.5rem; }
+.tt-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.tt-got-btn, .tt-pass-btn { min-height: 72px; border-radius: 999px; font: 1.5rem var(--display); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 var(--chrome-dark), 0 6px 14px rgb(0 0 0 / 0.5); transition: transform 90ms ease-out; }
+.tt-got-btn { background: radial-gradient(90% 130% at 50% 25%, color-mix(in srgb, var(--green) 60%, var(--chrome-hi)) 0%, var(--green) 55%, color-mix(in srgb, var(--green) 60%, var(--bg-deep)) 100%); color: var(--text); }
+.tt-pass-btn { background: var(--panel-raised); color: var(--text); border: 1px solid var(--line-strong); }
+.tt-got-btn:active, .tt-pass-btn:active { transform: translateY(2px); }
+.tt-foul-btn { justify-self: center; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgb(255 154 162 / 0.45); color: var(--red-text); font-weight: 700; }
+.tt-picks { display: grid; gap: 8px; }
+.tt-picks button { min-height: 52px; padding: 10px 16px; border-radius: 999px; background: var(--panel-raised); border: 1px solid var(--line-strong); font-weight: 700; text-align: center; }
+.tt-picks button:hover { border-color: var(--table); }
+.tt-big { min-height: 72px; font-size: 1.5rem; }
+.tt-guess input:focus { border-color: var(--table); }
+

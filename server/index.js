@@ -8,6 +8,7 @@ import { createSurveyGames } from './survey.js'
 import { createWheelGames } from './wheel.js'
 import { createFibGames } from './fib.js'
 import { createPriceGames } from './price.js'
+import { createTongueGames } from './tongue.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -74,10 +75,11 @@ const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimer
 const wheel = createWheelGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
 const fib = createFibGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
 const price = createPriceGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
+const tongue = createTongueGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
 // Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register },
 // and optionally hostJoined(game, socket) for a host screen or controller connecting and maxPlayers(game)
 // when the limit depends on the game (Spin & Solve teams take more phones than solo play).
-const modes = { survey, wheel, fib, price }
+const modes = { survey, wheel, fib, price, tongue }
 // Looked up with hasOwn because the name comes from the browser ("toString" must not count as a game).
 const modeFor = (kind) => Object.hasOwn(modes, kind) ? modes[kind] : undefined
 const modeOf = (game) => modeFor(game?.kind)
