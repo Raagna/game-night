@@ -1,0 +1,893 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T18:07:28.493Z",
+  "title": "Design System: Game Night",
+  "extensions": {
+    "colorMeta": {
+      "cabinet": {
+        "role": "neutral",
+        "displayName": "Cabinet Black-Violet",
+        "canonical": "#120a22",
+        "tonalRamp": [
+          "oklch(15.0% 0.049 296.3)",
+          "oklch(26.4% 0.049 296.3)",
+          "oklch(37.9% 0.049 296.3)",
+          "oklch(49.3% 0.049 296.3)",
+          "oklch(60.7% 0.049 296.3)",
+          "oklch(72.1% 0.049 296.3)",
+          "oklch(83.6% 0.049 296.3)",
+          "oklch(95.0% 0.049 296.3)"
+        ]
+      },
+      "cabinet-deep": {
+        "role": "neutral",
+        "displayName": "Deep Cabinet",
+        "canonical": "#08040f",
+        "tonalRamp": [
+          "oklch(15.0% 0.029 302.5)",
+          "oklch(26.4% 0.029 302.5)",
+          "oklch(37.9% 0.029 302.5)",
+          "oklch(49.3% 0.029 302.5)",
+          "oklch(60.7% 0.029 302.5)",
+          "oklch(72.1% 0.029 302.5)",
+          "oklch(83.6% 0.029 302.5)",
+          "oklch(95.0% 0.029 302.5)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel Glass",
+        "canonical": "#170d2b",
+        "tonalRamp": [
+          "oklch(15.0% 0.058 295.8)",
+          "oklch(26.4% 0.058 295.8)",
+          "oklch(37.9% 0.058 295.8)",
+          "oklch(49.3% 0.058 295.8)",
+          "oklch(60.7% 0.058 295.8)",
+          "oklch(72.1% 0.058 295.8)",
+          "oklch(83.6% 0.058 295.8)",
+          "oklch(95.0% 0.058 295.8)"
+        ]
+      },
+      "panel-raised": {
+        "role": "neutral",
+        "displayName": "Raised Glass",
+        "canonical": "#22143d",
+        "tonalRamp": [
+          "oklch(15.0% 0.075 295.8)",
+          "oklch(26.4% 0.075 295.8)",
+          "oklch(37.9% 0.075 295.8)",
+          "oklch(49.3% 0.075 295.8)",
+          "oklch(60.7% 0.075 295.8)",
+          "oklch(72.1% 0.075 295.8)",
+          "oklch(83.6% 0.075 295.8)",
+          "oklch(95.0% 0.075 295.8)"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Well",
+        "canonical": "#0f0820",
+        "tonalRamp": [
+          "oklch(15.0% 0.049 293.8)",
+          "oklch(26.4% 0.049 293.8)",
+          "oklch(37.9% 0.049 293.8)",
+          "oklch(49.3% 0.049 293.8)",
+          "oklch(60.7% 0.049 293.8)",
+          "oklch(72.1% 0.049 293.8)",
+          "oklch(83.6% 0.049 293.8)",
+          "oklch(95.0% 0.049 293.8)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Lilac Hairline",
+        "canonical": "rgb(214 196 255 / 0.14)",
+        "tonalRamp": [
+          "oklch(15.0% 0.083 298.6)",
+          "oklch(26.4% 0.083 298.6)",
+          "oklch(37.9% 0.083 298.6)",
+          "oklch(49.3% 0.083 298.6)",
+          "oklch(60.7% 0.083 298.6)",
+          "oklch(72.1% 0.083 298.6)",
+          "oklch(83.6% 0.083 298.6)",
+          "oklch(95.0% 0.083 298.6)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Lilac Hairline",
+        "canonical": "rgb(214 196 255 / 0.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.083 298.6)",
+          "oklch(26.4% 0.083 298.6)",
+          "oklch(37.9% 0.083 298.6)",
+          "oklch(49.3% 0.083 298.6)",
+          "oklch(60.7% 0.083 298.6)",
+          "oklch(72.1% 0.083 298.6)",
+          "oklch(83.6% 0.083 298.6)",
+          "oklch(95.0% 0.083 298.6)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Lilac White",
+        "canonical": "#f7f1ff",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 305.3)",
+          "oklch(26.4% 0.020 305.3)",
+          "oklch(37.9% 0.020 305.3)",
+          "oklch(49.3% 0.020 305.3)",
+          "oklch(60.7% 0.020 305.3)",
+          "oklch(72.1% 0.020 305.3)",
+          "oklch(83.6% 0.020 305.3)",
+          "oklch(95.0% 0.020 305.3)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Lavender",
+        "canonical": "#b9abd6",
+        "tonalRamp": [
+          "oklch(15.0% 0.062 299.8)",
+          "oklch(26.4% 0.062 299.8)",
+          "oklch(37.9% 0.062 299.8)",
+          "oklch(49.3% 0.062 299.8)",
+          "oklch(60.7% 0.062 299.8)",
+          "oklch(72.1% 0.062 299.8)",
+          "oklch(83.6% 0.062 299.8)",
+          "oklch(95.0% 0.062 299.8)"
+        ]
+      },
+      "chrome-hi": {
+        "role": "secondary",
+        "displayName": "Chrome Highlight",
+        "canonical": "#f4f6fa",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 264.5)",
+          "oklch(26.4% 0.006 264.5)",
+          "oklch(37.9% 0.006 264.5)",
+          "oklch(49.3% 0.006 264.5)",
+          "oklch(60.7% 0.006 264.5)",
+          "oklch(72.1% 0.006 264.5)",
+          "oklch(83.6% 0.006 264.5)",
+          "oklch(95.0% 0.006 264.5)"
+        ]
+      },
+      "chrome": {
+        "role": "secondary",
+        "displayName": "Chrome",
+        "canonical": "#c4cad4",
+        "tonalRamp": [
+          "oklch(15.0% 0.015 260.7)",
+          "oklch(26.4% 0.015 260.7)",
+          "oklch(37.9% 0.015 260.7)",
+          "oklch(49.3% 0.015 260.7)",
+          "oklch(60.7% 0.015 260.7)",
+          "oklch(72.1% 0.015 260.7)",
+          "oklch(83.6% 0.015 260.7)",
+          "oklch(95.0% 0.015 260.7)"
+        ]
+      },
+      "chrome-lo": {
+        "role": "secondary",
+        "displayName": "Chrome Shadow",
+        "canonical": "#6d7380",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 265.9)",
+          "oklch(26.4% 0.021 265.9)",
+          "oklch(37.9% 0.021 265.9)",
+          "oklch(49.3% 0.021 265.9)",
+          "oklch(60.7% 0.021 265.9)",
+          "oklch(72.1% 0.021 265.9)",
+          "oklch(83.6% 0.021 265.9)",
+          "oklch(95.0% 0.021 265.9)"
+        ]
+      },
+      "chrome-dark": {
+        "role": "secondary",
+        "displayName": "Chrome Skirt",
+        "canonical": "#343844",
+        "tonalRamp": [
+          "oklch(15.0% 0.022 270.7)",
+          "oklch(26.4% 0.022 270.7)",
+          "oklch(37.9% 0.022 270.7)",
+          "oklch(49.3% 0.022 270.7)",
+          "oklch(60.7% 0.022 270.7)",
+          "oklch(72.1% 0.022 270.7)",
+          "oklch(83.6% 0.022 270.7)",
+          "oklch(95.0% 0.022 270.7)"
+        ]
+      },
+      "art-magenta": {
+        "role": "tertiary",
+        "displayName": "House Magenta",
+        "canonical": "#ff2f8e",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 359.8)",
+          "oklch(26.4% 0.200 359.8)",
+          "oklch(37.9% 0.200 359.8)",
+          "oklch(49.3% 0.200 359.8)",
+          "oklch(60.7% 0.200 359.8)",
+          "oklch(72.1% 0.200 359.8)",
+          "oklch(83.6% 0.200 359.8)",
+          "oklch(95.0% 0.200 359.8)"
+        ]
+      },
+      "art-violet": {
+        "role": "tertiary",
+        "displayName": "House Violet",
+        "canonical": "#7a1fd0",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 300.1)",
+          "oklch(26.4% 0.200 300.1)",
+          "oklch(37.9% 0.200 300.1)",
+          "oklch(49.3% 0.200 300.1)",
+          "oklch(60.7% 0.200 300.1)",
+          "oklch(72.1% 0.200 300.1)",
+          "oklch(83.6% 0.200 300.1)",
+          "oklch(95.0% 0.200 300.1)"
+        ]
+      },
+      "art-night": {
+        "role": "tertiary",
+        "displayName": "Backglass Night",
+        "canonical": "#1a0b3d",
+        "tonalRamp": [
+          "oklch(15.0% 0.089 290.2)",
+          "oklch(26.4% 0.089 290.2)",
+          "oklch(37.9% 0.089 290.2)",
+          "oklch(49.3% 0.089 290.2)",
+          "oklch(60.7% 0.089 290.2)",
+          "oklch(72.1% 0.089 290.2)",
+          "oklch(83.6% 0.089 290.2)",
+          "oklch(95.0% 0.089 290.2)"
+        ]
+      },
+      "dmd": {
+        "role": "primary",
+        "displayName": "Plasma Orange",
+        "canonical": "#ff8a24",
+        "tonalRamp": [
+          "oklch(15.0% 0.175 54.8)",
+          "oklch(26.4% 0.175 54.8)",
+          "oklch(37.9% 0.175 54.8)",
+          "oklch(49.3% 0.175 54.8)",
+          "oklch(60.7% 0.175 54.8)",
+          "oklch(72.1% 0.175 54.8)",
+          "oklch(83.6% 0.175 54.8)",
+          "oklch(95.0% 0.175 54.8)"
+        ]
+      },
+      "dmd-dim": {
+        "role": "primary",
+        "displayName": "Unlit Plasma Dot",
+        "canonical": "rgb(255 138 36 / 0.16)",
+        "tonalRamp": [
+          "oklch(15.0% 0.175 54.8)",
+          "oklch(26.4% 0.175 54.8)",
+          "oklch(37.9% 0.175 54.8)",
+          "oklch(49.3% 0.175 54.8)",
+          "oklch(60.7% 0.175 54.8)",
+          "oklch(72.1% 0.175 54.8)",
+          "oklch(83.6% 0.175 54.8)",
+          "oklch(95.0% 0.175 54.8)"
+        ]
+      },
+      "dmd-bg": {
+        "role": "primary",
+        "displayName": "Display Grille",
+        "canonical": "#140800",
+        "tonalRamp": [
+          "oklch(15.0% 0.033 67.6)",
+          "oklch(26.4% 0.033 67.6)",
+          "oklch(37.9% 0.033 67.6)",
+          "oklch(49.3% 0.033 67.6)",
+          "oklch(60.7% 0.033 67.6)",
+          "oklch(72.1% 0.033 67.6)",
+          "oklch(83.6% 0.033 67.6)",
+          "oklch(95.0% 0.033 67.6)"
+        ]
+      },
+      "dmd-hurry": {
+        "role": "primary",
+        "displayName": "Hurry-Up Red",
+        "canonical": "#ff5a3c",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 32.5)",
+          "oklch(26.4% 0.200 32.5)",
+          "oklch(37.9% 0.200 32.5)",
+          "oklch(49.3% 0.200 32.5)",
+          "oklch(60.7% 0.200 32.5)",
+          "oklch(72.1% 0.200 32.5)",
+          "oklch(83.6% 0.200 32.5)",
+          "oklch(95.0% 0.200 32.5)"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Table Lamp Gold",
+        "canonical": "#ffd23f",
+        "tonalRamp": [
+          "oklch(15.0% 0.162 90.9)",
+          "oklch(26.4% 0.162 90.9)",
+          "oklch(37.9% 0.162 90.9)",
+          "oklch(49.3% 0.162 90.9)",
+          "oklch(60.7% 0.162 90.9)",
+          "oklch(72.1% 0.162 90.9)",
+          "oklch(83.6% 0.162 90.9)",
+          "oklch(95.0% 0.162 90.9)"
+        ]
+      },
+      "on-gold": {
+        "role": "primary",
+        "displayName": "Gold Lamp Ink",
+        "canonical": "#1f1300",
+        "tonalRamp": [
+          "oklch(15.0% 0.041 80.2)",
+          "oklch(26.4% 0.041 80.2)",
+          "oklch(37.9% 0.041 80.2)",
+          "oklch(49.3% 0.041 80.2)",
+          "oklch(60.7% 0.041 80.2)",
+          "oklch(72.1% 0.041 80.2)",
+          "oklch(83.6% 0.041 80.2)",
+          "oklch(95.0% 0.041 80.2)"
+        ]
+      },
+      "jeopardy-art": {
+        "role": "tertiary",
+        "displayName": "Show Blue",
+        "canonical": "#1d3bd6",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 266.4)",
+          "oklch(26.4% 0.200 266.4)",
+          "oklch(37.9% 0.200 266.4)",
+          "oklch(49.3% 0.200 266.4)",
+          "oklch(60.7% 0.200 266.4)",
+          "oklch(72.1% 0.200 266.4)",
+          "oklch(83.6% 0.200 266.4)",
+          "oklch(95.0% 0.200 266.4)"
+        ]
+      },
+      "jeopardy-cell": {
+        "role": "tertiary",
+        "displayName": "Board Cell Blue",
+        "canonical": "#0b1f8c",
+        "tonalRamp": [
+          "oklch(15.0% 0.177 265.9)",
+          "oklch(26.4% 0.177 265.9)",
+          "oklch(37.9% 0.177 265.9)",
+          "oklch(49.3% 0.177 265.9)",
+          "oklch(60.7% 0.177 265.9)",
+          "oklch(72.1% 0.177 265.9)",
+          "oklch(83.6% 0.177 265.9)",
+          "oklch(95.0% 0.177 265.9)"
+        ]
+      },
+      "jeopardy-cell-hover": {
+        "role": "tertiary",
+        "displayName": "Board Cell Hover",
+        "canonical": "#1430a8",
+        "tonalRamp": [
+          "oklch(15.0% 0.192 265.9)",
+          "oklch(26.4% 0.192 265.9)",
+          "oklch(37.9% 0.192 265.9)",
+          "oklch(49.3% 0.192 265.9)",
+          "oklch(60.7% 0.192 265.9)",
+          "oklch(72.1% 0.192 265.9)",
+          "oklch(83.6% 0.192 265.9)",
+          "oklch(95.0% 0.192 265.9)"
+        ]
+      },
+      "jeopardy-board": {
+        "role": "tertiary",
+        "displayName": "Board Ground",
+        "canonical": "#020722",
+        "tonalRamp": [
+          "oklch(15.0% 0.059 265.9)",
+          "oklch(26.4% 0.059 265.9)",
+          "oklch(37.9% 0.059 265.9)",
+          "oklch(49.3% 0.059 265.9)",
+          "oklch(60.7% 0.059 265.9)",
+          "oklch(72.1% 0.059 265.9)",
+          "oklch(83.6% 0.059 265.9)",
+          "oklch(95.0% 0.059 265.9)"
+        ]
+      },
+      "survey-lamp": {
+        "role": "tertiary",
+        "displayName": "Survey Lamp Orange",
+        "canonical": "#ff8a3d",
+        "tonalRamp": [
+          "oklch(15.0% 0.167 50.5)",
+          "oklch(26.4% 0.167 50.5)",
+          "oklch(37.9% 0.167 50.5)",
+          "oklch(49.3% 0.167 50.5)",
+          "oklch(60.7% 0.167 50.5)",
+          "oklch(72.1% 0.167 50.5)",
+          "oklch(83.6% 0.167 50.5)",
+          "oklch(95.0% 0.167 50.5)"
+        ]
+      },
+      "on-survey-lamp": {
+        "role": "tertiary",
+        "displayName": "Survey Lamp Ink",
+        "canonical": "#2a1205",
+        "tonalRamp": [
+          "oklch(15.0% 0.046 48.7)",
+          "oklch(26.4% 0.046 48.7)",
+          "oklch(37.9% 0.046 48.7)",
+          "oklch(49.3% 0.046 48.7)",
+          "oklch(60.7% 0.046 48.7)",
+          "oklch(72.1% 0.046 48.7)",
+          "oklch(83.6% 0.046 48.7)",
+          "oklch(95.0% 0.046 48.7)"
+        ]
+      },
+      "survey-art": {
+        "role": "tertiary",
+        "displayName": "Survey Art Rust",
+        "canonical": "#c2410c",
+        "tonalRamp": [
+          "oklch(15.0% 0.174 38.4)",
+          "oklch(26.4% 0.174 38.4)",
+          "oklch(37.9% 0.174 38.4)",
+          "oklch(49.3% 0.174 38.4)",
+          "oklch(60.7% 0.174 38.4)",
+          "oklch(72.1% 0.174 38.4)",
+          "oklch(83.6% 0.174 38.4)",
+          "oklch(95.0% 0.174 38.4)"
+        ]
+      },
+      "wheel-lamp": {
+        "role": "tertiary",
+        "displayName": "Wheel Lamp Pink",
+        "canonical": "#ff4fa3",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 355.3)",
+          "oklch(26.4% 0.200 355.3)",
+          "oklch(37.9% 0.200 355.3)",
+          "oklch(49.3% 0.200 355.3)",
+          "oklch(60.7% 0.200 355.3)",
+          "oklch(72.1% 0.200 355.3)",
+          "oklch(83.6% 0.200 355.3)",
+          "oklch(95.0% 0.200 355.3)"
+        ]
+      },
+      "on-wheel-lamp": {
+        "role": "tertiary",
+        "displayName": "Wheel Lamp Ink",
+        "canonical": "#2a0718",
+        "tonalRamp": [
+          "oklch(15.0% 0.062 354.0)",
+          "oklch(26.4% 0.062 354.0)",
+          "oklch(37.9% 0.062 354.0)",
+          "oklch(49.3% 0.062 354.0)",
+          "oklch(60.7% 0.062 354.0)",
+          "oklch(72.1% 0.062 354.0)",
+          "oklch(83.6% 0.062 354.0)",
+          "oklch(95.0% 0.062 354.0)"
+        ]
+      },
+      "wheel-art": {
+        "role": "tertiary",
+        "displayName": "Wheel Art Magenta",
+        "canonical": "#b0177a",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 347.9)",
+          "oklch(26.4% 0.200 347.9)",
+          "oklch(37.9% 0.200 347.9)",
+          "oklch(49.3% 0.200 347.9)",
+          "oklch(60.7% 0.200 347.9)",
+          "oklch(72.1% 0.200 347.9)",
+          "oklch(83.6% 0.200 347.9)",
+          "oklch(95.0% 0.200 347.9)"
+        ]
+      },
+      "fib-lamp": {
+        "role": "tertiary",
+        "displayName": "Fib Lamp Mint",
+        "canonical": "#3ddc97",
+        "tonalRamp": [
+          "oklch(15.0% 0.164 159.7)",
+          "oklch(26.4% 0.164 159.7)",
+          "oklch(37.9% 0.164 159.7)",
+          "oklch(49.3% 0.164 159.7)",
+          "oklch(60.7% 0.164 159.7)",
+          "oklch(72.1% 0.164 159.7)",
+          "oklch(83.6% 0.164 159.7)",
+          "oklch(95.0% 0.164 159.7)"
+        ]
+      },
+      "on-fib-lamp": {
+        "role": "tertiary",
+        "displayName": "Fib Lamp Ink",
+        "canonical": "#04261a",
+        "tonalRamp": [
+          "oklch(15.0% 0.046 165.5)",
+          "oklch(26.4% 0.046 165.5)",
+          "oklch(37.9% 0.046 165.5)",
+          "oklch(49.3% 0.046 165.5)",
+          "oklch(60.7% 0.046 165.5)",
+          "oklch(72.1% 0.046 165.5)",
+          "oklch(83.6% 0.046 165.5)",
+          "oklch(95.0% 0.046 165.5)"
+        ]
+      },
+      "fib-art": {
+        "role": "tertiary",
+        "displayName": "Fib Art Green",
+        "canonical": "#0e7a55",
+        "tonalRamp": [
+          "oklch(15.0% 0.108 162.9)",
+          "oklch(26.4% 0.108 162.9)",
+          "oklch(37.9% 0.108 162.9)",
+          "oklch(49.3% 0.108 162.9)",
+          "oklch(60.7% 0.108 162.9)",
+          "oklch(72.1% 0.108 162.9)",
+          "oklch(83.6% 0.108 162.9)",
+          "oklch(95.0% 0.108 162.9)"
+        ]
+      },
+      "green": {
+        "role": "neutral",
+        "displayName": "Verdict Green",
+        "canonical": "#17a35f",
+        "tonalRamp": [
+          "oklch(15.0% 0.151 154.9)",
+          "oklch(26.4% 0.151 154.9)",
+          "oklch(37.9% 0.151 154.9)",
+          "oklch(49.3% 0.151 154.9)",
+          "oklch(60.7% 0.151 154.9)",
+          "oklch(72.1% 0.151 154.9)",
+          "oklch(83.6% 0.151 154.9)",
+          "oklch(95.0% 0.151 154.9)"
+        ]
+      },
+      "green-text": {
+        "role": "neutral",
+        "displayName": "Verdict Green Text",
+        "canonical": "#6ff0b0",
+        "tonalRamp": [
+          "oklch(15.0% 0.147 159.4)",
+          "oklch(26.4% 0.147 159.4)",
+          "oklch(37.9% 0.147 159.4)",
+          "oklch(49.3% 0.147 159.4)",
+          "oklch(60.7% 0.147 159.4)",
+          "oklch(72.1% 0.147 159.4)",
+          "oklch(83.6% 0.147 159.4)",
+          "oklch(95.0% 0.147 159.4)"
+        ]
+      },
+      "red": {
+        "role": "neutral",
+        "displayName": "Verdict Red",
+        "canonical": "#e0303e",
+        "tonalRamp": [
+          "oklch(15.0% 0.200 22.8)",
+          "oklch(26.4% 0.200 22.8)",
+          "oklch(37.9% 0.200 22.8)",
+          "oklch(49.3% 0.200 22.8)",
+          "oklch(60.7% 0.200 22.8)",
+          "oklch(72.1% 0.200 22.8)",
+          "oklch(83.6% 0.200 22.8)",
+          "oklch(95.0% 0.200 22.8)"
+        ]
+      },
+      "red-text": {
+        "role": "neutral",
+        "displayName": "Verdict Red Text",
+        "canonical": "#ff9aa2",
+        "tonalRamp": [
+          "oklch(15.0% 0.121 15.1)",
+          "oklch(26.4% 0.121 15.1)",
+          "oklch(37.9% 0.121 15.1)",
+          "oklch(49.3% 0.121 15.1)",
+          "oklch(60.7% 0.121 15.1)",
+          "oklch(72.1% 0.121 15.1)",
+          "oklch(83.6% 0.121 15.1)",
+          "oklch(95.0% 0.121 15.1)"
+        ]
+      },
+      "card-paper": {
+        "role": "neutral",
+        "displayName": "Instruction Card Paper",
+        "canonical": "#f4ecd9",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 87.9)",
+          "oklch(26.4% 0.027 87.9)",
+          "oklch(37.9% 0.027 87.9)",
+          "oklch(49.3% 0.027 87.9)",
+          "oklch(60.7% 0.027 87.9)",
+          "oklch(72.1% 0.027 87.9)",
+          "oklch(83.6% 0.027 87.9)",
+          "oklch(95.0% 0.027 87.9)"
+        ]
+      },
+      "card-ink": {
+        "role": "neutral",
+        "displayName": "Instruction Card Ink",
+        "canonical": "#22132f",
+        "tonalRamp": [
+          "oklch(15.0% 0.056 307.2)",
+          "oklch(26.4% 0.056 307.2)",
+          "oklch(37.9% 0.056 307.2)",
+          "oklch(49.3% 0.056 307.2)",
+          "oklch(60.7% 0.056 307.2)",
+          "oklch(72.1% 0.056 307.2)",
+          "oklch(83.6% 0.056 307.2)",
+          "oklch(95.0% 0.056 307.2)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Chrome Display",
+        "purpose": "GAME NIGHT and game brands, always as chrome lettering."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Clues and questions on the TV."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Round titles, setup and join headings, dialogs."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Instructions, hints, status copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, chips, tabs, player names."
+      },
+      "dmd": {
+        "displayName": "Dot-Matrix",
+        "purpose": "Every score, clock, code, round label and verdict; sized and padded in whole 0.1em dots."
+      }
+    },
+    "gradients": [
+      {
+        "name": "chrome-ramp",
+        "value": "linear-gradient(180deg, #ffffff 0%, #e4e8ee 12%, #a7aeba 34%, #4b515d 48%, #f1f3f7 52%, #c3c9d3 70%, #6b7280 90%, #2b2f39 100%)",
+        "purpose": "Chrome bezels, painted into a transparent border via border-box."
+      },
+      {
+        "name": "chrome-face",
+        "value": "linear-gradient(180deg, #ffffff 0%, #f1f3f7 34%, #9aa1ad 48%, #5c6270 52%, #e6e9ef 58%, #ffffff 84%, #c9ced8 100%)",
+        "purpose": "Chrome lettering, clipped into the letters."
+      },
+      {
+        "name": "dmd-grille",
+        "value": "radial-gradient(circle, var(--dmd-dim) 0.026em, transparent 0.034em) 0 0.05em / 0.1em 0.1em",
+        "purpose": "The dot-matrix grille, aligned to Doto's dot centres."
+      },
+      {
+        "name": "lit-insert",
+        "value": "radial-gradient(80% 140% at 45% 60%, color-mix(in srgb, var(--table) 45%, #fff) 0%, var(--table) 50%, color-mix(in srgb, var(--table) 70%, #000) 100%)",
+        "purpose": "A playfield insert lit in the table colour."
+      },
+      {
+        "name": "backglass-house-art",
+        "value": "radial-gradient(55% 60% at 50% 30%, rgb(255 47 142 / 0.85) 0%, rgb(122 31 208 / 0.75) 48%, transparent 80%), repeating-conic-gradient(from -90deg at 50% 118%, rgb(255 255 255 / 0.07) 0deg 3deg, transparent 3deg 10deg), linear-gradient(180deg, #2b0f5c 0%, var(--art-night) 100%)",
+        "purpose": "Game Night's backglass: magenta burst over violet night with rays from below."
+      }
+    ],
+    "shadows": [
+      {
+        "name": "cabinet",
+        "value": "0 2px 4px rgb(0 0 0 / 0.4), 0 14px 34px rgb(0 0 0 / 0.45)",
+        "purpose": "Soft dark drop under framed objects."
+      },
+      {
+        "name": "bezel",
+        "value": "inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 0 1px #0a0b10, 0 2px 4px rgb(0 0 0 / 0.4), 0 14px 34px rgb(0 0 0 / 0.45)",
+        "purpose": "Chrome-bordered panels: setup apron, board."
+      },
+      {
+        "name": "readout-recess",
+        "value": "inset 0 2px 6px rgb(0 0 0 / 0.8), 0 0 0 2px #2a2a2e, 0 0 0 3px var(--chrome-lo)",
+        "purpose": "Every framed dot-matrix readout."
+      },
+      {
+        "name": "domed-button",
+        "value": "inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 var(--chrome-dark), 0 6px 14px rgb(0 0 0 / 0.5)",
+        "purpose": "Start button and lit lamps; the 3px vertical skirt is the only hard step."
+      },
+      {
+        "name": "domed-button-pressed",
+        "value": "inset 0 2px 0 rgb(255 255 255 / 0.35), inset 0 -2px 0 rgb(0 0 0 / 0.22), 0 1px 0 var(--chrome-dark), 0 3px 8px rgb(0 0 0 / 0.5)",
+        "purpose": "Active state, paired with translateY(2px)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "160ms ease-out",
+        "purpose": "Colour, border and filter changes on buttons, chips and inputs."
+      },
+      {
+        "name": "press",
+        "value": "90ms ease-out",
+        "purpose": "Button press travel."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Lamp lift (220ms), reveals and rises (360-420ms)."
+      },
+      {
+        "name": "dmd-flash",
+        "value": "1s steps(2, jump-none) infinite",
+        "purpose": "A clock in its last five seconds, like a DMD HURRY UP."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "1ms, single iteration",
+        "purpose": "prefers-reduced-motion collapses every animation and transition."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "max-width: 760px"
+      },
+      {
+        "name": "hub-two-up",
+        "value": "max-width: 1020px"
+      },
+      {
+        "name": "tv-720p",
+        "value": "max-height: 800px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Start Button",
+      "kind": "button",
+      "refersTo": "button-start",
+      "description": "Domed lit lamp in the table colour; unlit dark glass when disabled.",
+      "html": "<button class=\"ds-start\">Start game</button> <button class=\"ds-start\" disabled>Start game</button>",
+      "css": ".ds-start { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border: 0; border-radius: 999px; background: var(--table, #ffd23f); color: var(--on-table, #1f1300); font: 800 1rem 'DM Sans', system-ui, sans-serif; letter-spacing: 0.01em; cursor: pointer; box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 #343844, 0 6px 14px rgb(0 0 0 / 0.5); transition: filter 160ms ease-out, transform 90ms ease-out, box-shadow 90ms ease-out; } .ds-start:hover:not(:disabled) { filter: brightness(1.1); } .ds-start:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.35), inset 0 -2px 0 rgb(0 0 0 / 0.22), 0 1px 0 #343844, 0 3px 8px rgb(0 0 0 / 0.5); } .ds-start:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; } .ds-start:disabled { background: #22143d; color: #b9abd6; box-shadow: inset 0 0 0 1px rgb(214 196 255 / 0.3); cursor: default; }"
+    },
+    {
+      "name": "Chip Button",
+      "kind": "chip",
+      "refersTo": "chip-button",
+      "description": "Small domed pill for secondary actions on glass.",
+      "html": "<button class=\"ds-chip\">Skip clue</button>",
+      "css": ".ds-chip { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid rgb(214 196 255 / 0.3); background: #22143d; color: #f7f1ff; font: 700 0.875rem 'DM Sans', system-ui, sans-serif; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08); cursor: pointer; transition: border-color 160ms ease-out; } .ds-chip:hover { border-color: #c4cad4; } .ds-chip:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Field glass; the border lights in the table colour on focus.",
+      "html": "<label class=\"ds-field\"><span>Your name</span><input placeholder=\"Ava\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; } .ds-field span { font: 700 0.875rem 'DM Sans', system-ui, sans-serif; color: #b9abd6; } .ds-field input { min-height: 46px; padding: 10px 13px; border: 1px solid rgb(214 196 255 / 0.3); border-radius: 10px; background: #0f0820; color: #f7f1ff; font: 16px 'DM Sans', system-ui, sans-serif; caret-color: #ff8a24; transition: border-color 160ms ease-out; } .ds-field input:focus { border-color: var(--table, #ffd23f); outline: none; } .ds-field input::placeholder { color: rgb(185 171 214 / 0.75); }"
+    },
+    {
+      "name": "Dot-Matrix Readout",
+      "kind": "custom",
+      "refersTo": "dmd-readout",
+      "description": "Orange plasma Doto on a 0.1em grille: scores, clocks, codes, verdicts. Flashes hurry red in the last five seconds.",
+      "html": "<span class=\"ds-dmd\">$1200</span> <span class=\"ds-dmd ds-dmd-low\">0:04</span>",
+      "css": ".ds-dmd { display: inline-block; padding: 0.1em 0.3em; border-radius: 6px; font: 800 1.5rem/1.2 'Doto', ui-monospace, monospace; letter-spacing: 0; font-variant-numeric: tabular-nums; text-transform: uppercase; color: #ff8a24; background: #140800 radial-gradient(circle, rgb(255 138 36 / 0.16) 0.026em, transparent 0.034em) 0 0.05em / 0.1em 0.1em; box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.8), 0 0 0 2px #2a2a2e, 0 0 0 3px #6d7380; } .ds-dmd-low { color: #ff5a3c; animation: ds-dmd-flash 1s steps(2, jump-none) infinite; } @keyframes ds-dmd-flash { 50% { color: rgb(255 90 60 / 0.35); } }"
+    },
+    {
+      "name": "Join Grille",
+      "kind": "input",
+      "refersTo": "code-input",
+      "description": "Code keyed into the dot-matrix inside a chrome bezel, with the JOIN lamp at its end.",
+      "html": "<form class=\"ds-grille\"><input class=\"ds-code\" placeholder=\"CODE\" maxlength=\"6\" aria-label=\"Game code\"><button class=\"ds-join\">Join</button></form>",
+      "css": ".ds-grille { display: flex; gap: 10px; padding: 10px; border: 7px solid transparent; border-radius: 16px; background: linear-gradient(#0c0612, #0c0612) padding-box, linear-gradient(180deg, #ffffff 0%, #e4e8ee 12%, #a7aeba 34%, #4b515d 48%, #f1f3f7 52%, #c3c9d3 70%, #6b7280 90%, #2b2f39 100%) border-box; box-shadow: 0 0 0 1px #0a0b10, 0 12px 26px rgb(0 0 0 / 0.5); } .ds-code { flex: 1; min-width: 0; padding: 0.2em 0.3em; border: 0; border-radius: 8px; font: 800 1.9rem/1.2 'Doto', ui-monospace, monospace; letter-spacing: 0.3em; text-transform: uppercase; color: #ff8a24; caret-color: #ff8a24; background: #140800 radial-gradient(circle, rgb(255 138 36 / 0.16) 0.026em, transparent 0.034em) 0 0.05em / 0.1em 0.1em; box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.85); } .ds-code::placeholder { color: rgb(255 138 36 / 0.32); } .ds-code:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; } .ds-join { flex-shrink: 0; min-width: 4.2em; padding: 0 0.6em; border: 0; border-radius: 8px; font: 800 1.9rem/1 'Doto', ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #2a1200; background: radial-gradient(70% 90% at 50% 40%, #ffd79a 0%, #ffa23f 45%, #d46a10 100%); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.5), inset 0 -4px 0 rgb(0 0 0 / 0.25), 0 3px 8px rgb(0 0 0 / 0.5); cursor: pointer; transition: filter 160ms ease-out, transform 90ms ease-out; } .ds-join:hover { filter: brightness(1.08); } .ds-join:active { transform: translateY(2px); } .ds-join:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; }"
+    },
+    {
+      "name": "Arrow Insert",
+      "kind": "chip",
+      "refersTo": "arrow-insert",
+      "description": "Playfield arrow for setup choices: hollow lamp off, filled lamp on; focus drawn inside the clip.",
+      "html": "<div class=\"ds-inserts\" role=\"radiogroup\" aria-label=\"Question pack\"><button class=\"ds-insert\" role=\"radio\" aria-checked=\"true\">Classic</button><button class=\"ds-insert\" role=\"radio\" aria-checked=\"false\">Feud Sheet</button></div>",
+      "css": ".ds-inserts { display: flex; gap: 4px; --table: #ff8a3d; --on-table: #2a1205; } .ds-insert { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 24px 0 20px; border: 0; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 10px 50%); background: linear-gradient(180deg, #2f2047 0%, #1d122f 100%); color: #b9abd6; font: 700 0.8125rem 'DM Sans', system-ui, sans-serif; cursor: pointer; transition: color 160ms ease-out, filter 160ms ease-out; } .ds-insert::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; } .ds-insert:hover { color: #f7f1ff; filter: brightness(1.2); } .ds-insert[aria-checked='true'] { background: radial-gradient(80% 140% at 45% 60%, color-mix(in srgb, var(--table) 45%, #fff) 0%, var(--table) 50%, color-mix(in srgb, var(--table) 70%, #000) 100%); color: var(--on-table); } .ds-insert[aria-checked='true']::before { background: currentColor; } .ds-insert:focus-visible { outline: 3px solid #ffd23f; outline-offset: -6px; filter: brightness(1.25); }"
+    },
+    {
+      "name": "Table Lamp",
+      "kind": "nav",
+      "refersTo": "table-lamp-lens",
+      "description": "Hub game picker: a lens lit from inside, dim at rest, full on hover or focus.",
+      "html": "<a class=\"ds-lamp\" href=\"#\"><span class=\"ds-lens\"><svg viewBox=\"0 0 48 48\" width=\"36\" height=\"36\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"25\" r=\"16\"/><path d=\"M24 9v32\"/><path d=\"M24 9v32\" transform=\"rotate(45 24 25)\"/><path d=\"M24 9v32\" transform=\"rotate(90 24 25)\"/><path d=\"M24 9v32\" transform=\"rotate(135 24 25)\"/><path d=\"M20 4h8l-4 5z\" fill=\"currentColor\"/></g></svg><b>Spin &amp; Solve</b></span><small>2–6 players</small></a>",
+      "css": ".ds-lamp { --lens: #ff4fa3; display: grid; justify-items: center; gap: 12px; width: 180px; padding: 6px; color: #f7f1ff; text-decoration: none; text-align: center; border-radius: 24px; } .ds-lens { width: 160px; aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 8px; color: #2a0718; background: radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--lens) 30%, #fff) 0%, color-mix(in srgb, var(--lens) 62%, #fff) 17%, var(--lens) 45%, color-mix(in srgb, var(--lens) 64%, #000) 76%, color-mix(in srgb, var(--lens) 34%, #000) 100%); box-shadow: inset 0 0 0 6px rgb(0 0 0 / 0.42), inset 0 0 0 8px rgb(255 255 255 / 0.16), inset 0 -16px 24px rgb(0 0 0 / 0.38), 0 0 0 4px #15101e, 0 0 0 7px #8e95a1, 0 0 0 8px #dfe3ea, 0 14px 24px rgb(0 0 0 / 0.55); filter: brightness(0.86) saturate(0.9); transition: filter 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-lens b { font: 1.2rem/1.05 'Archivo Black', 'Arial Black', sans-serif; } .ds-lamp small { font: 800 0.92rem 'DM Sans', system-ui, sans-serif; color: #ffe7f3; } .ds-lamp:hover .ds-lens, .ds-lamp:focus-visible .ds-lens { filter: none; transform: translateY(-4px); } .ds-lamp:active .ds-lens { transform: translateY(0); } .ds-lamp:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Score Plate",
+      "kind": "card",
+      "refersTo": "score-plate",
+      "description": "Player name over a DMD score; gold-lit with a filled dot on their turn, dashed when away.",
+      "html": "<ul class=\"ds-plates\"><li class=\"ds-plate is-turn\"><b>Ava</b><span>$400</span></li><li class=\"ds-plate is-away\"><b>Ben</b><span>$0</span><small>Reconnecting…</small></li></ul>",
+      "css": ".ds-plates { display: flex; gap: 10px; list-style: none; margin: 0; padding: 0; } .ds-plate { display: grid; gap: 6px; justify-items: center; min-width: 132px; padding: 10px 14px 12px; border-radius: 12px; background: #170d2b; border: 1px solid rgb(214 196 255 / 0.3); color: #f7f1ff; font-family: 'DM Sans', system-ui, sans-serif; transition: border-color 200ms ease-out, opacity 200ms ease-out; } .ds-plate b { font-size: 0.9rem; } .ds-plate span { padding: 0.1em 0.3em; border-radius: 5px; font: 800 1.5rem/1.2 'Doto', ui-monospace, monospace; font-variant-numeric: tabular-nums; color: #ff8a24; background: #140800 radial-gradient(circle, rgb(255 138 36 / 0.16) 0.026em, transparent 0.034em) 0 0.05em / 0.1em 0.1em; box-shadow: inset 0 1px 4px rgb(0 0 0 / 0.8); } .ds-plate small { font-size: 0.75rem; color: #b9abd6; } .ds-plate.is-turn { border-color: #ffd23f; background: rgb(255 210 63 / 0.14); } .ds-plate.is-turn b::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: #ffd23f; vertical-align: 1px; } .ds-plate.is-away { opacity: 0.55; border-style: dashed; }"
+    },
+    {
+      "name": "Setup Apron",
+      "kind": "card",
+      "refersTo": "setup-card",
+      "description": "Dark glass panel inside a 6px chrome-ramp bezel.",
+      "html": "<section class=\"ds-apron\"><h2>Spin &amp; Solve</h2><p>Pick a puzzle pack and a game length.</p></section>",
+      "css": ".ds-apron { padding: 28px; border-radius: 18px; border: 6px solid transparent; background: linear-gradient(#170d2b, #170d2b) padding-box, linear-gradient(180deg, #ffffff 0%, #e4e8ee 12%, #a7aeba 34%, #4b515d 48%, #f1f3f7 52%, #c3c9d3 70%, #6b7280 90%, #2b2f39 100%) border-box; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 0 1px #0a0b10, 0 2px 4px rgb(0 0 0 / 0.4), 0 14px 34px rgb(0 0 0 / 0.45); color: #f7f1ff; } .ds-apron h2 { margin: 0 0 8px; font: 1.5rem/1.1 'Archivo Black', 'Arial Black', sans-serif; letter-spacing: -0.01em; } .ds-apron p { margin: 0; font: 1rem/1.45 'DM Sans', system-ui, sans-serif; color: #b9abd6; }"
+    },
+    {
+      "name": "Jeopardy! Cell",
+      "kind": "custom",
+      "refersTo": "jeopardy-cell",
+      "description": "The show's blue board cell with gold money inside the chrome bezel; kept from the show.",
+      "html": "<div class=\"ds-board\"><button class=\"ds-cell\">$400</button><button class=\"ds-cell is-used\" disabled>$600</button></div>",
+      "css": ".ds-board { display: inline-grid; grid-template-columns: repeat(2, 140px); gap: 6px; padding: 6px; border-radius: 14px; border: 6px solid transparent; background: linear-gradient(#020722, #020722) padding-box, linear-gradient(180deg, #ffffff 0%, #e4e8ee 12%, #a7aeba 34%, #4b515d 48%, #f1f3f7 52%, #c3c9d3 70%, #6b7280 90%, #2b2f39 100%) border-box; } .ds-cell { min-height: 72px; padding: 8px; border: 0; border-radius: 4px; background: linear-gradient(180deg, #1029a3 0%, #0b1f8c 100%); color: #ffd23f; font: 2rem 'Archivo Black', 'Arial Black', sans-serif; text-shadow: 0 2px 0 rgb(0 0 0 / 0.45); cursor: pointer; transition: background 160ms ease-out, transform 120ms ease-out; } .ds-cell:hover:not(:disabled) { background: #1430a8; } .ds-cell:active:not(:disabled) { transform: scale(0.98); } .ds-cell:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; } .ds-cell.is-used { background: #071660; color: transparent; text-shadow: none; cursor: default; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pinball Cabinet",
+    "overview": "Game Night is a pinball cabinet. The shared screen is the backglass: airbrushed art glowing down from the top, rays fanning up from below, the whole screen framed in a chrome bezel. Every score, clock, code and verdict sits on an orange dot-matrix display. Choices are lit playfield inserts: arrows and round lenses that are dark when off and lit in the table's colour when on. Each phone carries the cabinet's domed start and flipper buttons. Each game is its own table, with its own lamp colour and its own backglass art, set on the cabinet's black-violet wood.\n\nThe TV and the home hub are where the show happens: chrome lettering, deep glass, lamps that brighten under the cursor. Phones, setup and the host controller are the cabinet's apron: dark glass panels with one obvious lit button at a time. Jeopardy!'s blue-and-gold board and Survey Says!' answer board keep their show looks inside the cabinet's chrome, because each game should still evoke its show.\n\nThe system rejects flat, rounded party cards on a purple ground. Depth here comes from physical materials (chrome, glass, lenses, plasma dots), not from floating cards.",
+    "keyCharacteristics": [
+      "Black-violet cabinet ground with a violet glow at the top.",
+      "Chrome trim drawn as a stepped metal ramp, used for bezels and display lettering.",
+      "One orange dot-matrix display for every score, clock, code and verdict, and nowhere else.",
+      "Lamp states (off, lit, flashing) that never rely on colour alone.",
+      "Per-game tables that swap one lamp colour and one art colour."
+    ],
+    "rules": [
+      {
+        "name": "The One Display Rule",
+        "body": "Plasma orange on a dot grille means \"the machine is telling you something\": a score, clock, code, round or verdict. Never use Doto or dmd orange for body text, headings or buttons. The one exception is the JOIN lamp, which closes the join strip's code display.",
+        "section": "colors"
+      },
+      {
+        "name": "The Table Swap Rule",
+        "body": "A game recolours the cabinet only through `--table`, `--on-table` and `--table-art` on its root. Components read those variables. They never hard-code a game's colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Whole-Dot Rule",
+        "body": "Doto draws on a 0.1em dot grid. Each glyph's dot centres sit half a pitch in from the pen origin and the baseline, with an ascent of 0.95em and a descent of 0.25em. So every readout sets its grille to `background-size: 0.1em 0.1em` at `background-position: 0 0.05em`, uses `line-height: 1.2` and `letter-spacing` in 0.1em steps, pads in 0.1em steps (0.1em 0.3em is standard) and shrink-wraps its box (`inline-block` or `width: fit-content`). Lit dots then land exactly on grille dots. Never centre-stretch a readout or pad it in px.",
+        "section": "typography"
+      },
+      {
+        "name": "The Chrome Lettering Rule",
+        "body": "Display type that names the show or a table is chrome: the chrome face clipped into the letters, a 1px art-night stroke, stacked 1px drop steps (#9aa1ad, #5c6270, #2a2e38) for the bevelled edge and a soft shadow underneath, skewed -6° to -7°. Per-game brands swap the face for one built from the table colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The 720p Rule",
+        "body": "On TV screens shorter than 800px, the display tightens. Top padding drops to 14px and score plates become one row (name and score side by side). The lobby QR code and code scale with viewport height (24vh, 11vh). Spin & Solve's podiums turn to single rows and its board steps down a size. A whole board plus its scores must fit at 1280×720 without scrolling.",
+        "section": "layout"
+      },
+      {
+        "name": "The Lit-From-Inside Rule",
+        "body": "A lit lamp glows through its lens, with a lighter centre and a darker rim. It does not get a halo around it. At rest, hub lenses sit at brightness 0.86. Hover or focus lights them full and lifts them 4px.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Vertical Skirt Rule",
+        "body": "The only hard-edged offsets are vertical steps directly below an object: the skirt of a domed button and the bevel of chrome lettering. They read as metal thickness. Never offset them sideways.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put every score, clock, code, round label and verdict on a dot-matrix readout, sized and padded in whole 0.1em dots with the grille at `0 0.05em`.",
+      "Do recolour a game only through `--table`, `--on-table` and `--table-art` on its root.",
+      "Do pair every lamp state with a non-colour cue: a hollow versus filled lamp ring, a dashed edge for away or missed, a dot before the active name.",
+      "Do frame anything that is the machine (boards, the setup apron, the join strip, the TV edge) in the chrome ramp painted into a transparent border.",
+      "Do make unlit states dark glass, not faded colour.",
+      "Do draw icons as inline SVG in the table glyphs' stroke (round caps and joins, 2.6–3px on a 24–48 unit box).",
+      "Do keep Jeopardy!'s blue-and-gold board and the Survey answer board in their show looks inside the cabinet's chrome.",
+      "Do compact the TV layout under 800px tall so a full board and its scores fit at 720p."
+    ],
+    "donts": [
+      "Don't use Doto or plasma orange for prose, headings or ordinary buttons.",
+      "Don't fake chrome with a flat grey or a single two-stop gradient. Use the ramp with its reflection line.",
+      "Don't light a lamp or button with an outer halo. Light it from inside its lens. Show-moment flashes (the Survey strike X, the final countdown) are effects, not lamps, and are exempt.",
+      "Don't offset a hard shadow sideways. The only hard steps are vertical skirts and lettering bevels.",
+      "Don't let colour alone carry a state, team, or right versus wrong.",
+      "Don't fall back to flat rounded party cards floating on a purple ground."
+    ]
+  }
+}

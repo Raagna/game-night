@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-26T16:55:49.654Z",
+        "reason": "agent: decision-round sketch rendered as a skeleton thumbnail, never shipped"
+      },
+      {
+        "rule": "overused-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-drum.html"
+        ],
+        "createdAt": "2026-10-26T16:55:49.891Z",
+        "reason": "agent: decision-round sketch, never shipped"
+      },
+      {
+        "rule": "overused-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-26T16:55:50.093Z",
+        "reason": "agent: decision-round sketch, never shipped"
+      }
+    ]
+  }
+}

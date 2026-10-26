@@ -13,6 +13,7 @@ import "@fontsource/archivo-black/400.css";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/700.css";
+import "@fontsource/doto/800.css";
 import "./styles.css";
 import topicList from "./topics.json";
 import BoardEditor from "./BoardEditor";
@@ -188,7 +189,7 @@ function Setup({ onCreate }) {
     return (
       <main className="setup">
         <BackToHub />
-        <div className="brand">JEOPARDY! <span>local game night</span></div>
+        <div className="brand">JEOPARDY!</div>
         <section className="setup-card">
           <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
         </section>
@@ -198,7 +199,7 @@ function Setup({ onCreate }) {
     <main className="setup">
       <BackToHub />
       <div className="brand">
-        JEOPARDY! <span>local game night</span>
+        JEOPARDY!
       </div>
       <section className="setup-card">
         <div className="setup-top">
