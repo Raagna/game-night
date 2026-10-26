@@ -1080,7 +1080,7 @@ function App() {
     return <>{banner}<SurveyPlayer game={game} playerId={playerId} /></>;
   }
   if (game.kind === "wheel") {
-    if (game.status === "complete") return <>{banner}<WheelEnd game={game} host={host || controller} onAction={action} /></>;
+    if (game.status === "complete") return <>{banner}<WheelEnd game={game} host={host || controller} display={host} onAction={action} /></>;
     if (controller) return <>{banner}<WheelController game={game} onAction={action} /></>;
     if (host) return <>{banner}<WheelDisplay game={game} onAction={action} /></>;
     return <>{banner}<WheelPlayer game={game} playerId={playerId} /></>;

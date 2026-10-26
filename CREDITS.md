@@ -34,3 +34,13 @@ The hand-written Game Night pack (`src/surveys.json`) is original to this projec
 The buzzer, the answer ding, the round fanfare and the winners tune are synthesized in the browser by
 `src/survey/sounds.js` (Web Audio). There are no recordings or samples, and the tune is an original composition,
 not the TV show's music.
+
+## Spin & Solve puzzles and sounds
+
+The puzzles, bonus puzzles, gifts and trips in `src/wheel/puzzles.json` were written for this project. Most are
+everyday phrases and figures of speech; the rest name well-known places, people, public-domain characters and
+titles. None is copied from the TV show.
+
+The peg clicks, letter dings, Bankrupt slide, fanfares and bonus clock are synthesized in the browser by
+`src/wheel/sounds.js`, using the building blocks in `src/survey/sounds.js` (and the same winners tune). There are
+no recordings or samples.

@@ -376,6 +376,8 @@ Final podium, the bonus round result, a Play again button (new puzzles), Back to
 
 ## 7. Build order (one PR each, like #7–#11)
 
+All eight steps are built, one commit each on `feature/spin-and-solve`. Where the build differs from this plan, the code and `server/wheel.test.js` are the reference: buying a vowel is one step (no `vowel` phase), the bonus round's events are `wheel:bonusPick` / `bonusSpin` / `bonusLetters` / `bonusSolve`, and the host's undo covers the last player action or ruling within the current round.
+
 1. **Server dispatch by `kind`**: `modes` table, `jGame` fix. No behaviour change for the existing games.
 2. **Board layout + puzzle pack + check script**: `server/wheelBoard.js`, `src/wheel/puzzles.json` (about 500 + 150), `scripts/check-wheel-puzzles.mjs`.
 3. **A basic playable round**: cash wedges, Bankrupt, Lose a Turn, consonants, vowels, fill-in-the-blanks solving, turn order, clocks, `wheel:solution` to the controller. Plain Setup, Display, Player and Controller screens, and the Hub card. Playable from here.

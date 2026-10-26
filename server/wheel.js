@@ -158,7 +158,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   // Everything a new game (or a replay) starts from.
   const freshPlay = (config) => ({
     segments: config.segments.map((segment) => ({ ...segment })), spares: [...config.spares],
-    segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null, bonus: null,
+    segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null, bonus: null, undo: null,
   })
   // Solo: each new phone is a new contestant, with its own podium. Teams: new phones join the smallest
   // team, so teams stay even as people arrive (they can switch in the lobby).
@@ -221,7 +221,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const segment = game.segments[game.segmentIndex]
     return {
       kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId, mode: game.config.mode, maxPlayers: maxPlayers(game),
-      pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, winner: game.winner, speedUpMode: game.config.speedUp,
+      pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, canUndo: !!game.undo && game.status === 'playing', winner: game.winner, speedUpMode: game.config.speedUp,
       // The order of play without the puzzles, so "Play again" can deal new ones for the same game.
       plan: game.config.segments.map(({ type, value }) => ({ type: type === 'final' ? 'round' : type, value })), hasBonus: game.config.bonus.length > 0,
       bonus: publicBonus(game),
@@ -331,6 +331,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   // ---------- Segments ----------
   function startSegment(game) {
     const segment = game.segments[game.segmentIndex], puzzle = segment.puzzle
+    game.undo = null
     game.contestants.forEach((contestant) => Object.assign(contestant, { roundBank: 0, roundPrizes: [], millionThisRound: false }))
     game.round = {
       type: segment.type, n: segment.n, puzzle: { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) },
@@ -884,6 +885,27 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     } else handOff(game, player.id)
   }
 
+  // ---------- Undo (host) ----------
+  // The round as it was before the last player action or host ruling, so the host can take it back (a
+  // mis-tap on a phone, or a wrong call on a spoken solve). Only one step, and only within the round.
+  function withUndo(game, act) {
+    const before = game.undo, seq = game.eventSeq
+    if (game.status === 'playing' && game.round) game.undo = JSON.stringify({ round: game.round, contestants: game.contestants, startNext: game.startNext })
+    act()
+    // An action that changed nothing (every change is announced with an event) keeps the older snapshot.
+    if (game.eventSeq === seq) game.undo = before
+  }
+  function undo(game) {
+    if (!game.undo || game.status !== 'playing') return
+    const saved = JSON.parse(game.undo)
+    game.undo = null
+    Object.assign(game, { round: saved.round, contestants: saved.contestants, startNext: saved.startNext })
+    event(game, 'undo')
+    // The restored phase's clock starts again from the top; a spin restored mid-air lands straight away.
+    if (game.round.phase === 'spinning') land(game)
+    else setPhase(game, game.round.phase)
+  }
+
   // Switching teams. Mid-game, if the team was waiting on them, a teammate (or the next team) takes over.
   function movePlayer(game, playerId, contestant) {
     const player = game.players.get(playerId), to = Math.trunc(Number(contestant))
@@ -899,10 +921,11 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
       Object.assign(game, freshPlay(game.config), { status: 'playing' })
       startSegment(game)
     }
-    if (action === 'judgeSolve' && playing && SOLVE_PHASES.includes(round.phase)) {
+    if (action === 'judgeSolve' && playing && SOLVE_PHASES.includes(round.phase)) withUndo(game, () => {
       round.lastSolve = { playerId: round.actorId, contestant: round.control, text: null, correct: !!payload.correct, byHost: true }
       ruleSolve(game, !!payload.correct)
-    }
+    })
+    if (action === 'undo' && playing) undo(game)
     const bonus = game.status === 'bonus' && game.bonus
     if (action === 'judgeSolve' && bonus?.phase === 'solve') {
       bonus.lastSolve = { playerId: bonus.playerId, text: null, correct: !!payload.correct, byHost: true }
@@ -912,16 +935,16 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     if (action === 'endGame' && bonus) { complete(game); return }
     if (action === 'pause' && (playing || bonus)) pause(game)
     if (action === 'resume' && (playing || bonus)) resume(game)
-    if (action === 'skipTurn' && playing && ACTOR_PHASES.includes(round.phase)) {
+    if (action === 'skipTurn' && playing && ACTOR_PHASES.includes(round.phase)) withUndo(game, () => {
       if (round.phase === 'tossupSolve') lockOut(game, 'skipped')
       else { event(game, 'skipped', { contestant: round.control }); passControl(game) }
-    }
+    })
     // Starts at the next turn (straight away if someone is deciding what to do now).
     if (action === 'speedUp' && playing && round.type === 'final' && !round.speedUp) {
       round.speedUpAt = Date.now(); round.speedUpLeft = null
       if (round.phase === 'turn') startSpeedUp(game)
     }
-    if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') endRoundUnsolved(game)
+    if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') withUndo(game, () => endRoundUnsolved(game))
     if (action === 'nextSegment' && playing && round.phase === 'roundEnd') { nextSegment(game); return }
     // Ending early skips the bonus round.
     if (action === 'endGame' && game.status === 'playing') { endMainGame(game, { bonus: false }); return }
@@ -955,7 +978,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const on = (name, handle) => socket.on(`wheel:${name}`, (payload = {}) => {
       const game = wheelGame(payload.code)
       if (!isLive(game, payload.playerId, socket) || game.status !== 'playing' || game.round?.actorId !== payload.playerId) return
-      handle(game, payload)
+      withUndo(game, () => handle(game, payload))
       emitGame(game)
     })
     const letterIn = (value) => String(value ?? '').toUpperCase().slice(0, 1)
@@ -990,7 +1013,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     socket.on('wheel:buzz', ({ code, playerId } = {}) => {
       const game = wheelGame(code)
       if (!isLive(game, playerId, socket) || game.status !== 'playing' || !game.round) return
-      buzz(game, playerId)
+      withUndo(game, () => buzz(game, playerId))
       emitGame(game)
     })
   }

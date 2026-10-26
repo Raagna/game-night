@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeopardy!, Survey Says! and Spin & Solve. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -29,11 +29,24 @@ The ProtoQA and Feud Sheet packs are loaded when Survey Says! opens.
 
 The TV screen plays a buzzer for wrong answers, a ding for each answer revealed, a short fanfare when a team banks a round and an upbeat tune on the winners screen. They're all synthesized in the browser, with a sound on/off button in the corner.
 
-### With or without a host
-Both games can be played two ways:
+### Spin & Solve
+A Wheel of Fortune-style word puzzle game for 2 to 6 players on their own, or 2 to 4 teams sharing up to 12 phones. Spin the wheel on your phone, call a consonant to earn the spin's value for every time it appears, buy vowels for $250, and solve the puzzle to bank the round.
 
-- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out.
+- **Solving** is fill-in-the-blanks on the phone: type the missing letters and they're checked exactly. With a host, players can also say the answer out loud and the host judges it.
+- **Game length**: Short (a toss-up, two rounds and the final round, about 20 minutes), Classic (the show's order: two toss-ups, rounds 1 and 2, a toss-up, round 3 and the final round, about 35 minutes) or Custom (3 to 5 rounds, toss-ups on or off).
+- **The wheel** has the show's 24 wedges per round: the top value ($2,500, $3,500, $3,500, then $5,000), two Bankrupts and a Lose a Turn. Rounds 1 to 3 add the Wild Card, a Gift and the Million Dollar wedge; round 2 has two Mystery wedges (flip for $10,000 or Bankrupt) and round 3 the Express wedge and a Prize Puzzle worth a trip.
+- **Toss-ups** turn one tile at a time; the first to buzz in gets one try.
+- **The final round** ends in a speed-up: one last spin sets every consonant's value (plus $1,000), vowels are free, and each letter found gives a few seconds to solve. A tie for the lead is settled with a toss-up, and anyone who solved nothing gets $1,000 for playing.
+- **The bonus round**: the winner picks a category, spins for a sealed envelope ($40,000 to $100,000, or $1,000,000 with the Million Dollar wedge), gets R S T L N E plus three consonants and a vowel, and has ten seconds to solve it.
+- **Teams**: teammates take turns acting for the team, anyone on it can buzz in on a toss-up, and the whole team plays the bonus round.
+
+The 675 puzzles, 153 bonus puzzles and the gift and trip prizes are in `src/wheel/puzzles.json`, all written for this project. The TV plays peg clicks as the wheel turns, a ding for each letter, the Bankrupt slide, a fanfare for each solve and a ticking bonus clock, all synthesized in the browser and sharing Survey Says!' sound on/off button.
+
+### With or without a host
+All three games can be played two ways:
+
+- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace).
 
 ## How to play
 
@@ -69,6 +82,18 @@ To make a production build in `dist/`:
 npm run build
 ```
 
+To run the Spin & Solve tests (the board layout and the game rules, with Node's built-in test runner):
+
+```bash
+npm test
+```
+
+To check the Spin & Solve puzzle pack after editing it (every puzzle fits the board, uses allowed characters, appears once and follows its category's rule):
+
+```bash
+npm run check:puzzles
+```
+
 ## Deployment
 
 Every push to `main` builds the client and deploys it to GitHub Pages (`.github/workflows/deploy-pages.yml`). The deployed client connects to the game server at `VITE_SERVER_URL` from `.env.production`; without that variable, the client looks for the server on port 3001 of the host it was loaded from.
@@ -80,6 +105,7 @@ src/                  React client
   main.jsx            app entry: Jeopardy setup, host display, controller, player screens
   Hub.jsx             the Game Night home page
   survey/             Survey Says! screens and styles
+  wheel/              Spin & Solve screens, styles, sounds and its puzzle pack (puzzles.json)
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -92,6 +118,8 @@ src/                  React client
 server/               game server (Express + Socket.IO)
   index.js            lobbies, Jeopardy game logic, /health, /lan and the JeopardyLabs import route
   survey.js           Survey Says! game logic and answer matching
+  wheel.js            Spin & Solve game logic (wheel.test.js tests it)
+  wheelBoard.js       Spin & Solve puzzle board layout (wheelBoard.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers
 public/
@@ -102,6 +130,9 @@ scripts/
   build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
   build-protoqa-surveys.py  rebuilds public/data/surveys-protoqa.json from the ProtoQA data files
   build-sheet-surveys.py    rebuilds public/data/surveys-sheet.json from CSV exports of the sheet's tabs
+  check-wheel-puzzles.mjs   checks the Spin & Solve puzzle pack (npm run check:puzzles)
+docs/
+  wheel-of-fortune-plan.md  the Spin & Solve design: rules, server state, socket events and screens
 ```
 
 ## Credits and licence
@@ -109,7 +140,8 @@ scripts/
 - The built-in Jeopardy clues are generated into `public/data/` from a Jeopardy season archive by `scripts/build-question-data.py`.
 - The Survey Says! questions in `src/surveys.json` were written for this project, and their answers and points are invented.
 - The Survey Says! sounds and winners tune are synthesized in `src/survey/sounds.js` and are original; no audio from the show is used.
+- The Spin & Solve puzzles, bonus puzzles and prizes in `src/wheel/puzzles.json` were written for this project, and its sounds are synthesized in `src/wheel/sounds.js`; nothing is taken from the show.
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
-- Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud* or their owners.
+- Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.

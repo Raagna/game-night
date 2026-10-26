@@ -4,6 +4,8 @@ import { socket, ClueTimer } from "../shared";
 import { LobbyJoin, JoinCorner } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import PUZZLES from "./puzzles.json";
+import { useWheelSounds, useClockTicks, playPegs } from "./sounds";
+import { useSound, playWinnersTune } from "../survey/sounds";
 import "./wheel.css";
 
 // ---------- Picking puzzles ----------
@@ -136,7 +138,7 @@ function landedHint(round) {
 }
 
 // The latest thing that happened this round, in words ("There are 3 L’s!").
-const NEWS = ["hit", "miss", "land", "timeout", "wrongSolve", "skipped", "gift", "million", "wild", "wildUsed", "mysteryTake", "mysteryFlip", "expressPlay", "bankrupt"];
+const NEWS = ["hit", "miss", "land", "timeout", "wrongSolve", "skipped", "gift", "million", "wild", "wildUsed", "mysteryTake", "mysteryFlip", "expressPlay", "bankrupt", "undo"];
 function latestNews(game) {
   const events = game.events || [], since = events.findLastIndex((e) => e.type === "round");
   const e = events.slice(since + 1).findLast((item) => NEWS.includes(item.type));
@@ -159,6 +161,8 @@ function latestNews(game) {
     case "timeout": return { tone: "bad", text: `${who} ran out of time` };
     case "wrongSolve": return { tone: "bad", text: e.text ? `“${e.text}” isn’t it` : `${who} didn’t get it` };
     case "skipped": return { tone: "bad", text: `${possessive(who)} turn was skipped` };
+    // Replaces the news of the move that was taken back.
+    case "undo": return { tone: "good", text: "The host took back the last move" };
     default: return null;
   }
 }
@@ -411,6 +415,20 @@ function slotAngle(spin, wedges) {
   const slot = 360 / (wedges * 3);
   return (spin.slot + 0.5 + spin.jitter) * slot - 180 / wedges;
 }
+// The wheel's ease-out: fast at first, then a long slow coast to a stop.
+const SPIN_EASE = [0.12, 0.6, 0.1, 1];
+// When each peg passes the pointer, in seconds from the start of a spin turning `degrees` in `ms`, following
+// the same curve the wheel moves on, so the clicks can all be scheduled up front and slow down with it.
+function pegTimes(degrees, pegEvery, ms) {
+  const [x1, y1, x2, y2] = SPIN_EASE, curve = (s, a, b) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3;
+  const times = [];
+  let next = pegEvery;
+  for (let i = 1; i <= 4000 && next <= degrees; i++) {
+    const s = i / 4000, travelled = curve(s, y1, y2) * degrees;
+    while (next <= travelled) { times.push((curve(s, x1, x2) * ms) / 1000); next += pegEvery; }
+  }
+  return times;
+}
 function Wheel({ wheel, spin, spinKey }) {
   const wedges = wheel.length, size = 360 / wedges;
   const rotation = useRef(spin ? -slotAngle(spin, wedges) : 0), seen = useRef(spin ? spinKey : null);
@@ -420,13 +438,15 @@ function Wheel({ wheel, spin, spinKey }) {
     seen.current = spinKey;
     const current = rotation.current, target = -slotAngle(spin, wedges);
     const next = current + (3 + Math.round(spin.power * 3)) * 360 + ((((target - current) % 360) + 360) % 360);
+    const ms = Math.max(1000, spin.ms - 250);
     rotation.current = next;
-    setView({ angle: next, ms: Math.max(1000, spin.ms - 250) });
+    setView({ angle: next, ms });
+    playPegs(pegTimes(next - current, size, ms));
   }, [spinKey]);
   return (
     <div className="ws-wheel">
       <svg viewBox="-110 -116 220 228" aria-hidden="true">
-        <g style={{ transform: `rotate(${view.angle}deg)`, transition: view.ms ? `transform ${view.ms}ms cubic-bezier(0.12, 0.6, 0.1, 1)` : "none" }}>
+        <g style={{ transform: `rotate(${view.angle}deg)`, transition: view.ms ? `transform ${view.ms}ms cubic-bezier(${SPIN_EASE.join(", ")})` : "none" }}>
           <circle r="104" fill="#11183f" />
           {wheel.map((wedge, i) => {
             const center = i * size, [x1, y1] = point(center - size / 2, 100), [x2, y2] = point(center + size / 2, 100);
@@ -547,6 +567,7 @@ function RoundTools({ game, onAction }) {
       {game.clocksPaused
         ? <button className="chip-btn" onClick={() => onAction("resume")}>Resume clocks</button>
         : <button className="chip-btn" onClick={() => onAction("pause")}>Pause clocks</button>}
+      <button className="chip-btn" disabled={!game.canUndo} onClick={() => onAction("undo")} title="Takes back the last letter, spin, solve or ruling">Undo last move</button>
       <button className="chip-btn" disabled={!waiting} onClick={() => onAction("skipTurn")}>Skip turn</button>
       {round.type === "final" && !round.speedUp && round.phase !== "roundEnd" && (
         <button className="chip-btn" onClick={() => onAction("speedUp")}>Start the speed-up <SpeedUpIn game={game} /></button>
@@ -638,12 +659,34 @@ function Lobby({ game, onAction }) {
   );
 }
 
+// Sound on/off for the TV, shared with Survey Says! (and styled like its button). Until someone clicks the
+// page, browsers keep it silent.
+function SoundToggle() {
+  const [muted, toggle, waiting] = useSound();
+  return (
+    <button className="sv-sound" aria-pressed={!muted} onClick={toggle}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+        {muted ? <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          : <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+      </svg>
+      {muted ? "Sound off" : waiting ? "Click for sound" : "Sound on"}
+    </button>
+  );
+}
+
 export function WheelDisplay({ game, onAction }) {
   const round = game.round, news = round && latestNews(game);
+  useWheelSounds(game);
+  // The last three seconds of a solve tick out loud; the bonus round's ten all do, like the show's clock.
+  const bonusSolve = game.status === "bonus" && game.bonus?.phase === "solve";
+  const ticking = bonusSolve ? game.bonus.deadline : game.status === "playing" && round && SOLVE_PHASES.includes(round.phase) ? round.deadline : null;
+  useClockTicks(ticking, game.serverNow, bonusSolve ? 10 : 3);
   const { title, detail } = round ? phaseText(game) : {};
   const last = game.segment.index >= game.segment.count - 1;
   return (
     <main className="display wheel-game">
+      <SoundToggle />
       <header className="display-bar">
         <div className="brand ws-brand">SPIN &amp; SOLVE</div>
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
@@ -1223,7 +1266,14 @@ function BonusTools({ game, onAction }) {
 }
 
 // ---------- End of game ----------
-export function WheelEnd({ game, host, onAction }) {
+// display: this is the TV screen (not the host controller or a phone), which is the one that plays the tune.
+export function WheelEnd({ game, host, display, onAction }) {
+  // The winners tune plays once when the scores appear (not when the TV is reloaded later), and fades out
+  // if the screen changes first.
+  useEffect(() => {
+    const finished = game.events?.findLast((e) => e.type === "complete");
+    if (display && finished && game.serverNow - finished.at < 15000) return playWinnersTune();
+  }, [display]);
   // The winner was decided before anyone who solved nothing got their $1,000, so it comes from the server.
   const ranked = game.contestants.map((contestant, i) => ({ ...contestant, i })).sort((a, b) => (b.i === game.winner) - (a.i === game.winner) || b.total - a.total);
   const tied = game.winner == null && ranked.length > 1;
@@ -1234,6 +1284,7 @@ export function WheelEnd({ game, host, onAction }) {
   };
   return (
     <main className="end wheel-game">
+      {display && <SoundToggle />}
       <div className="brand ws-brand">SPIN &amp; SOLVE</div>
       <h1>{!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
       {game.bonus?.prize != null && (

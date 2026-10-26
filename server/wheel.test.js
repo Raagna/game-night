@@ -754,6 +754,50 @@ test('on the Express, a wrong solve or running out of time is Bankrupt', () => {
   assert.notEqual(game.round.control, c)
 })
 
+// ---------- Undo ----------
+test('the host can undo the last move: a wrong call on a spoken solve', () => {
+  const h = harness(), game = newGame(h)
+  h.spinTo(game, 'p1', CASH_600)
+  h.act(game, 'p1', 'consonant', { letter: 'L' })
+  h.act(game, 'p1', 'solveStart')
+  h.api.hostAction(game, 'judgeSolve', { correct: false })
+  assert.equal(game.round.control, 1)
+  assert.equal(h.api.publicGame(game).canUndo, true)
+  h.api.hostAction(game, 'undo', {})
+  assert.equal(game.round.phase, 'solving')
+  assert.equal(game.round.control, 0)
+  assert.equal(game.round.actorId, 'p1')
+  assert.equal(game.contestants[0].roundBank, 1800)
+  assert.ok(h.timers.wheel, 'the solve clock runs again')
+  assert.equal(h.api.publicGame(game).canUndo, false, 'one step only')
+  h.api.hostAction(game, 'judgeSolve', { correct: true })
+  assert.equal(game.contestants[0].total, 1800)
+})
+
+test('undo takes back a mis-tapped letter, and a refused action doesn’t replace what undo would restore', () => {
+  const h = harness(), game = newGame(h)
+  h.spinTo(game, 'p1', CASH_600)
+  h.act(game, 'p1', 'consonant', { letter: 'Z' })
+  assert.equal(game.round.control, 1)
+  // Ann's phone tries something it isn't allowed to: nothing changes, so undo still means the Z.
+  h.act(game, 'p1', 'spin')
+  h.act(game, 'p2', 'buyVowel', { letter: 'O' })
+  h.api.hostAction(game, 'undo', {})
+  assert.equal(game.round.phase, 'consonant')
+  assert.equal(game.round.value, 600)
+  assert.deepEqual(game.round.called, [])
+})
+
+test('undo doesn’t reach back into an earlier round', () => {
+  const h = harness(), game = specialGame(h)
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'HELLOWORLD' })
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.equal(h.api.publicGame(game).canUndo, false)
+  h.api.hostAction(game, 'undo', {})
+  assert.equal(game.round.n, 2)
+})
+
 // ---------- Teams ----------
 // A teams game with phones p1..pN joining in order (so they alternate between teams).
 function teamGame(h, { phones = 4, teamCount = 2, start = true, ...config } = {}) {
