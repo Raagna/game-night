@@ -939,7 +939,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeopardy! and Spin &amp; Solve take up to 6 players, and Survey Says! up to 12. You can join after a game starts.</p>
+      <p className="muted">Jeopardy! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), and Survey Says! 12. You can join after a game starts.</p>
       <a href="./">← Game Night</a>
     </main>
   );

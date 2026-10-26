@@ -88,7 +88,8 @@ function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||
 const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, gameTimers, cancelLeave })
 const wheel = createWheelGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
 // Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register },
-// and optionally hostJoined(game, socket) for a host screen or controller connecting.
+// and optionally hostJoined(game, socket) for a host screen or controller connecting and maxPlayers(game)
+// when the limit depends on the game (Spin & Solve teams take more phones than solo play).
 const modes = { survey, wheel }
 // Looked up with hasOwn because the name comes from the browser ("toString" must not count as a game).
 const modeFor = (kind) => Object.hasOwn(modes, kind) ? modes[kind] : undefined
@@ -288,7 +289,7 @@ io.on('connection', (socket) => {
       ack?.({ ok: true, playerId: returning.id, game: publicGame(game), rejoined: true }); emitGame(game)
       return
     }
-    const mode = modeOf(game), maxPlayers = mode ? mode.MAX_PLAYERS : MAX_PLAYERS
+    const mode = modeOf(game), maxPlayers = mode ? (mode.maxPlayers?.(game) ?? mode.MAX_PLAYERS) : MAX_PLAYERS
     if (!['lobby', 'playing'].includes(game.status)) return ack?.({ ok: false, error: 'This game is no longer accepting new players.' })
     if (game.players.size >= maxPlayers) return ack?.({ ok: false, error: `This game already has the maximum of ${maxPlayers} players.` })
     const clean = String(name || '').trim().slice(0, 20); if (!clean) return ack?.({ ok: false, error: 'Enter a name' })

@@ -56,6 +56,13 @@ const money = (value) => `$${(value || 0).toLocaleString()}`;
 const nameOf = (game, contestant) => game.contestants[contestant]?.name || "Nobody";
 const colorOf = (contestant) => `c-${contestant % 6}`;
 const myContestant = (game, playerId) => game.players.find((player) => player.id === playerId)?.contestant;
+const isTeams = (game) => game.mode === "teams";
+// "Ann’s", but "Reds’" for a team name ending in s.
+const possessive = (name) => (/s$/i.test(name) ? `${name}’` : `${name}’s`);
+const membersOf = (game, contestant) => game.players.filter((player) => player.contestant === contestant);
+const playerName = (game, id) => game.players.find((player) => player.id === id)?.name || "";
+// In a teams game, which teammate is up ("Sam is up. "), to go before what the turn is waiting for.
+const teamActor = (game) => (isTeams(game) && game.round?.actorId ? `${playerName(game, game.round.actorId)} is up. ` : "");
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
 function segmentLabel(game) {
   const { type, n, value, rounds } = game.segment;
@@ -75,7 +82,7 @@ function phaseText(game) {
   switch (round.phase) {
     case "turn":
       if (round.control == null) return { title: "Waiting for players", detail: "Nobody’s phone is connected" };
-      return { title: `${who}’s turn`, detail: round.consonantsLeft ? "Spin, buy a vowel or solve" : "Only vowels left: buy a vowel or solve" };
+      return { title: `${possessive(who)} turn`, detail: teamActor(game) + (round.consonantsLeft ? "Spin, buy a vowel or solve" : "Only vowels left: buy a vowel or solve") };
     case "spinning":
       return { title: `${who} is spinning…`, detail: "" };
     case "consonant":
@@ -151,7 +158,7 @@ function latestNews(game) {
       return e.kind === "bankrupt" ? { tone: "bad", text: `${who} went bankrupt` } : e.kind === "loseTurn" ? { tone: "bad", text: `${who} lost a turn` } : null;
     case "timeout": return { tone: "bad", text: `${who} ran out of time` };
     case "wrongSolve": return { tone: "bad", text: e.text ? `“${e.text}” isn’t it` : `${who} didn’t get it` };
-    case "skipped": return { tone: "bad", text: `${who}’s turn was skipped` };
+    case "skipped": return { tone: "bad", text: `${possessive(who)} turn was skipped` };
     default: return null;
   }
 }
@@ -199,6 +206,9 @@ export function WheelSetup({ onCreate }) {
     [tossups, setTossups] = useState(true),
     [{ picks, spares, bonus }, setDeal] = useState(() => dealPuzzles(planFor("classic", 4, true))),
     [withBonus, setWithBonus] = useState(true),
+    [teams, setTeams] = useState(false),
+    [teamCount, setTeamCount] = useState(2),
+    [teamNames, setTeamNames] = useState(["", "", "", ""]),
     [hostless, setHostless] = useState(false),
     [relaxed, setRelaxed] = useState(false),
     [speedUpNow, setSpeedUpNow] = useState(false),
@@ -217,7 +227,11 @@ export function WheelSetup({ onCreate }) {
     setNotice(""); setBusy(true);
     rememberPlayed([...picks, ...(withBonus ? bonus : [])].map((puzzle) => puzzle.id));
     onCreate(
-      { game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), bonus: withBonus ? bonus.map(forServer) : [], ...dealPrizes(), hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after" },
+      {
+        game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), bonus: withBonus ? bonus.map(forServer) : [], ...dealPrizes(),
+        mode: teams ? "teams" : "solo", teamCount, teamNames: teamNames.slice(0, teamCount).map((name, i) => name.trim() || `Team ${i + 1}`),
+        hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after",
+      },
       (error) => { setBusy(false); setNotice(error); },
     );
   };
@@ -232,6 +246,29 @@ export function WheelSetup({ onCreate }) {
             <p className="muted">Spin the wheel, call letters and solve the puzzle. 2 to 6 players, each on their own phone. Pick how long a game to play and swap out any puzzle you don’t like.</p>
           </div>
         </div>
+        <fieldset className="ws-fieldset">
+          <legend>Players</legend>
+          <div className="ws-rounds ws-two" role="radiogroup" aria-label="Solo or teams">
+            <button role="radio" aria-checked={!teams} onClick={() => setTeams(false)}>Solo</button>
+            <button role="radio" aria-checked={teams} onClick={() => setTeams(true)}>Teams</button>
+          </div>
+          {teams ? (
+            <>
+              <div className="ws-rounds ws-rounds-small" role="radiogroup" aria-label="Number of teams">
+                {[2, 3, 4].map((count) => <button key={count} role="radio" aria-checked={teamCount === count} onClick={() => setTeamCount(count)}>{count} teams</button>)}
+              </div>
+              <div className="ws-team-names">
+                {Array.from({ length: teamCount }, (_, i) => (
+                  <label className="field" key={i}>
+                    <span>Team {i + 1}</span>
+                    <input value={teamNames[i]} maxLength="24" placeholder={`Team ${i + 1}`} onChange={(e) => setTeamNames((names) => names.map((name, j) => (j === i ? e.target.value : name)))} />
+                  </label>
+                ))}
+              </div>
+              <p className="muted ws-hint">Up to 12 phones. Players pick a team when they join. Teammates take turns spinning and calling letters, anyone on the team can buzz in on a toss-up, and the whole team plays the bonus round.</p>
+            </>
+          ) : <p className="muted ws-hint">2 to 6 players, each with their own podium. The show has 3.</p>}
+        </fieldset>
         <fieldset className="ws-fieldset">
           <legend>Game length</legend>
           <div className="ws-rounds" role="radiogroup" aria-label="Game length">
@@ -457,6 +494,11 @@ function Podiums({ game }) {
             <b className="ws-podium-bank money">{money(contestant.roundBank)}</b>
             <span className="ws-podium-total">Total <b className="money">{money(contestant.total)}</b></span>
             <Extras contestant={contestant} />
+            {isTeams(game) && (
+              <span className="ws-podium-members">
+                {membersOf(game, i).map((player) => <span key={player.id} className={`${player.id === round?.actorId ? "is-up" : ""}${player.connected ? "" : " is-away"}`}>{player.name}</span>)}
+              </span>
+            )}
           </li>
         );
       })}
@@ -517,18 +559,36 @@ function RoundTools({ game, onAction }) {
 function PlayerTools({ game, onAction }) {
   const [amount, setAmount] = useState("500");
   const step = Math.max(1, Math.trunc(Number(amount) || 0));
+  const teams = isTeams(game), adjust = (contestant) => (
+    <>
+      <span className="money">{money(game.contestants[contestant]?.total)}</span>
+      <button className="chip-btn add" onClick={() => onAction("adjustScore", { contestant, amount: step })}>+{step}</button>
+      <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { contestant, amount: -step })}>−{step}</button>
+    </>
+  );
   return (
     <div className="ws-player-tools">
       {game.status !== "lobby" && <label className="inline-field">Adjust totals by <input aria-label="Score adjustment amount" type="number" min="1" step="50" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>}
+      {teams && (
+        <ul className="ws-team-tools">
+          {game.contestants.map((team, i) => (
+            <li key={i} className={colorOf(i)}>
+              <input aria-label={`Team ${i + 1} name`} defaultValue={team.name} key={team.name} maxLength="24" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== team.name && onAction("renameTeam", { contestant: i, name: e.target.value })} />
+              {game.status !== "lobby" && adjust(i)}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul>
         {game.players.map((player) => (
           <li key={player.id}>
             <input aria-label={`${player.name}’s name`} defaultValue={player.name} key={player.name} maxLength="20" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name: e.target.value })} />
-            {game.status !== "lobby" && <>
-              <span className="money">{money(game.contestants[player.contestant]?.total)}</span>
-              <button className="chip-btn add" onClick={() => onAction("adjustScore", { contestant: player.contestant, amount: step })}>+{step}</button>
-              <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { contestant: player.contestant, amount: -step })}>−{step}</button>
-            </>}
+            {teams && (
+              <select aria-label={`${player.name}’s team`} value={player.contestant} onChange={(e) => onAction("movePlayer", { playerId: player.id, contestant: Number(e.target.value) })}>
+                {game.contestants.map((team, i) => <option key={i} value={i}>{team.name}</option>)}
+              </select>
+            )}
+            {!teams && game.status !== "lobby" && adjust(player.contestant)}
             <button className="chip-btn danger" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Kick</button>
           </li>
         ))}
@@ -545,12 +605,35 @@ function Lobby({ game, onAction }) {
     <div className="lobby ws-lobby">
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
-      <ol className="ws-lobby-players">
-        {game.contestants.map((contestant, i) => <li key={i} className={colorOf(i)}>{contestant.name}</li>)}
-        {!game.contestants.length && <li className="muted">Nobody yet</li>}
-      </ol>
+      {isTeams(game) ? (
+        <div className="ws-lobby-teams">
+          {game.contestants.map((team, i) => (
+            <section key={i} className={colorOf(i)}>
+              <h2>{team.name}</h2>
+              <ul>
+                {membersOf(game, i).map((player) => (
+                  <li key={player.id}>
+                    <button onClick={() => onAction("movePlayer", { playerId: player.id, contestant: (i + 1) % game.contestants.length })} aria-label={`Move ${player.name} to ${game.contestants[(i + 1) % game.contestants.length].name}`}>
+                      {player.name} <span aria-hidden="true">⇄</span>
+                    </button>
+                  </li>
+                ))}
+                {!membersOf(game, i).length && <li className="muted">Nobody yet</li>}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <ol className="ws-lobby-players">
+          {game.contestants.map((contestant, i) => <li key={i} className={colorOf(i)}>{contestant.name}</li>)}
+          {!game.contestants.length && <li className="muted">Nobody yet</li>}
+        </ol>
+      )}
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
-      <p className="muted">{game.contestants.length < 2 ? "2 to 6 players. The show has 3." : `${game.contestants.length} players. Player 1 spins first.`}</p>
+      <p className="muted">
+        {isTeams(game) ? "Players choose a team on their phone. Tap a name to move someone. Up to 12 players."
+          : game.contestants.length < 2 ? "2 to 6 players. The show has 3." : `${game.contestants.length} players. Player 1 spins first.`}
+      </p>
     </div>
   );
 }
@@ -772,7 +855,13 @@ function PlayerAction({ game, playerId }) {
   const solveKey = `${game.segment.index}-${round.phase}-${round.control}`;
   if (round.phase === "roundEnd") { const { title, detail } = phaseText(game); return <>{status(title, round.winner === myContestant(game, playerId))}<p className="muted">{detail}</p></>; }
   if (round.phase === "tossupReveal") return <TossupBuzzer game={game} playerId={playerId} />;
-  if (!mine) { const { title, detail } = phaseText(game); return <>{status(title)}{detail && <p className="muted">{detail}</p>}</>; }
+  if (!mine) {
+    const { title, detail } = phaseText(game);
+    // A teammate is acting for the team.
+    if (isTeams(game) && round.actorId && round.control === myContestant(game, playerId))
+      return <>{status(`${playerName(game, round.actorId)} is playing for your team`, true)}<p className="muted">{title}{/[.!?…]$/.test(title) ? "" : "."} Help them out!</p></>;
+    return <>{status(title)}{detail && <p className="muted">{detail}</p>}</>;
+  }
   switch (round.phase) {
     case "tossupSolve":
     case "speedSolve":
@@ -866,6 +955,7 @@ export function WheelPlayer({ game, playerId }) {
         <span className="brand ws-brand">SPIN &amp; SOLVE</span>
         <span className="player-name">{player.name}</span>
       </header>
+      {isTeams(game) && <p className={`ws-my-team ${colorOf(player.contestant)}`}>{me?.name}</p>}
       <div className={`ws-my-podium ${colorOf(player.contestant)}`}>
         <span>This round <b className="money">{money(me?.roundBank)}</b></span>
         <span>Total <b className="money">{money(me?.total)}</b></span>
@@ -874,7 +964,19 @@ export function WheelPlayer({ game, playerId }) {
       {game.status === "bonus" ? (
         <BonusPlayer game={game} playerId={playerId} />
       ) : game.status === "lobby" || !round ? (
-        <p className="player-status">You’re in! Wait for the game to start.</p>
+        isTeams(game) ? (
+          <div className="ws-team-pick">
+            <p className="player-status">Pick your team, then wait for the game to start.</p>
+            <div className="ws-team-pick-buttons" role="radiogroup" aria-label="Your team">
+              {game.contestants.map((team, i) => (
+                <button key={i} role="radio" aria-checked={player.contestant === i} className={colorOf(i)} onClick={() => socket.emit("wheel:team", { code: game.code, playerId, contestant: i })}>
+                  {team.name}
+                  <small>{membersOf(game, i).length} {membersOf(game, i).length === 1 ? "player" : "players"}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : <p className="player-status">You’re in! Wait for the game to start.</p>
       ) : (
         <>
           <p className="player-clue-meta">{segmentLabel(game)} · {round.category}</p>
@@ -1051,13 +1153,14 @@ function BonusLetterPicker({ game, playerId }) {
 }
 
 function BonusPlayer({ game, playerId }) {
-  const bonus = game.bonus, mine = bonus.playerId === playerId, { title, detail } = bonusText(game);
+  // On a team, everyone on the winning team gets the controls: whoever acts first.
+  const bonus = game.bonus, mine = myContestant(game, playerId) === bonus.contestant, { title, detail } = bonusText(game);
   const status = (text, you = false) => <p className={"player-status" + (you ? " is-you" : "")}>{text}</p>;
   let action = null;
   if (mine && bonus.phase === "pick")
     action = (
       <>
-        {status("You won! Pick a category for the bonus round", true)}
+        {status(`${isTeams(game) ? "Your team won" : "You won"}! Pick a category for the bonus round`, true)}
         <BonusClock game={game} />
         <div className="ws-bonus-choices is-phone">
           {bonus.categories.map((category, i) => <button key={i} onClick={() => socket.emit("wheel:bonusPick", { code: game.code, playerId, index: i })}>{category}</button>)}
@@ -1147,6 +1250,7 @@ export function WheelEnd({ game, host, onAction }) {
               {contestant.name}
               {contestant.prizes?.length > 0 && <small>won {contestant.prizes.map((prize) => prize.name).join(", ")}</small>}
               {contestant.consolation > 0 && <small>includes {money(contestant.consolation)} for playing</small>}
+              {isTeams(game) && <small>{membersOf(game, contestant.i).map((player) => player.name).join(", ") || "No players"}</small>}
             </span>
             <b className="money">{money(contestant.total)}</b>
           </li>

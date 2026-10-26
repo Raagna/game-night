@@ -28,6 +28,10 @@
 // three more consonants and a vowel, then have ten seconds to solve it, as many tries as fit. The envelope
 // is opened either way; the money is theirs only if they solved it.
 //
+// Players play on their own (2 to 6, a podium each) or in 2 to 4 teams sharing up to 12 phones. A team plays
+// as one contestant: its members take turns acting when the team has control, any member can buzz in on a
+// toss-up, and the whole team plays the bonus round.
+//
 // The server picks where every spin lands and only applies it once the wheel has stopped on the TV, so
 // all screens agree and no phone can fake a spin. The solution never goes out with the game state:
 // phones get the board with unrevealed letters blank, and only the host controller is sent the answer.
@@ -42,7 +46,8 @@ export const WHEEL_TIMES = {
 }
 // Relaxed pace doubles the clocks people play against (not the spin, the toss-up tiles or the pause between rounds).
 const RELAXED = new Set(['decideMs', 'letterMs', 'solveMs', 'quickSolveMs', 'pickMs', 'bonusLettersMs'])
-const MAX_PLAYERS = 6
+// Up to 6 contestants on their own, or 2 to 4 teams sharing up to 12 phones.
+const MAX_SOLO = 6, MAX_TEAM_PLAYERS = 12, TEAM_COUNTS = [2, 3, 4]
 const MAX_SEGMENTS = 12
 export const VOWEL_COST = 250
 // Solving a round for less than this is raised to it, as on the show.
@@ -118,7 +123,10 @@ function cleanConfig(config) {
   // The Gift wedge's prize in rounds 1 to 3, and the Prize Puzzle's trip in round 3.
   const prize = (raw) => { const name = text(raw?.name, 40), value = Math.trunc(Number(raw?.value)); return name && value >= 100 && value <= 50000 ? { name, value } : null }
   const gifts = (Array.isArray(config?.gifts) ? config.gifts : []).slice(0, SPECIAL_ROUNDS).map(prize).filter(Boolean)
+  const teams = config?.mode === 'teams'
+  const teamCount = TEAM_COUNTS.includes(Number(config?.teamCount)) ? Number(config.teamCount) : 2
   return {
+    mode: teams ? 'teams' : 'solo', teamNames: teams ? Array.from({ length: teamCount }, (_, i) => text(config?.teamNames?.[i], 24) || `Team ${i + 1}`) : [],
     segments, spares, bonus, gifts, trip: prize(config?.trip), hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
     speedUp: config?.speedUp === 'start' ? 'start' : 'after',
   }
@@ -141,25 +149,43 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const config = cleanConfig(rawConfig)
     return {
       kind: 'wheel', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config,
-      contestants: [], ...freshPlay(config), lastEvent: null,
+      // Teams have their podiums from the start; solo podiums appear as phones join.
+      contestants: config.teamNames.map(freshContestant), ...freshPlay(config), lastEvent: null,
     }
   }
+  const isTeams = (game) => game.config.mode === 'teams'
+  const maxPlayers = (game) => (isTeams(game) ? MAX_TEAM_PLAYERS : MAX_SOLO)
   // Everything a new game (or a replay) starts from.
   const freshPlay = (config) => ({
     segments: config.segments.map((segment) => ({ ...segment })), spares: [...config.spares],
     segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null, bonus: null,
   })
-  // Everyone plays for themselves: each new phone is a new contestant, with its own podium.
+  // Solo: each new phone is a new contestant, with its own podium. Teams: new phones join the smallest
+  // team, so teams stay even as people arrive (they can switch in the lobby).
   function playerJoined(game, player) {
-    player.contestant = game.contestants.length
-    game.contestants.push(freshContestant(player.name))
+    if (!isTeams(game)) {
+      player.contestant = game.contestants.length
+      game.contestants.push(freshContestant(player.name))
+      return
+    }
+    const sizes = game.contestants.map((_, i) => members(game, i).filter((other) => other !== player).length)
+    player.contestant = sizes.indexOf(Math.min(...sizes))
   }
   // roundPrizes: gifts picked up this round, kept only on a solve; prizes: everything won so far.
   // wildCard and million carry over from round to round until used, or lost to Bankrupt.
+  // turnRotation: which team member acts next time the team gets control.
   const freshContestant = (name) => ({
     name, total: 0, roundBank: 0, solvedAny: false, consolation: 0,
-    roundPrizes: [], prizes: [], wildCard: false, million: false, millionThisRound: false,
+    roundPrizes: [], prizes: [], wildCard: false, million: false, millionThisRound: false, turnRotation: 0,
   })
+  // The team member whose turn it is to act for the team (members take turns), or null if none are connected.
+  function nextActor(game, contestant) {
+    const here = members(game, contestant).filter((player) => player.socketId)
+    if (!here.length) return null
+    const player = here[game.contestants[contestant].turnRotation % here.length]
+    game.contestants[contestant].turnRotation++
+    return player.id
+  }
 
   // ---------- The puzzle ----------
   // A letter is showing if it has been called, or (in a toss-up) its tile has been turned on its own.
@@ -194,7 +220,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const round = game.round, ended = round?.phase === 'roundEnd' || game.status === 'complete'
     const segment = game.segments[game.segmentIndex]
     return {
-      kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
+      kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId, mode: game.config.mode, maxPlayers: maxPlayers(game),
       pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, winner: game.winner, speedUpMode: game.config.speedUp,
       // The order of play without the puzzles, so "Play again" can deal new ones for the same game.
       plan: game.config.segments.map(({ type, value }) => ({ type: type === 'final' ? 'round' : type, value })), hasBonus: game.config.bonus.length > 0,
@@ -452,7 +478,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function giveControl(game, contestant) {
     const round = game.round
     round.control = contestant
-    round.actorId = contestant == null ? null : members(game, contestant).find((player) => player.socketId)?.id || null
+    round.actorId = contestant == null ? null : nextActor(game, contestant)
     round.express = false; round.landed = null; round.wildChance = null
     if (!round.speedUp) round.value = null
     setPhase(game, round.speedUp?.value ? 'speedLetter' : round.speedUp ? 'finalSpin' : 'turn')
@@ -829,6 +855,9 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function handOff(game, playerId) {
     const round = game.round
     if (game.status !== 'playing' || !round || round.actorId !== playerId) return
+    // On a team, a teammate takes over the same turn, clock and all.
+    const teammate = isTeams(game) && round.control != null && members(game, round.control).find((player) => player.socketId && player.id !== playerId)
+    if (teammate) { round.actorId = teammate.id; return }
     if (round.phase === 'tossupSolve') lockOut(game, 'timeout')
     else if (ACTOR_PHASES.includes(round.phase)) passControl(game)
     // Mid-spin, the wheel still lands; the next phase finds nobody to act and the clock moves things on.
@@ -847,11 +876,20 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const socket = io.sockets.sockets.get(player.socketId)
     socket?.leave(game.code); socket?.emit('player:kicked')
     game.players.delete(player.id)
-    // Before the game starts their podium goes too; once it's running, their score stays on the board.
-    if (game.status === 'lobby' && !members(game, player.contestant).length) {
+    // Before a solo game starts their podium goes too; once it's running, their score stays on the board.
+    // Team podiums stay put.
+    if (game.status === 'lobby' && !isTeams(game) && !members(game, player.contestant).length) {
       game.contestants.splice(player.contestant, 1)
       for (const other of game.players.values()) if (other.contestant > player.contestant) other.contestant--
     } else handOff(game, player.id)
+  }
+
+  // Switching teams. Mid-game, if the team was waiting on them, a teammate (or the next team) takes over.
+  function movePlayer(game, playerId, contestant) {
+    const player = game.players.get(playerId), to = Math.trunc(Number(contestant))
+    if (!player || !game.contestants[to] || player.contestant === to) return
+    handOff(game, player.id)
+    player.contestant = to
   }
 
   function hostAction(game, action, payload) {
@@ -893,8 +931,13 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'renamePlayer') {
       const player = game.players.get(payload.playerId), name = text(payload.name, 20)
-      if (player && name) { player.name = name; game.contestants[player.contestant].name = name }
+      if (player && name) { player.name = name; if (!isTeams(game)) game.contestants[player.contestant].name = name }
     }
+    if (action === 'renameTeam' && isTeams(game)) {
+      const team = game.contestants[payload.contestant], name = text(payload.name, 24)
+      if (team && name) { team.name = name; game.config.teamNames[payload.contestant] = name }
+    }
+    if (action === 'movePlayer' && isTeams(game)) movePlayer(game, payload.playerId, payload.contestant)
     if (action === 'kickPlayer') kick(game, payload.playerId)
     if (action === 'replay') {
       try {
@@ -925,10 +968,11 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     on('mystery', (game, { flip }) => chooseMystery(game, !!flip))
     on('express', (game, { play }) => chooseExpress(game, !!play))
     on('solve', (game, { playerId, guess }) => solve(game, playerId, guess))
-    // The bonus round's player, on their own connection.
+    // The bonus round's player, on their own connection. On a team, the whole team plays it: any member can
+    // pick, spin, choose the letters or type the solve.
     const onBonus = (name, handle) => socket.on(`wheel:${name}`, (payload = {}) => {
       const game = wheelGame(payload.code)
-      if (!isLive(game, payload.playerId, socket) || game.status !== 'bonus' || game.bonus?.playerId !== payload.playerId) return
+      if (!isLive(game, payload.playerId, socket) || game.status !== 'bonus' || game.players.get(payload.playerId)?.contestant !== game.bonus?.contestant) return
       handle(game, payload)
       emitGame(game)
     })
@@ -936,6 +980,13 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     onBonus('bonusSpin', (game, { power }) => spinBonus(game, power))
     onBonus('bonusLetters', (game, { consonants, vowel }) => chooseBonusLetters(game, consonants, vowel))
     onBonus('bonusSolve', (game, { playerId, guess }) => solveBonus(game, playerId, guess))
+    // Choosing a team before the game starts.
+    socket.on('wheel:team', ({ code, playerId, contestant } = {}) => {
+      const game = wheelGame(code)
+      if (!isLive(game, playerId, socket) || game.status !== 'lobby' || !isTeams(game)) return
+      movePlayer(game, playerId, contestant)
+      emitGame(game)
+    })
     socket.on('wheel:buzz', ({ code, playerId } = {}) => {
       const game = wheelGame(code)
       if (!isLive(game, playerId, socket) || game.status !== 'playing' || !game.round) return
@@ -944,5 +995,5 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }
+  return { MAX_PLAYERS: MAX_SOLO, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }
 }

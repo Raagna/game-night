@@ -753,3 +753,91 @@ test('on the Express, a wrong solve or running out of time is Bankrupt', () => {
   assert.equal(game.contestants[c].roundBank, 0)
   assert.notEqual(game.round.control, c)
 })
+
+// ---------- Teams ----------
+// A teams game with phones p1..pN joining in order (so they alternate between teams).
+function teamGame(h, { phones = 4, teamCount = 2, start = true, ...config } = {}) {
+  const game = newGame(h, { players: 0, start: false, mode: 'teams', teamCount, teamNames: ['Reds', 'Blues', 'Greens'], segments: [round('Hello world'), round('Tea set')], ...config })
+  for (let i = 1; i <= phones; i++) {
+    const player = { id: `p${i}`, name: `Player ${i}`, score: 0, socketId: `s-p${i}` }
+    game.players.set(player.id, player); h.api.playerJoined(game, player)
+  }
+  if (start) h.api.hostAction(game, 'start', {})
+  return game
+}
+const teamOf = (game, id) => game.players.get(id).contestant
+
+test('teams have their podiums from the start, and new phones join the smallest team', () => {
+  const h = harness(), game = teamGame(h, { phones: 4, teamCount: 3, start: false })
+  assert.deepEqual(game.contestants.map((c) => c.name), ['Reds', 'Blues', 'Greens'])
+  assert.deepEqual(['p1', 'p2', 'p3', 'p4'].map((id) => teamOf(game, id)), [0, 1, 2, 0])
+  assert.equal(h.api.maxPlayers(game), 12)
+  assert.equal(h.api.maxPlayers(newGame(harness(), { start: false })), 6)
+})
+
+test('players pick a team in the lobby; the host can move players and rename teams; kicking keeps the team', () => {
+  const h = harness(), game = teamGame(h, { start: false })
+  h.act(game, 'p1', 'team', { contestant: 1 })
+  assert.equal(teamOf(game, 'p1'), 1)
+  h.api.hostAction(game, 'movePlayer', { playerId: 'p1', contestant: 0 })
+  assert.equal(teamOf(game, 'p1'), 0)
+  h.api.hostAction(game, 'renameTeam', { contestant: 1, name: 'Night Owls' })
+  h.api.hostAction(game, 'renamePlayer', { playerId: 'p2', name: 'Sam' })
+  assert.deepEqual(game.contestants.map((c) => c.name), ['Reds', 'Night Owls'], 'a player’s new name isn’t the team’s')
+  h.api.hostAction(game, 'kickPlayer', { playerId: 'p2' })
+  assert.equal(game.contestants.length, 2)
+  h.api.hostAction(game, 'start', {})
+  h.act(game, 'p1', 'team', { contestant: 1 })
+  assert.equal(teamOf(game, 'p1'), 0, 'no switching on your own once the game is on')
+})
+
+test('team members take turns acting for their team', () => {
+  const h = harness(), game = teamGame(h)
+  // Reds: p1, p3. Blues: p2, p4.
+  const actors = []
+  for (const letter of ['Z', 'Q', 'X', 'J', 'V']) {
+    const actor = game.round.actorId
+    actors.push(actor)
+    h.spinTo(game, actor, CASH_600)
+    h.act(game, actor, 'consonant', { letter })
+  }
+  assert.deepEqual(actors, ['p1', 'p2', 'p3', 'p4', 'p1'])
+})
+
+test('if the player acting for a team leaves, a teammate takes over the same turn', () => {
+  const h = harness(), game = teamGame(h)
+  h.spinTo(game, 'p1', CASH_600)
+  game.players.get('p1').socketId = null
+  h.api.playerLeft(game, 'p1')
+  assert.equal(game.round.control, 0)
+  assert.equal(game.round.actorId, 'p3')
+  assert.equal(game.round.phase, 'consonant')
+  h.act(game, 'p3', 'consonant', { letter: 'L' })
+  assert.equal(game.contestants[0].roundBank, 1800)
+})
+
+test('any team member can buzz in on a toss-up', () => {
+  const h = harness(), game = teamGame(h, { segments: [tossup('Hello world'), round('Tea set')] })
+  h.act(game, 'p4', 'buzz')
+  assert.equal(game.round.control, 1)
+  assert.equal(game.round.actorId, 'p4')
+})
+
+test('the whole winning team plays the bonus round: any member can pick, choose letters or solve', () => {
+  const h = harness(), game = teamGame(h, { segments: [round('Bob')], bonus: BONUS })
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'BOB' })
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.equal(game.status, 'bonus')
+  h.act(game, 'p2', 'bonusPick', { index: 1 })
+  assert.equal(game.bonus.phase, 'pick', 'not the other team')
+  h.act(game, 'p3', 'bonusPick', { index: 1 })
+  assert.equal(game.bonus.phase, 'spin')
+  envelopeAt(h, game, 0)
+  h.fire()
+  h.act(game, 'p3', 'bonusLetters', { consonants: ['B', 'G', 'D'], vowel: 'A' })
+  h.fire()
+  h.act(game, 'p1', 'bonusSolve', { guess: 'I' })
+  assert.equal(game.bonus.solved, true)
+  assert.equal(game.contestants[0].total, SOLVE_MINIMUM + 100000)
+})

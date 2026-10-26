@@ -20,7 +20,7 @@ const GAMES = [
   {
     id: "wheel",
     name: "Spin & Solve",
-    tag: "2–6 players",
+    tag: "2–6 players, or teams of up to 12",
     blurb: "Spin the wheel, call a letter and cash in for every time it shows up. Buy vowels, dodge Bankrupt, and solve the puzzle to bank the round.",
     className: "hub-card--wheel",
   },
