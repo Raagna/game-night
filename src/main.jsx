@@ -22,6 +22,7 @@ import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, n
 import Hub, { BackToHub } from "./Hub";
 import { LobbyJoin, JoinCorner } from "./JoinQR";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
+import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -938,7 +939,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeopardy! takes up to 6 players and Survey Says! up to 12. You can join after a game starts.</p>
+      <p className="muted">Jeopardy! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), and Survey Says! 12. You can join after a game starts.</p>
       <a href="./">← Game Night</a>
     </main>
   );
@@ -1052,6 +1053,7 @@ function App() {
             });
       const pick = params.get("game");
       if (pick === "survey") return <SurveySetup onCreate={create} />;
+      if (pick === "wheel") return <WheelSetup onCreate={create} />;
       if (pick === "jeopardy") return <Setup onCreate={create} />;
       return <Hub />;
     }
@@ -1076,6 +1078,12 @@ function App() {
     if (controller) return <>{banner}<SurveyController game={game} onAction={action} /></>;
     if (host) return <>{banner}<SurveyDisplay game={game} onAction={action} /></>;
     return <>{banner}<SurveyPlayer game={game} playerId={playerId} /></>;
+  }
+  if (game.kind === "wheel") {
+    if (game.status === "complete") return <>{banner}<WheelEnd game={game} host={host || controller} display={host} onAction={action} /></>;
+    if (controller) return <>{banner}<WheelController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<WheelDisplay game={game} onAction={action} /></>;
+    return <>{banner}<WheelPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} /></>;

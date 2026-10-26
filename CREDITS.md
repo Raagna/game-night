@@ -34,3 +34,26 @@ The hand-written Game Night pack (`src/surveys.json`) is original to this projec
 The buzzer, the answer ding, the round fanfare and the winners tune are synthesized in the browser by
 `src/survey/sounds.js` (Web Audio). There are no recordings or samples, and the tune is an original composition,
 not the TV show's music.
+
+## Spin & Solve puzzles and sounds
+
+The puzzles, bonus puzzles, gifts and trips in `src/wheel/puzzles.json` (the Game Night pack) were written for
+this project. Most are everyday phrases and figures of speech; the rest name well-known places, people,
+public-domain characters and titles. None is copied from the TV show.
+
+## Spin & Solve Fan Database pack
+
+`public/data/puzzles-fans.json` is built from https://wheeloffortuneanswer.com/, a player-maintained list of
+answers from the official Wheel of Fortune game, collected from its category pages on 2026-10-26. The site doesn't
+name an author or a licence, and we don't know them, so no licence is claimed for this data. If you're the
+author and want it credited differently or removed, get in touch through this GitHub repository.
+
+The answers are kept as written, with their categories (some renamed, like "Food and Drink" to "Food & Drink").
+The categories made of other people's words (Song Lyrics, Movie Quotes, Quotation, Slogan) were not collected,
+and Headline was left out. Answers that don't fit the board, use characters it can't show, have notes attached,
+have fewer than 5 letters, break their category's rule or repeat a Game Night puzzle were left out.
+`scripts/build-fan-puzzles.mjs` rebuilds the file from the collected answers and documents every rule.
+
+The peg clicks, letter dings, Bankrupt slide, fanfares and bonus clock are synthesized in the browser by
+`src/wheel/sounds.js`, using the building blocks in `src/survey/sounds.js` (and the same winners tune). There are
+no recordings or samples.

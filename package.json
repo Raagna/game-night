@@ -7,7 +7,9 @@
     "dev": "concurrently \"vite --host 0.0.0.0\" \"node server/index.js\"",
     "client": "vite --host 0.0.0.0",
     "server": "node server/index.js",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "node --test \"server/*.test.js\"",
+    "check:puzzles": "node scripts/check-wheel-puzzles.mjs"
   },
   "dependencies": {
     "@fontsource/archivo-black": "^5.3.0",

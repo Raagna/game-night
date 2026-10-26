@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { audioContext } from "../shared";
 
 // ---------- Mute ----------
+// One sound on/off switch for the TV, shared with Spin & Solve (src/wheel/sounds.js builds on this file).
 const MUTE_KEY = "gameNight.survey.muted";
 let muted = (() => { try { return localStorage.getItem(MUTE_KEY) === "1"; } catch { return false; } })();
 const listeners = new Set();
 let master = null;
-function output() {
+export const isMuted = () => muted;
+export function output() {
   const ctx = audioContext();
   if (!ctx) return null;
   if (!master || master.context !== ctx) { master = ctx.createGain(); master.connect(ctx.destination); }
@@ -36,7 +38,7 @@ export function useSound() {
 
 // ---------- Building blocks ----------
 // An oscillator with a quick attack and an exponential fade, starting `at` seconds from now.
-function note(ctx, out, { freq, at = 0, dur = 0.2, type = "sine", gain = 0.1, attack = 0.005, filter }) {
+export function note(ctx, out, { freq, at = 0, dur = 0.2, type = "sine", gain = 0.1, attack = 0.005, filter }) {
   const t = ctx.currentTime + at, osc = ctx.createOscillator(), amp = ctx.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t);
@@ -51,7 +53,7 @@ function note(ctx, out, { freq, at = 0, dur = 0.2, type = "sine", gain = 0.1, at
   return osc;
 }
 let noiseBuffer = null;
-function noise(ctx, out, { at = 0, dur = 0.1, gain = 0.1, highpass = 1000 }) {
+export function noise(ctx, out, { at = 0, dur = 0.1, gain = 0.1, highpass = 1000 }) {
   if (!noiseBuffer || noiseBuffer.sampleRate !== ctx.sampleRate) {
     noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
@@ -66,7 +68,7 @@ function noise(ctx, out, { at = 0, dur = 0.1, gain = 0.1, highpass = 1000 }) {
   src.start(t);
   src.stop(t + dur + 0.05);
 }
-const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+export const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
 
 // ---------- Effects ----------
 // Wrong answer: a low, harsh two-tone buzzer held for most of a second.

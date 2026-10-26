@@ -17,6 +17,13 @@ const GAMES = [
     blurb: "We asked 100 people… Face off for control, guess the top answers, and don’t get three strikes — or the other team steals the points.",
     className: "hub-card--survey",
   },
+  {
+    id: "wheel",
+    name: "Spin & Solve",
+    tag: "2–6 players, or teams of up to 12",
+    blurb: "Spin the wheel, call a letter and cash in for every time it shows up. Buy vowels, dodge Bankrupt, and solve the puzzle to bank the round.",
+    className: "hub-card--wheel",
+  },
 ];
 
 export function BackToHub() {
