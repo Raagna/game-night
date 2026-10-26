@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE, CONSOLATION, SPEED_UP_BONUS, TIEBREAK_VALUE, WHEEL_TIMES } from './wheel.js'
+import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE, CONSOLATION, SPEED_UP_BONUS, TIEBREAK_VALUE, WHEEL_TIMES, BONUS_ENVELOPES, MILLION_PRIZE } from './wheel.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire(), and spins
 // land where the test says.
@@ -17,6 +17,8 @@ function harness() {
   const h = {
     api, games, timers, sockets, rooms, sent,
     fire: (name = 'wheel') => { const timer = timers[name]; assert.ok(timer, `no ${name} clock running`); delete timers[name]; timer.fn() },
+    // The next numbers the game's random() will return (0.5 after that).
+    randoms: (list) => { randoms = [...list] },
     // A phone action, sent on that player's own connection.
     act: (game, playerId, name, payload = {}) => {
       const handlers = new Map(), player = game.players.get(playerId)
@@ -414,4 +416,143 @@ test('with no spare puzzle left, a tie stands', () => {
   h.fire()
   assert.equal(game.status, 'complete')
   assert.equal(game.winner, null)
+})
+
+// ---------- The bonus round ----------
+const BONUS = [{ category: 'Thing', text: 'Glass jar' }, { category: 'Phrase', text: 'Big deal' }, { category: 'Place', text: 'Fox den' }]
+// Ann solves the only round, so she wins and plays the bonus round.
+function bonusGame(h, extra = {}) {
+  const game = newGame(h, { segments: [round('Bob')], bonus: BONUS, ...extra })
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'BOB' })
+  if (game.hostless) h.fire(); else h.api.hostAction(game, 'nextSegment', {})
+  return game
+}
+const envelopeAt = (h, game, index) => {
+  h.randoms([(index * SLOTS_PER_WEDGE + 1) / (24 * SLOTS_PER_WEDGE), 0.5])
+  h.act(game, 'p1', 'bonusSpin', { power: 0.7 })
+  h.fire()
+}
+
+test('the winner plays the bonus round: pick a category, spin for an envelope, RSTLNE, three consonants and a vowel, solve', () => {
+  const h = harness(), game = bonusGame(h)
+  assert.equal(game.status, 'bonus')
+  let view = h.api.publicGame(game).bonus
+  assert.deepEqual([view.contestant, view.playerId, view.phase], [0, 'p1', 'pick'])
+  assert.deepEqual(view.categories, ['Thing', 'Phrase', 'Place'])
+  assert.equal(view.board, null)
+  h.act(game, 'p2', 'bonusPick', { index: 0 })
+  assert.equal(game.bonus.phase, 'pick', 'only the winner picks')
+  h.act(game, 'p1', 'bonusPick', { index: 1 })
+  assert.equal(game.bonus.phase, 'spin')
+  assert.equal(h.api.publicGame(game).bonus.board, null, 'the puzzle stays hidden until the envelope is picked')
+  // Unshuffled envelopes (the harness's random numbers are all equal), so envelope 0 holds $100,000.
+  envelopeAt(h, game, 0)
+  view = h.api.publicGame(game).bonus
+  assert.equal(view.phase, 'given')
+  assert.equal(view.envelope, 0)
+  assert.equal(view.prize, null, 'the envelope stays sealed')
+  // BIG DEAL with R S T L N E showing: the blanks are B I G D A.
+  assert.equal(view.blanks, 5)
+  h.fire()
+  assert.equal(game.bonus.phase, 'letters')
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G'], vowel: 'A' })
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G', 'T'], vowel: 'A' })
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G', 'D'], vowel: 'E' })
+  assert.equal(game.bonus.phase, 'letters', 'two consonants, a given one, or a given vowel are all refused')
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G', 'D'], vowel: 'A' })
+  assert.equal(game.bonus.phase, 'lighting')
+  assert.equal(h.api.publicGame(game).bonus.blanks, 1)
+  h.fire()
+  assert.equal(game.bonus.phase, 'solve')
+  assert.equal(h.timers.wheel.ms, WHEEL_TIMES.quickSolveMs)
+  h.act(game, 'p1', 'bonusSolve', { guess: 'O' })
+  assert.equal(game.bonus.phase, 'solve', 'wrong tries are allowed until time runs out')
+  h.act(game, 'p1', 'bonusSolve', { guess: 'I' })
+  view = h.api.publicGame(game).bonus
+  assert.equal(view.phase, 'envelope')
+  assert.equal(view.solved, true)
+  assert.equal(view.prize, 100000)
+  assert.equal(view.solution, 'BIG DEAL')
+  assert.equal(game.contestants[0].total, SOLVE_MINIMUM + 100000)
+  assert.equal(h.timers.wheel, undefined, 'with a host, the host moves on to the final scores')
+  h.api.hostAction(game, 'finishBonus', {})
+  assert.equal(game.status, 'complete')
+})
+
+test('running out of time in the bonus round: the game picks and spins for them, no letters, and the envelope is opened anyway', () => {
+  const h = harness(), game = bonusGame(h, { hostless: true })
+  h.fire()
+  assert.equal(game.bonus.phase, 'spin')
+  h.fire()
+  assert.equal(game.bonus.phase, 'spinning')
+  h.fire(); h.fire()
+  assert.equal(game.bonus.phase, 'letters')
+  h.fire()
+  assert.deepEqual(game.bonus.picked, [])
+  h.fire(); h.fire()
+  assert.equal(game.bonus.phase, 'envelope')
+  assert.equal(game.bonus.solved, false)
+  assert.ok(BONUS_ENVELOPES.includes(h.api.publicGame(game).bonus.prize))
+  assert.equal(game.contestants[0].total, SOLVE_MINIMUM, 'no money without solving')
+  h.fire()
+  assert.equal(game.status, 'complete', 'without a host, the final scores follow by themselves')
+})
+
+test('the host can judge a bonus solve said out loud', () => {
+  const h = harness(), game = bonusGame(h)
+  h.act(game, 'p1', 'bonusPick', { index: 2 })
+  envelopeAt(h, game, 1)
+  h.fire()
+  // FOX DEN: with N and E given, these show every letter, so there's no pause to light them up.
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['F', 'X', 'D'], vowel: 'O' })
+  assert.equal(game.bonus.phase, 'solve')
+  h.api.hostAction(game, 'judgeSolve', { correct: true })
+  assert.equal(game.bonus.solved, true)
+  assert.equal(game.contestants[0].total, SOLVE_MINIMUM + BONUS_ENVELOPES[1])
+})
+
+test('the Million Dollar wedge swaps the $100,000 envelope for $1,000,000; the Wild Card adds a fourth consonant', () => {
+  const h = harness(), game = newGame(h, { segments: [round('Bob')], bonus: BONUS })
+  Object.assign(game.contestants[0], { million: true, wildCard: true })
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'BOB' })
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.ok(game.bonus.envelopes.includes(MILLION_PRIZE) && !game.bonus.envelopes.includes(100000))
+  h.act(game, 'p1', 'bonusPick', { index: 1 })
+  envelopeAt(h, game, 0)
+  h.fire()
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G', 'D'], vowel: 'A' })
+  assert.equal(game.bonus.phase, 'letters', 'with the Wild Card it takes four consonants')
+  h.act(game, 'p1', 'bonusLetters', { consonants: ['B', 'G', 'D', 'C'], vowel: 'I' })
+  assert.equal(game.bonus.phase, 'lighting')
+  assert.deepEqual(game.bonus.picked, ['B', 'G', 'D', 'C', 'I'])
+})
+
+test('no bonus round when the host ends the game early, when the lead is tied, or without bonus puzzles', () => {
+  const h = harness(), early = newGame(h, { segments: [round('Bob')], bonus: BONUS })
+  h.api.hostAction(early, 'endGame', {})
+  assert.equal(early.status, 'complete')
+
+  const h2 = harness(), tied = newGame(h2, { segments: [round('Bob')], bonus: BONUS })
+  tied.contestants.forEach((c) => { c.total = 3000; c.solvedAny = true })
+  h2.api.hostAction(tied, 'revealPuzzle', {})
+  h2.api.hostAction(tied, 'nextSegment', {})
+  assert.equal(tied.status, 'complete')
+  assert.equal(tied.bonus, null)
+
+  const h3 = harness(), plain = newGame(h3, { segments: [round('Bob')] })
+  h3.act(plain, 'p1', 'solveStart')
+  h3.act(plain, 'p1', 'solve', { guess: 'BOB' })
+  h3.api.hostAction(plain, 'nextSegment', {})
+  assert.equal(plain.status, 'complete')
+})
+
+test('the host controller is sent the bonus answer once a category is picked', () => {
+  const h = harness(), game = bonusGame(h)
+  const got = []
+  h.sockets.set('ctrl', { id: 'ctrl', data: { controllerGame: game.code }, emit: (name, data) => got.push(data.text) })
+  h.rooms.set(game.code, new Set(['ctrl']))
+  h.act(game, 'p1', 'bonusPick', { index: 0 })
+  assert.deepEqual(got, ['GLASS JAR'])
 })

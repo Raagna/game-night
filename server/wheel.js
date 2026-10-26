@@ -14,6 +14,11 @@
 // letter found gives that contestant a few seconds to solve. A tie for the lead after that is settled by
 // a tiebreaker toss-up, and anyone who solved nothing gets $1,000 for playing.
 //
+// The winner then plays the bonus round: they pick one of three categories, spin a wheel of 24 sealed
+// envelopes ($40,000 to $100,000) for the prize, and see the puzzle with R S T L N E showing. They choose
+// three more consonants and a vowel, then have ten seconds to solve it, as many tries as fit. The envelope
+// is opened either way; the money is theirs only if they solved it.
+//
 // The server picks where every spin lands and only applies it once the wheel has stopped on the TV, so
 // all screens agree and no phone can fake a spin. The solution never goes out with the game state:
 // phones get the board with unrevealed letters blank, and only the host controller is sent the answer.
@@ -24,9 +29,10 @@ import { layoutPuzzle, puzzleProblem, normalizePuzzle, letterCounts, isLetter, i
 export const WHEEL_TIMES = {
   decideMs: 10000, letterMs: 10000, solveMs: 20000, quickSolveMs: 10000, spinMs: 5200, roundEndMs: 9000,
   tossupRevealMs: 1100, tossupLastMs: 6000, speedUpAfterMs: 120000,
+  pickMs: 15000, lightMs: 3000, bonusLettersMs: 20000, envelopeMs: 12000,
 }
 // Relaxed pace doubles the clocks people play against (not the spin, the toss-up tiles or the pause between rounds).
-const RELAXED = new Set(['decideMs', 'letterMs', 'solveMs', 'quickSolveMs'])
+const RELAXED = new Set(['decideMs', 'letterMs', 'solveMs', 'quickSolveMs', 'pickMs', 'bonusLettersMs'])
 const MAX_PLAYERS = 6
 const MAX_SEGMENTS = 12
 export const VOWEL_COST = 250
@@ -38,6 +44,13 @@ export const SPEED_UP_BONUS = 1000
 export const CONSOLATION = 1000
 export const TIEBREAK_VALUE = 1000
 export const SLOTS_PER_WEDGE = 3
+// The bonus round's given letters, and how many more of each kind the player picks.
+export const BONUS_GIVEN = 'RSTLNE'
+export const BONUS_PICKS = { consonants: 3, vowels: 1 }
+// The bonus wheel's 24 envelopes. They're sealed: their order is shuffled for each game and only the
+// server knows it until the envelope is opened. Holding the Million Dollar wedge swaps $100,000 for $1,000,000.
+export const BONUS_ENVELOPES = [100000, 40000, 45000, 40000, 50000, 40000, 45000, 40000, 55000, 40000, 45000, 40000, 60000, 40000, 45000, 40000, 50000, 40000, 45000, 40000, 75000, 40000, 45000, 40000]
+export const MILLION_PRIZE = 1000000
 const TOP_VALUES = [2500, 3500, 3500, 5000]
 // Each round's 24 wedges, clockwise from the top-value wedge. Numbers are cash wedges. Special wedges
 // stand in as the cash value in STAND_IN until they're in play.
@@ -80,8 +93,10 @@ function cleanSegments(config) {
 function cleanConfig(config) {
   const segments = cleanSegments(config)
   const spares = (Array.isArray(config?.spares) ? config.spares : []).slice(0, 3).map(cleanPuzzle).filter(usable)
+  // The bonus round's three category choices (fewer is fine; none means no bonus round).
+  const bonus = (Array.isArray(config?.bonus) ? config.bonus : []).slice(0, 3).map(cleanPuzzle).filter(usable)
   return {
-    segments, spares, hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
+    segments, spares, bonus, hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
     speedUp: config?.speedUp === 'start' ? 'start' : 'after',
   }
 }
@@ -109,7 +124,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   // Everything a new game (or a replay) starts from.
   const freshPlay = (config) => ({
     segments: config.segments.map((segment) => ({ ...segment })), spares: [...config.spares],
-    segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null,
+    segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null, bonus: null,
   })
   // Everyone plays for themselves: each new phone is a new contestant, with its own podium.
   function playerJoined(game, player) {
@@ -154,7 +169,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
       kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
       pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, winner: game.winner, speedUpMode: game.config.speedUp,
       // The order of play without the puzzles, so "Play again" can deal new ones for the same game.
-      plan: game.config.segments.map(({ type, value }) => ({ type: type === 'final' ? 'round' : type, value })),
+      plan: game.config.segments.map(({ type, value }) => ({ type: type === 'final' ? 'round' : type, value })), hasBonus: game.config.bonus.length > 0,
+      bonus: publicBonus(game),
       players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId })),
       contestants: game.contestants.map((contestant, i) => ({ ...contestant, present: present(game, i) })),
       segment: {
@@ -175,10 +191,30 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
   }
 
+  // The bonus round as the screens see it. The puzzle shows once the envelope is picked, and the
+  // envelope's value only when it's opened.
+  function publicBonus(game) {
+    const bonus = game.bonus
+    if (!bonus) return null
+    const opened = bonus.phase === 'envelope' || game.status === 'complete'
+    return {
+      contestant: bonus.contestant, playerId: bonus.playerId, phase: bonus.phase, deadline: bonus.deadline, pausedMs: bonus.pausedMs,
+      categories: bonus.choices.map((puzzle) => puzzle.category), choice: bonus.choice, category: bonus.puzzle?.category || null,
+      board: bonus.puzzle && !['pick', 'spin', 'spinning'].includes(bonus.phase) ? publicBoard(bonus, opened) : null,
+      blanks: bonus.puzzle ? hiddenLetters(bonus).length : 0,
+      given: BONUS_GIVEN, picked: bonus.picked, picks: { ...BONUS_PICKS, consonants: BONUS_PICKS.consonants + (bonus.extra ? 1 : 0) }, extra: bonus.extra,
+      spin: bonus.spin, envelopes: bonus.envelopes.length, envelope: bonus.envelope, million: bonus.million,
+      prize: opened ? bonus.prize : null, solved: bonus.solved, lastSolve: bonus.lastSolve, solution: opened && bonus.puzzle ? bonus.puzzle.text : undefined,
+    }
+  }
+
+  // The puzzle being played right now: the round's, or the bonus round's once it's picked.
+  const currentPuzzle = (game) => (game.status === 'bonus' ? game.bonus?.puzzle : game.status === 'playing' ? game.round?.puzzle : null)
   // The answer goes only to host controllers: never to phones, and not to the TV, which everyone can see.
   function sendSecret(game, only = null) {
-    if (game.hostless || !game.round || game.status !== 'playing') return
-    const secret = { code: game.code, category: game.round.puzzle.category, text: game.round.puzzle.text }
+    const puzzle = currentPuzzle(game)
+    if (game.hostless || !puzzle) return
+    const secret = { code: game.code, category: puzzle.category, text: puzzle.text }
     const sockets = only ? [only] : [...(io.sockets.adapter.rooms.get(game.code) || [])].map((id) => io.sockets.sockets.get(id))
     for (const socket of sockets) if (socket?.data.controllerGame === game.code && socket.id !== game.hostSocketId) socket.emit('wheel:solution', secret)
   }
@@ -250,7 +286,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     giveControl(game, start)
   }
   function nextSegment(game) {
-    if (game.segmentIndex >= game.segments.length - 1 && !addTiebreak(game)) { finish(game); return }
+    if (game.segmentIndex >= game.segments.length - 1 && !addTiebreak(game)) { endMainGame(game); return }
     game.segmentIndex++
     startSegment(game)
     emitGame(game)
@@ -267,7 +303,9 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const top = Math.max(...game.contestants.map((contestant) => contestant.total))
     return game.contestants.map((contestant, i) => (contestant.total === top ? i : -1)).filter((i) => i >= 0)
   }
-  function finish(game) {
+  // The main game is over: decide the winner, pay out the consolation money, then the bonus round (unless
+  // the host ended the game early, nobody won outright, or the winner's phone isn't connected).
+  function endMainGame(game, { bonus = true } = {}) {
     clearGameTimers(game)
     if (game.contestants.length) {
       const top = leaders(game)
@@ -275,8 +313,14 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     // Decided before the consolation money, which only goes to contestants who solved nothing.
     for (const contestant of game.contestants) if (!contestant.solvedAny && !contestant.consolation) { contestant.consolation = CONSOLATION; contestant.total += CONSOLATION }
-    game.status = 'complete'
     if (game.round) { game.round.phase = 'roundEnd'; game.round.deadline = null; game.round.actorId = null }
+    if (bonus && game.config.bonus.length && game.winner != null && present(game, game.winner)) startBonus(game)
+    else complete(game)
+  }
+  function complete(game) {
+    clearGameTimers(game)
+    game.status = 'complete'
+    if (game.bonus) { game.bonus.deadline = null; game.bonus.pausedMs = null }
     event(game, 'complete')
     emitGame(game)
   }
@@ -491,12 +535,126 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     else setPhase(game, 'speedSolve')
   }
 
+  // ---------- The bonus round ----------
+  // [clock, waits on the player (pausable, and doubled at relaxed pace)]. With a host, the host opens the
+  // envelope's result up to the final scores; without one, they follow by themselves.
+  const BONUS_TIME = {
+    pick: ['pickMs', true], spin: ['decideMs', true], spinning: ['spinMs'], given: ['lightMs'],
+    letters: ['bonusLettersMs', true], lighting: ['lightMs'], solve: ['quickSolveMs', true], envelope: ['envelopeMs'],
+  }
+  function startBonus(game) {
+    const contestant = game.contestants[game.winner]
+    // Shuffled so the $100,000 envelope (or $1,000,000) could be anywhere.
+    const values = BONUS_ENVELOPES.map((value) => (value === 100000 && contestant.million ? MILLION_PRIZE : value))
+    game.status = 'bonus'
+    game.bonus = {
+      contestant: game.winner, playerId: members(game, game.winner).find((player) => player.socketId)?.id || null,
+      choices: game.config.bonus, choice: null, puzzle: null, shown: [...BONUS_GIVEN], revealed: [], picked: [],
+      extra: !!contestant.wildCard, million: !!contestant.million,
+      envelopes: values.map((value) => [random(), value]).sort((a, b) => a[0] - b[0]).map(([, value]) => value),
+      spin: null, envelope: null, prize: null, solved: null, lastSolve: null, phase: null, deadline: null, pausedMs: null,
+    }
+    event(game, 'bonus', { contestant: game.winner })
+    setBonusPhase(game, 'pick')
+    emitGame(game)
+  }
+  function setBonusPhase(game, phase) {
+    const bonus = game.bonus, [key, waits] = BONUS_TIME[phase]
+    bonus.phase = phase; bonus.deadline = null; bonus.pausedMs = null
+    clearGameTimers(game)
+    if (phase === 'envelope' && !game.hostless) return
+    const ms = WHEEL_TIMES[key] * (game.config.pace === 'relaxed' && RELAXED.has(key) ? 2 : 1)
+    if (waits && game.clocksPaused) { bonus.pausedMs = ms; return }
+    runBonusClock(game, ms)
+  }
+  function runBonusClock(game, ms) {
+    const bonus = game.bonus, phase = bonus.phase
+    bonus.deadline = Date.now() + ms; bonus.pausedMs = null
+    schedule(game, 'wheel', ms, () => bonusTimedOut(game, bonus, phase))
+  }
+  function bonusTimedOut(game, bonus, phase) {
+    if (game.bonus !== bonus || bonus.phase !== phase || game.status !== 'bonus') return
+    // Anything the player didn't do in time is done for them, except the letters (they just get none) and the solve.
+    if (phase === 'pick') pickBonus(game, Math.floor(random() * bonus.choices.length))
+    else if (phase === 'spin') spinBonus(game, 0.6)
+    else if (phase === 'spinning') { bonus.envelope = Math.floor(bonus.spin.slot / SLOTS_PER_WEDGE); event(game, 'envelopeLanded'); setBonusPhase(game, 'given') }
+    else if (phase === 'given') setBonusPhase(game, 'letters')
+    else if (phase === 'letters') lightBonus(game, [])
+    else if (phase === 'lighting') setBonusPhase(game, 'solve')
+    else if (phase === 'solve') openEnvelope(game, false)
+    else if (phase === 'envelope') { complete(game); return }
+    emitGame(game)
+  }
+  function pickBonus(game, index) {
+    const bonus = game.bonus, puzzle = bonus.choices[Math.trunc(Number(index))]
+    if (bonus.phase !== 'pick' || !puzzle) return
+    bonus.choice = bonus.choices.indexOf(puzzle)
+    bonus.puzzle = { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) }
+    event(game, 'bonusPick', { category: puzzle.category })
+    setBonusPhase(game, 'spin')
+    sendSecret(game)
+  }
+  function spinBonus(game, power) {
+    const bonus = game.bonus
+    if (bonus.phase !== 'spin') return
+    const slots = bonus.envelopes.length * SLOTS_PER_WEDGE
+    bonus.spin = { id: (bonus.spin?.id || 0) + 1, slot: Math.floor(random() * slots), jitter: random() * 0.8 - 0.4, power: Math.min(1, Math.max(0, Number(power) || 0.6)), ms: WHEEL_TIMES.spinMs }
+    event(game, 'spin', { contestant: bonus.contestant, bonus: true })
+    setBonusPhase(game, 'spinning')
+  }
+  // Three consonants (four with the Wild Card) and a vowel, none of them already given.
+  function chooseBonusLetters(game, consonants, vowel) {
+    const bonus = game.bonus
+    if (bonus.phase !== 'letters') return
+    const want = BONUS_PICKS.consonants + (bonus.extra ? 1 : 0)
+    const picked = [...new Set((Array.isArray(consonants) ? consonants : []).map((letter) => String(letter).toUpperCase()))]
+    const v = String(vowel ?? '').toUpperCase()
+    if (picked.length !== want || picked.some((letter) => !CONSONANTS.includes(letter) || BONUS_GIVEN.includes(letter))) return
+    if (!isVowel(v) || BONUS_GIVEN.includes(v)) return
+    lightBonus(game, [...picked, v])
+  }
+  function lightBonus(game, letters) {
+    const bonus = game.bonus
+    bonus.picked = letters
+    bonus.shown.push(...letters)
+    event(game, 'bonusLetters', { letters, found: letters.filter((letter) => bonus.puzzle.counts[letter]) })
+    setBonusPhase(game, allShown(bonus) ? 'solve' : 'lighting')
+  }
+  function solveBonus(game, playerId, rawGuess) {
+    const bonus = game.bonus
+    if (bonus.phase !== 'solve') return
+    const guess = String(rawGuess ?? '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 60)
+    const correct = guess === hiddenLetters(bonus).join('')
+    bonus.lastSolve = { playerId, text: attempt(bonus, guess), correct }
+    ruleBonus(game, correct)
+  }
+  // Wrong tries are allowed until the ten seconds are up.
+  function ruleBonus(game, correct) {
+    if (correct) openEnvelope(game, true)
+    else event(game, 'wrongSolve', { contestant: game.bonus.contestant, text: game.bonus.lastSolve?.text || null, bonus: true })
+  }
+  function openEnvelope(game, solved) {
+    const bonus = game.bonus, contestant = game.contestants[bonus.contestant]
+    bonus.solved = solved
+    bonus.prize = bonus.envelopes[bonus.envelope ?? 0]
+    bonus.shown = Object.keys(bonus.puzzle.counts)
+    if (solved) contestant.total += bonus.prize
+    event(game, 'envelope', { contestant: bonus.contestant, solved, prize: bonus.prize })
+    setBonusPhase(game, 'envelope')
+  }
+
   // ---------- Pausing (host) ----------
   function pause(game) {
     const round = game.round
     if (game.clocksPaused) return
     game.clocksPaused = true
-    if (!round) return
+    const bonus = game.status === 'bonus' && game.bonus
+    if (bonus && BONUS_TIME[bonus.phase]?.[1] && bonus.deadline) {
+      bonus.pausedMs = Math.max(0, bonus.deadline - Date.now()); bonus.deadline = null
+      clearGameTimers(game)
+      return
+    }
+    if (!round || bonus) return
     if (round.speedUpAt != null && !round.speedUp) round.speedUpLeft = Math.max(0, round.speedUpAt - Date.now())
     if (ACTOR_PHASES.includes(round.phase) && round.deadline) {
       round.pausedMs = Math.max(0, round.deadline - Date.now()); round.deadline = null
@@ -508,6 +666,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const round = game.round
     if (!game.clocksPaused) return
     game.clocksPaused = false
+    if (game.status === 'bonus') { if (game.bonus?.pausedMs != null) runBonusClock(game, game.bonus.pausedMs); return }
     if (!round || game.status !== 'playing') return
     if (round.speedUpLeft != null) { round.speedUpAt = Date.now() + round.speedUpLeft; round.speedUpLeft = null }
     if (round.pausedMs != null) runClock(game, round.pausedMs)
@@ -555,8 +714,15 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
       round.lastSolve = { playerId: round.actorId, contestant: round.control, text: null, correct: !!payload.correct, byHost: true }
       ruleSolve(game, !!payload.correct)
     }
-    if (action === 'pause' && playing) pause(game)
-    if (action === 'resume' && playing) resume(game)
+    const bonus = game.status === 'bonus' && game.bonus
+    if (action === 'judgeSolve' && bonus?.phase === 'solve') {
+      bonus.lastSolve = { playerId: bonus.playerId, text: null, correct: !!payload.correct, byHost: true }
+      ruleBonus(game, !!payload.correct)
+    }
+    if (action === 'finishBonus' && bonus?.phase === 'envelope') { complete(game); return }
+    if (action === 'endGame' && bonus) { complete(game); return }
+    if (action === 'pause' && (playing || bonus)) pause(game)
+    if (action === 'resume' && (playing || bonus)) resume(game)
     if (action === 'skipTurn' && playing && ACTOR_PHASES.includes(round.phase)) {
       if (round.phase === 'tossupSolve') lockOut(game, 'skipped')
       else { event(game, 'skipped', { contestant: round.control }); passControl(game) }
@@ -568,7 +734,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') endRoundUnsolved(game)
     if (action === 'nextSegment' && playing && round.phase === 'roundEnd') { nextSegment(game); return }
-    if (action === 'endGame' && game.status === 'playing') { finish(game); return }
+    // Ending early skips the bonus round.
+    if (action === 'endGame' && game.status === 'playing') { endMainGame(game, { bonus: false }); return }
     if (action === 'adjustScore') {
       const contestant = game.contestants[payload.contestant], amount = Math.trunc(Number(payload.amount))
       if (contestant && Number.isFinite(amount)) contestant.total += amount
@@ -579,7 +746,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'kickPlayer') kick(game, payload.playerId)
     if (action === 'replay') {
-      try { if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares })) } catch {}
+      try { if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares, bonus: payload.bonus })) } catch {}
       clearGameTimers(game)
       Object.assign(game, freshPlay(game.config), { status: 'lobby', lastEvent: null })
       game.contestants.forEach((contestant, i) => { game.contestants[i] = freshContestant(contestant.name) })
@@ -602,6 +769,17 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     on('letter', (game, { letter }) => speedLetter(game, letterIn(letter)))
     on('solveStart', (game) => startSolve(game))
     on('solve', (game, { playerId, guess }) => solve(game, playerId, guess))
+    // The bonus round's player, on their own connection.
+    const onBonus = (name, handle) => socket.on(`wheel:${name}`, (payload = {}) => {
+      const game = wheelGame(payload.code)
+      if (!isLive(game, payload.playerId, socket) || game.status !== 'bonus' || game.bonus?.playerId !== payload.playerId) return
+      handle(game, payload)
+      emitGame(game)
+    })
+    onBonus('bonusPick', (game, { index }) => pickBonus(game, index))
+    onBonus('bonusSpin', (game, { power }) => spinBonus(game, power))
+    onBonus('bonusLetters', (game, { consonants, vowel }) => chooseBonusLetters(game, consonants, vowel))
+    onBonus('bonusSolve', (game, { playerId, guess }) => solveBonus(game, playerId, guess))
     socket.on('wheel:buzz', ({ code, playerId } = {}) => {
       const game = wheelGame(code)
       if (!isLive(game, playerId, socket) || game.status !== 'playing' || !game.round) return

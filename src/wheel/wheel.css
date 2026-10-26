@@ -205,3 +205,38 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
 .ws-final li.is-winner { background: color-mix(in srgb, var(--c) 20%, var(--panel)); }
 .ws-end-buttons { display: grid; justify-items: center; gap: 12px; }
 .ws-end-buttons a { color: var(--text-muted); font-weight: 700; }
+.ws-bonus-result { max-width: 46ch; font-size: 1.1rem; line-height: 1.5; color: var(--text-muted); }
+.ws-bonus-result b { color: var(--text); }
+
+/* ---------- Bonus round ---------- */
+.ws-bonus-setup { margin: 14px 0 8px; padding: 14px 16px; border-radius: 12px; background: var(--field); border: 1px solid var(--line); display: grid; gap: 10px; }
+.ws-bonus-setup.is-off { opacity: 0.75; }
+.ws-bonus-cats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-left: 30px; }
+.ws-bonus-cats span { padding: 6px 12px; border-radius: 999px; background: var(--panel-raised); font-weight: 700; font-size: 0.9rem; }
+
+.ws-bonus { display: grid; justify-items: center; gap: 18px; max-width: 1200px; margin: 0 auto; }
+.ws-bonus-label { font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ws-accent-text); }
+.ws-bonus-choices { list-style: none; margin: 4vh 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; width: 100%; }
+.ws-bonus-choices li, .ws-bonus-choices button {
+  display: grid; place-items: center; min-height: 26vh; padding: 18px; border-radius: 18px;
+  background: linear-gradient(160deg, #2a1050 0%, var(--panel) 80%); box-shadow: inset 0 0 0 3px rgb(255 79 163 / 0.45);
+  font: clamp(1.4rem, 3vw, 2.6rem)/1.15 var(--display); text-align: center; text-wrap: balance;
+}
+.ws-bonus-choices.is-phone { grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
+.ws-bonus-choices.is-phone button { min-height: 76px; font-size: 1.4rem; border-radius: 14px; }
+.ws-bonus-choices.is-phone button:active { background: var(--ws-accent); color: var(--ws-on-accent); }
+.ws-bonus-wheel { width: min(520px, 90vw); }
+.ws-bonus-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 6px; }
+.ws-bonus-letters span { display: grid; place-items: center; width: 2.2em; height: 2.2em; border-radius: 8px; background: var(--tile-letter); color: var(--tile-text); font: 1.2rem var(--display); }
+.ws-bonus-letters span.is-picked { background: var(--ws-accent); color: var(--ws-on-accent); }
+.player .ws-bonus-letters span { font-size: 0.95rem; }
+.ws-envelope { display: grid; justify-items: center; gap: 4px; padding: 18px 40px; border-radius: 16px; background: #f2c14e; color: #2b1d05; box-shadow: 0 14px 34px rgb(0 0 0 / 0.4); animation: ws-envelope 900ms cubic-bezier(0.2, 0.8, 0.2, 1.2) both; }
+.ws-envelope span { font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.85rem; }
+.ws-envelope b { font: clamp(2.4rem, 6vw, 4.6rem)/1 var(--display); }
+.ws-envelope:not(.is-won) { filter: saturate(0.4); opacity: 0.85; }
+@keyframes ws-envelope { from { transform: rotateX(80deg) scale(0.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ws-envelope { animation: none; } }
+.ws-bonus-pick { display: grid; gap: 8px; }
+.ws-bonus-vowels { margin-top: 6px; }
+.ws-key-row button.is-chosen { background: var(--ws-accent); color: var(--ws-on-accent); }
+@media (max-width: 760px) { .ws-bonus-choices { grid-template-columns: 1fr; } .ws-bonus-choices li { min-height: 14vh; } }
