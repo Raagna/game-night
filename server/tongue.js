@@ -1,30 +1,31 @@
 // Tip of the Tongue — a team word game in the style of the TV word-clue shows.
 //
-// Teams of two (an odd player makes one team of three). Each round, every team takes a turn: the clue-giver picks
-// a category, then has TONGUE_TIMES.playMs to clue their partner through its seven words. A word the partner gets
-// scores a point and brings the next; a passed word goes to the back of the line (passes are unlimited); a foul
-// (saying the word) throws it out. Clearing all seven banks a bonus point for every second left on the clock.
-// Partners swap roles every round; in the last round each team chooses who gives the clues.
+// Teams of two (an odd player makes one team of three). Each round, every team takes a turn: once the clue-giver
+// is ready, they have TONGUE_TIMES.playMs to clue their partner through seven words drawn at random from the
+// game's word pool (the host picks which categories go into it at setup; players never see a category). A word the
+// partner gets scores a point and brings the next; a passed word goes to the back of the line (passes are
+// unlimited); a foul (saying the word) throws it out. Clearing all seven banks a bonus point for every second left
+// on the clock. Partners swap roles every round; in the last round each team chooses who gives the clues.
 //
 // Guessing is set per game: "aloud" (the partner says it; the clue-giver, or a host, taps Got it) or "typed" (the
 // partner types it and the server checks it). The word is only ever shown on the clue-giver's phone and the host
 // controller, which ask for it with tongue:peek; it never goes out in the game state.
 import { answersMatch } from './text.js'
 
-export const TONGUE_TIMES = { chooseMs: 15000, pickMs: 20000, playMs: 45000, doneMs: 8000 }
+export const TONGUE_TIMES = { chooseMs: 15000, readyMs: 15000, playMs: 45000, doneMs: 8000 }
 export const WORDS_PER_TURN = 7
 const MAX_PLAYERS = 12
-const MAX_CATEGORIES = 40
+const MAX_WORDS = 1000
 
 const text = (value, max) => String(value ?? '').trim().slice(0, max)
+// The word pool arrives shuffled; turns deal from it in order, so no word comes up twice until the pool runs out.
 function cleanConfig(config) {
-  const categories = (Array.isArray(config?.categories) ? config.categories : []).slice(0, MAX_CATEGORIES).map((category) => ({
-    name: text(category?.name, 40),
-    words: [...new Set((Array.isArray(category?.words) ? category.words : []).map((word) => text(word, 40)).filter(Boolean))].slice(0, WORDS_PER_TURN),
-  })).filter((category) => category.name && category.words.length >= 3)
-  if (categories.length < 2) throw new Error('A game needs at least two categories.')
+  const seen = new Set()
+  const words = (Array.isArray(config?.words) ? config.words : []).slice(0, MAX_WORDS).map((word) => text(word, 40))
+    .filter((word) => word && !seen.has(word.toLowerCase()) && seen.add(word.toLowerCase()))
+  if (words.length < WORDS_PER_TURN) throw new Error(`Pick categories with at least ${WORDS_PER_TURN} words between them.`)
   const rounds = Math.max(3, Math.min(5, Math.trunc(Number(config?.rounds)) || 3))
-  return { categories, rounds, guessing: config?.guessing === 'aloud' ? 'aloud' : 'typed', hostless: !!config?.hostless }
+  return { words, rounds, guessing: config?.guessing === 'aloud' ? 'aloud' : 'typed', hostless: !!config?.hostless }
 }
 
 export function createTongueGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave, random = Math.random }) {
@@ -40,7 +41,7 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
 
   function makeGame(code, rawConfig) {
     const config = cleanConfig(rawConfig)
-    return { kind: 'tongue', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config, teams: [], teamSeq: 0, roundIndex: 0, order: [], turn: null, used: [], lastEvent: null }
+    return { kind: 'tongue', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config, teams: [], teamSeq: 0, roundIndex: 0, order: [], turn: null, dealt: 0, lastEvent: null }
   }
   const newTeam = (game) => { game.teamSeq++; const team = { id: `t${game.teamSeq}`, name: `Team ${game.teamSeq}`, members: [], score: 0 }; game.teams.push(team); return team }
   // Players pair up in the order they join.
@@ -56,8 +57,6 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     const done = turn.phase === 'done'
     return {
       teamId: turn.teamId, phase: turn.phase, deadline: turn.deadline, clueGiverId: turn.clueGiverId, seq: turn.seq,
-      category: turn.category == null ? null : game.config.categories[turn.category].name,
-      choices: turn.phase === 'pick' ? game.config.categories.map((category, index) => ({ index, name: category.name })).filter(({ index }) => !game.used.includes(index)) : null,
       // Words the team got are safe to show as they land; passed ones would give the game away.
       got: turn.words.filter((word) => word.status === 'got').map((word) => word.text),
       total: turn.words.length, left: turn.queue.length, points: turn.points, bonus: turn.bonus,
@@ -75,7 +74,7 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
   }
 
   // ---------- Turns ----------
-  const PHASE_TIME = { choose: 'chooseMs', pick: 'pickMs', play: 'playMs', done: 'doneMs' }
+  const PHASE_TIME = { choose: 'chooseMs', ready: 'readyMs', play: 'playMs', done: 'doneMs' }
   function setPhase(game, phase) {
     const turn = game.turn
     turn.phase = phase
@@ -87,8 +86,8 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
   // The clock ran out or the host tapped Next.
   function advance(game) {
     const turn = game.turn
-    if (turn.phase === 'choose') { turn.clueGiverId ||= defaultClueGiver(game, turn.teamId); setPhase(game, 'pick') }
-    else if (turn.phase === 'pick') pickCategory(game, randomChoice(game))
+    if (turn.phase === 'choose') { turn.clueGiverId ||= defaultClueGiver(game, turn.teamId); setPhase(game, 'ready') }
+    else if (turn.phase === 'ready') startPlay(game)
     else if (turn.phase === 'play') endTurn(game)
     else nextTurn(game)
   }
@@ -98,7 +97,6 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     const team = game.teams.find((t) => t.id === teamId), members = live(game, team.members)
     return members[game.roundIndex % members.length]
   }
-  const randomChoice = (game) => { const open = game.config.categories.map((_, i) => i).filter((i) => !game.used.includes(i)); return open[Math.floor(random() * open.length)] }
 
   function startRound(game) {
     game.order = game.teams.filter((team) => live(game, team.members).length >= 2).map((team) => team.id)
@@ -106,20 +104,25 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     startTurn(game, game.order[0])
   }
   function startTurn(game, teamId) {
-    game.turn = { teamId, phase: 'pick', deadline: null, clueGiverId: null, category: null, words: [], queue: [], seq: 0, points: 0, bonus: 0, lastGuess: null }
+    game.turn = { teamId, phase: 'ready', deadline: null, clueGiverId: null, words: [], queue: [], seq: 0, points: 0, bonus: 0, lastGuess: null }
     event(game, 'turn', { teamId })
     if (isLastRound(game)) setPhase(game, 'choose')
-    else { game.turn.clueGiverId = defaultClueGiver(game, teamId); setPhase(game, 'pick') }
+    else { game.turn.clueGiverId = defaultClueGiver(game, teamId); setPhase(game, 'ready') }
   }
-  function pickCategory(game, index) {
-    const turn = game.turn, category = game.config.categories[index]
-    if (!category || game.used.includes(index)) return false
-    game.used.push(index)
-    turn.category = index
-    turn.words = category.words.map((word) => ({ text: word, status: 'waiting' }))
+  // The next seven words from the pool (starting over from the top if a long game uses them all up).
+  function deal(game) {
+    const { words } = game.config, hand = []
+    for (let i = 0; i < Math.min(WORDS_PER_TURN, words.length); i++) hand.push(words[(game.dealt + i) % words.length])
+    game.dealt = (game.dealt + hand.length) % words.length
+    return hand
+  }
+  function startPlay(game) {
+    const turn = game.turn
+    if (turn.phase !== 'ready') return false
+    turn.words = deal(game).map((word) => ({ text: word, status: 'waiting' }))
     turn.queue = turn.words.map((_, i) => i)
     turn.seq++
-    event(game, 'play', { category: category.name })
+    event(game, 'play', { teamId: turn.teamId })
     setPhase(game, 'play')
     return true
   }
@@ -205,11 +208,10 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     if (action === 'start' && game.status === 'lobby') {
       // A team left with one player joins the team before it, making a team of three.
       for (let i = game.teams.length - 1; i > 0; i--) if (game.teams[i].members.length === 1) { game.teams[i - 1].members.push(...game.teams[i].members); game.teams.splice(i, 1) }
-      if (game.teams.some((team) => live(game, team.members).length >= 2)) { game.status = 'playing'; game.roundIndex = 0; game.used = []; startRound(game) }
+      if (game.teams.some((team) => live(game, team.members).length >= 2)) { game.status = 'playing'; game.roundIndex = 0; startRound(game) }
     }
     if (action === 'next' && playing) advance(game)
     if (['got', 'pass', 'foul'].includes(action) && playing) wordAction(game, action)
-    if (action === 'pick' && playing && turn.phase === 'pick') pickCategory(game, Math.trunc(Number(payload.index)))
     if (action === 'skipTurn' && playing) { if (turn.phase === 'play') endTurn(game); else nextTurn(game) }
     if (action === 'endGame' && game.status === 'playing') finish(game)
     if (action === 'renameTeam') { const team = game.teams.find((t) => t.id === payload.teamId), name = text(payload.name, 24); if (team && name) team.name = name }
@@ -234,9 +236,9 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     }
     if (action === 'replay') {
       let config = game.config
-      try { if (payload.categories) config = cleanConfig({ ...game.config, categories: payload.categories, hostless: game.hostless }) } catch {}
+      try { if (payload.words) config = cleanConfig({ ...game.config, words: payload.words, hostless: game.hostless }) } catch {}
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', config, roundIndex: 0, order: [], turn: null, used: [], lastEvent: null })
+      Object.assign(game, { status: 'lobby', config, roundIndex: 0, order: [], turn: null, dealt: 0, lastEvent: null })
       for (const team of game.teams) team.score = 0
     }
     emitGame(game)
@@ -263,17 +265,18 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
       ack?.(result)
       if (result.ok) emitGame(game)
     })
-    socket.on('tongue:pick', ({ code, playerId, index } = {}) => {
+    // The clue-giver starts the clock when they're ready.
+    socket.on('tongue:start', ({ code, playerId } = {}) => {
       const game = tongueGame(code)
-      if (!isLive(game, playerId, socket) || game.turn?.phase !== 'pick' || !isClueGiver(game, playerId)) return
-      if (pickCategory(game, Math.trunc(Number(index)))) emitGame(game)
+      if (!isLive(game, playerId, socket) || !isClueGiver(game, playerId)) return
+      if (startPlay(game)) emitGame(game)
     })
     // Last round: whoever on the team taps first gives the clues.
     socket.on('tongue:choose', ({ code, playerId } = {}) => {
       const game = tongueGame(code), turn = game?.turn
       if (!isLive(game, playerId, socket) || turn?.phase !== 'choose' || teamOf(game, playerId)?.id !== turn.teamId) return
       turn.clueGiverId = playerId
-      setPhase(game, 'pick')
+      setPhase(game, 'ready')
       emitGame(game)
     })
     socket.on('tongue:team', ({ code, playerId, teamId } = {}) => {

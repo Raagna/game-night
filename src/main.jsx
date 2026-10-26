@@ -159,7 +159,7 @@ function Setup({ onCreate }) {
     let config;
     if (mode === "archive") {
       if (picked[0].length !== 6 || picked[1].length !== 6) return setNotice("Choose six categories for each round.");
-      config = { boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), roundNames: ["Jeopardy!", "Double Jeopardy!"] };
+      config = { boards: picked.map((b, boardIndex) => b.map((entry) => makeCategory(entry, boardIndex))), roundNames: ["Jeoparty!", "Double Jeoparty!"] };
     } else {
       if (!chosenBoard) return setNotice("Pick one of your boards, or make a new one.");
       config = boardToConfig(chosenBoard);
@@ -167,7 +167,7 @@ function Setup({ onCreate }) {
     let finalClue = null;
     if (includeFinal) {
       finalClue = mode === "archive" ? final || randomArchiveFinal() : hasFinal(chosenBoard) ? chosenBoard.final : randomArchiveFinal();
-      if (!finalClue) return setNotice("There’s no Final Jeopardy clue to use. Add one to the board, or turn Final Jeopardy off.");
+      if (!finalClue) return setNotice("There’s no Final Jeoparty clue to use. Add one to the board, or turn Final Jeoparty off.");
     }
     let fastMoneyConfig = null;
     if (fastMoney) {
@@ -191,7 +191,7 @@ function Setup({ onCreate }) {
     return (
       <main className="setup">
         <BackToHub />
-        <div className="brand">JEOPARDY!</div>
+        <div className="brand">JEOPARTY!</div>
         <section className="setup-card">
           <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
         </section>
@@ -201,7 +201,7 @@ function Setup({ onCreate }) {
     <main className="setup">
       <BackToHub />
       <div className="brand">
-        JEOPARDY!
+        JEOPARTY!
       </div>
       <section className="setup-card">
         <div className="setup-top">
@@ -262,13 +262,13 @@ function Setup({ onCreate }) {
             className={board === 0 ? "active" : ""}
             onClick={() => setBoard(0)}
           >
-            Jeopardy · {picked[0].length}/6
+            Jeoparty · {picked[0].length}/6
           </button>
           <button
             className={board === 1 ? "active" : ""}
             onClick={() => setBoard(1)}
           >
-            Double Jeopardy · {picked[1].length}/6
+            Double Jeoparty · {picked[1].length}/6
           </button>
           <button className="randomize" onClick={randomize}>
             Fill remaining randomly
@@ -346,7 +346,7 @@ function Setup({ onCreate }) {
             </div>
           </div>
           <div className="selected">
-            <h2>{board === 0 ? "Jeopardy round" : "Double Jeopardy round"}</h2>
+            <h2>{board === 0 ? "Jeoparty round" : "Double Jeoparty round"}</h2>
             {picked[board].map((x) => (
               <div className="pill" key={x[0]}>
                 <span>{categoryTitle(x)} <small>{x[1][0].airDate}</small></span>
@@ -364,14 +364,14 @@ function Setup({ onCreate }) {
         <section className="game-options" aria-labelledby="game-options-title">
           <h2 id="game-options-title">Game options</h2>
           <label className="game-mode"><input type="checkbox" checked={hostless} onChange={(event) => setHostless(event.target.checked)} /> <span><b>Play without a host</b><small>Players select clues, buzz automatically, and type their own responses.</small></span></label>
-          <label className="game-mode"><input type="checkbox" checked={includeFinal} onChange={(event) => setIncludeFinal(event.target.checked)} /> <span><b>Final Jeopardy</b><small>
-            {mode === "archive" ? "One last wagered clue after the final round." : chosenBoard && !hasFinal(chosenBoard) ? "This board has no Final clue, so a random archive one is used." : "Uses the board’s own Final Jeopardy clue."}
+          <label className="game-mode"><input type="checkbox" checked={includeFinal} onChange={(event) => setIncludeFinal(event.target.checked)} /> <span><b>Final Jeoparty</b><small>
+            {mode === "archive" ? "One last wagered clue after the final round." : chosenBoard && !hasFinal(chosenBoard) ? "This board has no Final clue, so a random archive one is used." : "Uses the board’s own Final Jeoparty clue."}
           </small></span></label>
           {includeFinal && mode === "archive" && (
             <label className="field option-field">
-              <span>Final Jeopardy clue</span>
+              <span>Final Jeoparty clue</span>
               <select value={final?.id || ""} onChange={(e) => setFinal(questions.find((q) => q.id === e.target.value) || null)}>
-                <option value="">Random Final Jeopardy clue</option>
+                <option value="">Random Final Jeoparty clue</option>
                 {questions
                   .filter((q) => q.round === "Final Jeopardy!")
                   .map((q) => (
@@ -413,10 +413,10 @@ function Scores({ players, turnPlayerId }) {
     </ul>
   );
 }
-// What comes after the current board: the next round, Final Jeopardy, Fast Money, or nothing (the game ends).
+// What comes after the current board: the next round, Final Jeoparty, Fast Money, or nothing (the game ends).
 const nextStage = (game) =>
   game.boardIndex < (game.boardCount || 2) - 1 ? game.roundNames?.[game.boardIndex + 1] || "the next round"
-    : game.final ? "Final Jeopardy" : game.hasFastMoney ? "Fast Money" : null;
+    : game.final ? "Final Jeoparty" : game.hasFastMoney ? "Fast Money" : null;
 const formatBuzzTime = (milliseconds) => `${(Math.max(0, milliseconds || 0) / 1000).toFixed(3)}s`;
 function Display({ game, host = false, onAction }) {
   const q = game.activeQuestion?.question;
@@ -433,7 +433,7 @@ function Display({ game, host = false, onAction }) {
   return (
     <main className="display">
       <header className="display-bar">
-        <div className="brand">JEOPARDY!</div>
+        <div className="brand">JEOPARTY!</div>
         {game.status !== "lobby" && <JoinCorner code={game.code} />}
         <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} frozenMs={game.clockPaused ? game.pausedRemaining : null} />
       </header>
@@ -453,7 +453,7 @@ function Display({ game, host = false, onAction }) {
       ) : game.activeQuestion ? (
         <div className="clue-screen">
           <p className="clue-meta">
-            {dailyPending ? "Daily Double" : <>{q.category} <span>{q.value ? `$${q.value.toLocaleString()}` : "Final Jeopardy"}</span></>}
+            {dailyPending ? "Daily Double" : <>{q.category} <span>{q.value ? `$${q.value.toLocaleString()}` : "Final Jeoparty"}</span></>}
           </p>
           <h1>{dailyPending ? "Wager required" : q.question}</h1>
           {game.status === "final" && !game.hostless && <FinalReveals game={game} />}
@@ -463,13 +463,13 @@ function Display({ game, host = false, onAction }) {
         </div>
       ) : game.status === "final" ? (
         <div className="clue-screen">
-          <p className="clue-meta">Final Jeopardy</p>
+          <p className="clue-meta">Final Jeoparty</p>
           <h1>Ready for the final clue</h1>
         </div>
       ) : (
         <>
           <div className="round-title">
-            {game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeopardy!" : "Double Jeopardy!")}
+            {game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeoparty!" : "Double Jeoparty!")}
           </div>
           <div className="board" style={{ "--cols": game.board.length, "--cols-small": Math.min(3, game.board.length) }}>
             {game.board.map((c, ci) => (
@@ -509,7 +509,7 @@ function Display({ game, host = false, onAction }) {
     </main>
   );
 }
-// Final Jeopardy with a host: each response appears on the main screen as the host reveals it.
+// Final Jeoparty with a host: each response appears on the main screen as the host reveals it.
 function FinalReveals({ game }) {
   const shown = game.finalResponses.filter((r) => r.revealed);
   if (!game.finalTimeUp) return null;
@@ -570,7 +570,7 @@ function Controller({ game, onAction }) {
     return (
       <main className="controller">
         <header className="controller-bar">
-          <span className="brand">JEOPARDY!</span>
+          <span className="brand">JEOPARTY!</span>
           <span className="code-chip">{game.code}</span>
         </header>
         <FastMoneyController game={game} onAction={onAction} />
@@ -579,12 +579,12 @@ function Controller({ game, onAction }) {
   return (
     <main className="controller">
       <header className="controller-bar">
-        <span className="brand">JEOPARDY!</span>
+        <span className="brand">JEOPARTY!</span>
         <span className="code-chip">{game.code}</span>
       </header>
       <h1>
         {finalMode
-          ? "Final Jeopardy"
+          ? "Final Jeoparty"
           : game.activeQuestion
             ? "Clue controls"
             : "Board controls"}
@@ -660,7 +660,7 @@ function Controller({ game, onAction }) {
     </main>
   );
 }
-// Host's Final Jeopardy controls: while the clock runs, players write. Once time is up the host reveals
+// Host's Final Jeoparty controls: while the clock runs, players write. Once time is up the host reveals
 // every response (each one appears on the main screen) and only then can reveal the correct answer.
 function FinalControls({ game, onAction }) {
   const responses = game.finalResponses, revealedCount = responses.filter((r) => r.revealed).length;
@@ -717,7 +717,7 @@ function FinalPlayer({ game, playerId, p }) {
     [confirming, setConfirming] = useState(false);
   const submitted = game.finalResponses.find((x) => x.playerId === playerId);
   if (p.score < 1)
-    return <p className="status-card">You need a positive score to play Final Jeopardy.</p>;
+    return <p className="status-card">You need a positive score to play Final Jeoparty.</p>;
   if (submitted && game.hostless && game.reveal)
     return <div className="status-card"><p>The answer was <b>{game.activeQuestion?.question?.answer}</b></p><p className={submitted.correct ? "final-correct" : "final-incorrect"}>{submitted.correct ? `Correct! +$${submitted.wager}` : `Incorrect. −$${submitted.wager}`}</p></div>;
   if (submitted)
@@ -814,7 +814,7 @@ function Player({ game, playerId }) {
   return (
     <main className={`player ${signal === "correct" ? "signal-correct" : signal === "incorrect" ? "signal-incorrect" : ""}`}>
       <header className="player-bar">
-        <span className="brand">JEOPARDY!</span>
+        <span className="brand">JEOPARTY!</span>
         <span className="player-name">{p.name}</span>
       </header>
       <div className="player-score money">${p.score.toLocaleString()}</div>
@@ -943,7 +943,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeopardy! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, and Survey Says! and Tip of the Tongue 12. You can join after a game starts.</p>
+      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, and Survey Says! and Tip of the Tongue 12. You can join after a game starts.</p>
       <a href="./">← Game Night</a>
     </main>
   );
@@ -952,7 +952,7 @@ function EndGame({ game, host }) {
   const ranked=[...game.players].sort((a,b)=>b.score-a.score), top=ranked.slice(0,3), rest=ranked.slice(3);
   return (
     <main className="end">
-      <div className="brand">JEOPARDY!</div>
+      <div className="brand">JEOPARTY!</div>
       <h1>Final standings</h1>
       <div className="podium">{top.map((p,i)=><div className={`place place-${i+1}`} key={p.id}><span className="rank">{i+1}</span><b>{p.name}</b><strong className="money">${p.score.toLocaleString()}</strong></div>)}</div>
       {rest.length>0&&<ol className="remaining-players" start="4">{rest.map((p)=><li key={p.id}><span>{p.name}</span><b className="money">${p.score.toLocaleString()}</b></li>)}</ol>}

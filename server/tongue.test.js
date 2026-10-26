@@ -26,14 +26,10 @@ function harness() {
     controllerPeek: (game) => { let reply; handlersFor({ id: 'ctrl', data: { controllerGame: game.code } }).get('tongue:peek')({ code: game.code }, (r) => { reply = r }); return reply },
   }
 }
-const CATEGORIES = [
-  { name: 'Fruit', words: ['Banana', 'Mango', 'Kiwi', 'Lemon', 'Cherry', 'Grapes', 'Peach'] },
-  { name: 'Sports', words: ['Tennis', 'Golf', 'Hockey', 'Boxing', 'Rugby', 'Skiing', 'Polo'] },
-  { name: 'Weather', words: ['Rain', 'Snow', 'Fog', 'Hail', 'Wind', 'Thunder', 'Sleet'] },
-  { name: 'Jobs', words: ['Chef', 'Pilot', 'Nurse', 'Judge', 'Baker', 'Miner', 'Tailor'] },
-]
-function newGame(h, { players = 4, start = true, ...config } = {}) {
-  const game = h.api.makeGame('ABCDEF', { categories: CATEGORIES, rounds: 3, ...config })
+// The word pool as setup sends it: already shuffled, from whichever categories the host picked.
+const WORDS = ['Banana', 'Mango', 'Kiwi', 'Lemon', 'Cherry', 'Grapes', 'Peach', 'Tennis', 'Golf', 'Hockey', 'Boxing', 'Rugby', 'Skiing', 'Polo', 'Rain', 'Snow']
+function newGame(h, { players = 4, start = true, words = WORDS, ...config } = {}) {
+  const game = h.api.makeGame('ABCDEF', { words, rounds: 3, ...config })
   h.games.set(game.code, game)
   for (let i = 0; i < players; i++) {
     const player = { id: `p${i}`, name: `Player ${i}`, score: 0, socketId: `s${i}` }
@@ -44,6 +40,12 @@ function newGame(h, { players = 4, start = true, ...config } = {}) {
 }
 const teamOf = (game, id) => game.teams.find((t) => t.id === id)
 
+test('a game needs enough words for a turn, and repeats are dropped', () => {
+  const h = harness()
+  assert.throws(() => h.api.makeGame('X', { words: ['One', 'Two', 'Three'] }))
+  assert.throws(() => h.api.makeGame('X', { words: ['Kiwi', 'kiwi', 'KIWI', 'Lime', 'Plum', 'Fig', 'Date'] }), 'only five different words')
+})
+
 test('players pair up in join order, and an odd player joins the last team at the start', () => {
   const h = harness(), game = newGame(h, { players: 5, start: false })
   assert.deepEqual(game.teams.map((t) => t.members), [['p0', 'p1'], ['p2', 'p3'], ['p4']])
@@ -51,24 +53,38 @@ test('players pair up in join order, and an odd player joins the last team at th
   assert.deepEqual(game.teams.map((t) => t.members), [['p0', 'p1'], ['p2', 'p3', 'p4']])
 })
 
-test('the clue-giver picks a category; it is gone for everyone after', () => {
+test('the clue-giver starts the clock when ready, or it starts by itself', () => {
   const h = harness(), game = newGame(h)
-  assert.equal(game.turn.phase, 'pick')
+  assert.equal(game.turn.phase, 'ready')
   assert.equal(game.turn.clueGiverId, 'p0')
-  h.act(game, 'p1', 'pick', { index: 1 })
-  assert.equal(game.turn.phase, 'pick', 'only the clue-giver picks')
-  h.act(game, 'p0', 'pick', { index: 1 })
+  assert.equal(h.timers.tongue.ms, TONGUE_TIMES.readyMs)
+  h.act(game, 'p1', 'start')
+  assert.equal(game.turn.phase, 'ready', 'only the clue-giver starts it')
+  h.act(game, 'p0', 'start')
   assert.equal(game.turn.phase, 'play')
   assert.equal(h.timers.tongue.ms, TONGUE_TIMES.playMs)
-  assert.equal(h.api.publicGame(game).turn.category, 'Sports')
-  h.fire() // time's up
-  h.api.hostAction(game, 'next', {})
-  assert.ok(!h.api.publicGame(game).turn.choices.some((c) => c.name === 'Sports'))
+  h.fire(); h.api.hostAction(game, 'next', {}) // time's up; next team
+  assert.equal(game.turn.phase, 'ready')
+  h.fire()
+  assert.equal(game.turn.phase, 'play', 'nobody tapped Start: the clock starts anyway')
+})
+
+test('turns deal seven words in pool order, with no category, and no word twice until the pool runs out', () => {
+  const h = harness(), game = newGame(h, { hostless: true })
+  h.act(game, 'p0', 'start')
+  assert.deepEqual(game.turn.words.map((w) => w.text), WORDS.slice(0, 7))
+  assert.equal(h.api.publicGame(game).turn.category, undefined)
+  h.fire(); h.fire() // time's up, results
+  h.act(game, 'p2', 'start')
+  assert.deepEqual(game.turn.words.map((w) => w.text), WORDS.slice(7, 14))
+  h.fire(); h.fire()
+  h.fire() // round two: nobody starts, the clock does
+  assert.deepEqual(game.turn.words.map((w) => w.text), [...WORDS.slice(14), ...WORDS.slice(0, 5)], 'the pool starts over')
 })
 
 test('the word only goes to the clue-giver and the host controller, never the game state', () => {
   const h = harness(), game = newGame(h)
-  h.act(game, 'p0', 'pick', { index: 0 })
+  h.act(game, 'p0', 'start')
   assert.equal(h.act(game, 'p0', 'peek').word, 'Banana')
   assert.equal(h.act(game, 'p1', 'peek').ok, false)
   assert.equal(h.controllerPeek(game).word, 'Banana')
@@ -77,7 +93,7 @@ test('the word only goes to the clue-giver and the host controller, never the ga
 
 test('typed guesses are checked; passes go to the back; fouls are thrown out', () => {
   const h = harness(), game = newGame(h)
-  h.act(game, 'p0', 'pick', { index: 0 })
+  h.act(game, 'p0', 'start')
   assert.equal(h.act(game, 'p1', 'guess', { guess: 'apple' }).correct, false)
   assert.equal(h.act(game, 'p1', 'guess', { guess: 'a banana' }).correct, true)
   assert.equal(h.act(game, 'p0', 'guess', { guess: 'mango' }).ok, false, 'the clue-giver can’t guess')
@@ -93,7 +109,7 @@ test('typed guesses are checked; passes go to the back; fouls are thrown out', (
 
 test('clearing all seven banks a point for every second left', () => {
   const h = harness(), game = newGame(h, { guessing: 'aloud', hostless: true })
-  h.act(game, 'p0', 'pick', { index: 0 })
+  h.act(game, 'p0', 'start')
   game.turn.deadline = Date.now() + 20000
   for (let i = 0; i < 7; i++) h.act(game, 'p0', 'word', { action: 'got' })
   assert.equal(game.turn.phase, 'done')
@@ -104,7 +120,7 @@ test('clearing all seven banks a point for every second left', () => {
 
 test('partners swap every round, and in the last round the team chooses', () => {
   const h = harness(), game = newGame(h, { hostless: true })
-  const playTurn = () => { h.fire(); h.fire(); h.fire() } // pick (random), play, done
+  const playTurn = () => { h.fire(); h.fire(); h.fire() } // ready, play, done
   assert.equal(game.turn.clueGiverId, 'p0')
   playTurn()
   assert.equal(game.turn.teamId, 't2')
@@ -117,10 +133,10 @@ test('partners swap every round, and in the last round the team chooses', () => 
   assert.equal(game.turn.phase, 'choose')
   h.act(game, 'p1', 'choose')
   assert.equal(game.turn.clueGiverId, 'p1')
-  assert.equal(game.turn.phase, 'pick')
+  assert.equal(game.turn.phase, 'ready')
 })
 
-test('an unpicked category is chosen at random, and the game ends after the last round', () => {
+test('the game ends after the last round', () => {
   const h = harness(), game = newGame(h, { players: 2, hostless: true })
   for (let round = 0; round < 3; round++) {
     if (game.turn.phase === 'choose') h.fire()
@@ -129,9 +145,9 @@ test('an unpicked category is chosen at random, and the game ends after the last
   assert.equal(game.status, 'complete')
 })
 
-test('a clue-giver who leaves hands over to a teammate, or the turn ends', () => {
+test('a clue-giver who leaves hands over to a teammate', () => {
   const h = harness(), game = newGame(h, { players: 5 })
-  h.act(game, 'p0', 'pick', { index: 0 })
+  h.act(game, 'p0', 'start')
   h.fire(); h.api.hostAction(game, 'next', {}) // team 2 (p2, p3, p4)
   assert.equal(game.turn.clueGiverId, 'p2')
   game.players.get('p2').socketId = null

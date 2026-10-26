@@ -1,19 +1,20 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve, Fib or Fact, Price Check and Tip of the Tongue. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeoparty!, Survey Says!, Spin & Solve, Fib or Fact, Price Check and Tip of the Tongue. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
-### Jeopardy!
+### Jeoparty!
+Trivia on clues from the show's archive.
 Up to 6 players buzz in from their phones.
 
-- **Built-in archive**: every season of the show (seasons 1–42) is built in. Pick six categories for each of the Jeopardy and Double Jeopardy rounds, or fill the rest randomly.
+- **Built-in archive**: every season of the show (seasons 1–42) is built in. Pick six categories for each of the Jeoparty and Double Jeoparty rounds, or fill the rest randomly.
 - **Topic search**: search categories by name or by topic ("sports" also finds sports categories whose names don't say so), or filter with the topic chips.
-- **Custom boards**: make your own boards (up to 2 rounds, up to 6 categories × 6 rows, with an optional Final Jeopardy clue and Fast Money clues). Boards are saved in the browser and can be exported to and imported from a `.json` file.
+- **Custom boards**: make your own boards (up to 2 rounds, up to 6 categories × 6 rows, with an optional Final Jeoparty clue and Fast Money clues). Boards are saved in the browser and can be exported to and imported from a `.json` file.
 - **JeopardyLabs import**: paste a `jeopardylabs.com/play/...` link to turn a JeopardyLabs game into a custom board.
 - **Your own question files**: the archive screen also loads clues from a JSON, CSV or season ZIP file.
 - **Daily Doubles**, with wagers.
-- **Final Jeopardy**: one last wagered clue after the final round, from the archive or from your board.
+- **Final Jeoparty**: one last wagered clue after the final round, from the archive or from your board.
 - **Fast Money finale**: the top two players race the clock through the same five quick clues: $1,000 per right answer, plus a $5,000 bonus each if they get 8 of 10 between them.
 
 ### Survey Says!
@@ -76,9 +77,10 @@ Prices come from two packs:
 ### Tip of the Tongue
 A team word game for teams of two (up to 12 players). Players pair up as they join; the host can move them between teams in the lobby, and an odd player makes one team of three.
 
-- **A turn**: the clue-giver picks a category, then has 45 seconds to clue their partner through its seven words. The word shows only on the clue-giver's phone (and the host controller), never on the TV.
+- **A turn**: when the clue-giver taps Start (or after 15 seconds), they have 45 seconds to clue their partner through seven words drawn at random. The word shows only on the clue-giver's phone (and the host controller), never on the TV.
+- **Categories**: the host picks which of the 32 word categories go into the pool at setup (all of them by default). Players never see a category, so the words give nothing away.
 - **Scoring**: a point per word. Clearing all seven banks a bonus point for every second left on the clock. Passes are unlimited (a passed word comes round again); saying the word is a foul and throws it out.
-- **Rounds**: 3, 4 or 5. Every team takes a turn each round; partners swap who gives the clues, and in the last round each team decides. A category disappears once it's used.
+- **Rounds**: 3, 4 or 5. Every team takes a turn each round; partners swap who gives the clues, and in the last round each team decides. No word comes up twice until the pool runs out.
 - **Guessing**: set up to be typed (the guesser types on their phone and the game checks it) or said out loud (the clue-giver, or the host, taps Got it).
 - **Words**: 32 categories in `src/tongue/words.json`, written for this project.
 
@@ -86,7 +88,7 @@ A team word game for teams of two (up to 12 players). Players pair up as they jo
 All six games can be played two ways:
 
 - **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along. In Tip of the Tongue, the controller shows the current word and can call Got it, Pass or Foul, which helps when guesses are shouted out loud.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, Price Check and Tip of the Tongue, the reveals and turns move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeoparty, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, Price Check and Tip of the Tongue, the reveals and turns move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
 
 ## How to play
 
@@ -142,7 +144,7 @@ Every push to `main` builds the client and deploys it to GitHub Pages (`.github/
 
 ```
 src/                  React client
-  main.jsx            app entry: Jeopardy setup, host display, controller, player screens
+  main.jsx            app entry: Jeoparty setup, host display, controller, player screens
   Hub.jsx             the Game Night home page
   survey/             Survey Says! screens and styles
   wheel/              Spin & Solve screens, styles, sounds and its puzzle pack (puzzles.json)
@@ -159,7 +161,7 @@ src/                  React client
   surveys.json        Survey Says! hand-written questions
   topics.json         topic keywords for archive search
 server/               game server (Express + Socket.IO)
-  index.js            lobbies, Jeopardy game logic, /health, /lan and the JeopardyLabs import route
+  index.js            lobbies, Jeoparty game logic, /health, /lan and the JeopardyLabs import route
   survey.js           Survey Says! game logic and answer matching
   wheel.js            Spin & Solve game logic (wheel.test.js tests it)
   wheelBoard.js       Spin & Solve puzzle board layout (wheelBoard.test.js tests it)
