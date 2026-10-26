@@ -82,6 +82,10 @@
 .sv-strike-flash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 2%; pointer-events: none; animation: sv-strike 1.3s ease-out forwards; }
 .sv-strike-flash svg { width: min(26%, 220px); height: auto; color: #ff2d3a; filter: drop-shadow(0 0 16px rgb(255 45 58 / 0.8)) drop-shadow(0 6px 0 #7a0710); }
 @keyframes sv-strike { 0% { opacity: 0; transform: scale(1.4); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+/* The last three seconds of an answer clock, one big number per second over the board. */
+.sv-final-count { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font: clamp(5rem, 16vw, 12rem)/1 var(--display); color: #ff8a3d; text-shadow: 0 0 24px rgb(255 138 61 / 0.7), 0 8px 0 #6b2a05; animation: sv-count 1s ease-out forwards; }
+@keyframes sv-count { 0% { opacity: 0; transform: scale(1.6); } 15% { opacity: 1; transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(0.9); } }
+@media (prefers-reduced-motion: reduce) { .sv-final-count { animation: none; } }
 
 .sv-strikes { display: flex; gap: 10px; justify-content: center; min-height: 40px; }
 .sv-strikes span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; border: 2px solid var(--line-strong); color: transparent; }
@@ -179,6 +183,8 @@
 .controller.survey .sv-slot.is-revealed .sv-slot-text::after { content: "✓"; margin-left: 8px; color: var(--green-text); }
 .sv-strike-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .sv-strike-btn svg { width: 22px; height: 22px; }
+.sv-time-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 8px; }
+.sv-time-btn .clue-timer { width: 36px; height: 36px; font-size: 1rem; }
 .sv-buzz-pick button { background: var(--panel-raised) !important; border: 1px solid var(--line-strong); }
 .controller.survey .sv-round-controls { padding: 16px 0 0; justify-content: flex-start; }
 

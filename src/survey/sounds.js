@@ -90,6 +90,15 @@ export function playDing(points = 20) {
   for (let i = 0; i < ticks; i++) note(ctx, out, { freq: 1568 + i * 40, at: 0.28 + i * 0.045, dur: 0.035, type: "square", gain: 0.035, filter: 4000 });
 }
 
+// The last three seconds of an answer clock: a dry wood-block tick, a little higher on the final second.
+export function playTick(last = false) {
+  const sound = output();
+  if (!sound || muted) return;
+  const { ctx, out } = sound;
+  note(ctx, out, { freq: last ? 1250 : 950, dur: 0.07, gain: 0.14, attack: 0.001 });
+  noise(ctx, out, { dur: 0.02, gain: 0.05, highpass: 3000 });
+}
+
 // A team banks the round: a short rising fanfare.
 export function playRoundWon() {
   const sound = output();
