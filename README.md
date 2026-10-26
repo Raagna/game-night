@@ -27,6 +27,8 @@ Setup offers three question packs, one at a time or all together (*Everything*).
 
 The ProtoQA and Feud Sheet packs are loaded when Survey Says! opens.
 
+The TV screen plays a buzzer for wrong answers, a ding for each answer revealed, a short fanfare when a team banks a round and an upbeat tune on the winners screen. They're all synthesized in the browser, with a sound on/off button in the corner.
+
 ### With or without a host
 Both games can be played two ways:
 
@@ -106,6 +108,7 @@ scripts/
 
 - The built-in Jeopardy clues are generated into `public/data/` from a Jeopardy season archive by `scripts/build-question-data.py`.
 - The Survey Says! questions in `src/surveys.json` were written for this project, and their answers and points are invented.
+- The Survey Says! sounds and winners tune are synthesized in `src/survey/sounds.js` and are original; no audio from the show is used.
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud* or their owners.

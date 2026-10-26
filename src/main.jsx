@@ -1072,7 +1072,7 @@ function App() {
     );
   }
   if (game.kind === "survey") {
-    if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} onAction={action} /></>;
+    if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} display={host} onAction={action} /></>;
     if (controller) return <>{banner}<SurveyController game={game} onAction={action} /></>;
     if (host) return <>{banner}<SurveyDisplay game={game} onAction={action} /></>;
     return <>{banner}<SurveyPlayer game={game} playerId={playerId} /></>;

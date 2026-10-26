@@ -28,3 +28,9 @@ pack, add up to more than 100 points or aren't suitable for a party were left ou
 ## Game Night pack
 
 The hand-written Game Night pack (`src/surveys.json`) is original to this project; its answers and points are invented.
+
+## Survey Says! sounds
+
+The buzzer, the answer ding, the round fanfare and the winners tune are synthesized in the browser by
+`src/survey/sounds.js` (Web Audio). There are no recordings or samples, and the tune is an original composition,
+not the TV show's music.

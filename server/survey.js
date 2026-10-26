@@ -87,7 +87,13 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
   const multiplier = (game) => game.multipliers[game.roundIndex] || 1
   const allRevealed = (game) => game.round.revealed.every(Boolean)
   const other = (team) => 1 - team
-  const event = (game, type, extra = {}) => { game.lastEvent = { type, at: Date.now(), ...extra } }
+  // One ruling can set off several events before the next update goes out (the last answer's "hit", then
+  // "roundWon"), so the recent ones are kept, numbered, for the TV to play each sound once and in order.
+  const event = (game, type, extra = {}) => {
+    game.eventSeq = (game.eventSeq || 0) + 1
+    game.lastEvent = { id: game.eventSeq, type, at: Date.now(), ...extra }
+    game.recentEvents = [...(game.recentEvents || []).slice(-7), game.lastEvent]
+  }
 
   function makeGame(code, rawConfig) {
     const config = cleanConfig(rawConfig)
@@ -125,7 +131,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
         faceoff: round.faceoff, chooserId: round.chooserId, guesserId: round.guesserId, stealTeam: round.stealTeam,
         winner: round.winner, awarded: round.awarded, lastGuess: round.lastGuess, deadline: round.deadline,
       },
-      canUndo: !!game.undo, serverNow: Date.now(), lastEvent: game.lastEvent,
+      canUndo: !!game.undo, serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
     }
   }
 
@@ -253,7 +259,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     round.revealedBy[index] = team
     round.bank += points
     round.lastGuess = { playerId, team, text: guess, result: 'hit', index }
-    event(game, 'hit', { index, playerId, team })
+    event(game, 'hit', { index, playerId, team, points })
     if (round.phase === 'faceoffAnswer') {
       const { faceoff } = round
       // The top answer wins outright, and so does any answer after the other player has missed.
