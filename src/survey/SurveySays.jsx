@@ -4,7 +4,7 @@ import { socket, tone, ClueTimer } from "../shared";
 import { LobbyJoin, JoinCorner } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import SURVEYS from "../surveys.json";
-import { useSound, useEventSounds, playWinnersTune } from "./sounds";
+import { useSound, useEventSounds, playWinnersTune, playTick } from "./sounds";
 import "./survey.css";
 
 // ---------- Picking questions ----------
@@ -214,7 +214,7 @@ export function SurveySetup({ onCreate }) {
           <h2 id="sv-options-title">Game options</h2>
           <label className="game-mode">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
-            <span><b>Play without a host</b><small>Players type their guesses and the game checks them against the survey. With a host, players say answers out loud and the host reveals them from their phone.</small></span>
+            <span><b>Play without a host</b><small>Players type their guesses and the game checks them against the survey. Answers have to come fast, like on the show: 8 seconds for a face-off answer, 10 per guess, and 20 for the other team to confer on a steal. With a host, players say answers out loud and the host reveals them from their phone, and can give a stalling player a 3-second count.</small></span>
           </label>
         </section>
         <div className="final-row">
@@ -303,6 +303,25 @@ const SpeakerIcon = ({ off }) => (
       : <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
   </svg>
 );
+// The last three seconds of an answer clock, counted out big on the TV like the host's "3, 2, 1".
+const ANSWER_PHASES = ["faceoffAnswer", "guessing", "steal"];
+// It stays mounted under the strike X's (hidden), so the clock is worked out when each update arrives.
+function FinalCount({ round, serverNow, hidden }) {
+  const [count, setCount] = useState(null);
+  const deadline = ANSWER_PHASES.includes(round.phase) ? round.deadline : null;
+  useEffect(() => {
+    setCount(null);
+    if (!deadline) return;
+    const end = Date.now() + (deadline - serverNow);
+    // A second that has already gone by (the TV was reloaded mid-count) isn't counted late.
+    const timers = [3, 2, 1].filter((n) => end - n * 1000 - Date.now() > -300)
+      .map((n) => setTimeout(() => { setCount(n); playTick(n === 1); }, end - n * 1000 - Date.now()));
+    timers.push(setTimeout(() => setCount(null), end - Date.now()));
+    return () => timers.forEach(clearTimeout);
+  }, [deadline]);
+  return count && !hidden ? <div className="sv-final-count" key={count} aria-hidden="true">{count}</div> : null;
+}
+
 // Sound on/off for the TV (remembered in this browser). Until someone clicks the page, browsers keep it silent.
 function SoundToggle() {
   const [muted, toggle, waiting] = useSound();
@@ -426,6 +445,7 @@ export function SurveyDisplay({ game, onAction }) {
             <div className="sv-board-wrap">
               <AnswerBoard round={round} showAll={round.phase === "roundEnd"} />
               {flash && <div className="sv-strike-flash" key={flash.at} aria-hidden="true">{Array.from({ length: flash.count }, (_, i) => <XIcon key={i} />)}</div>}
+              <FinalCount round={round} serverNow={game.serverNow} hidden={!!flash} />
             </div>
             <Strikes count={["guessing", "steal"].includes(round.phase) || (round.phase === "roundEnd" && round.stealTeam != null) ? round.strikes : 0} />
             <div className="sv-status" role="status">
@@ -650,6 +670,12 @@ export function SurveyController({ game, onAction }) {
       <p className="muted sv-ctrl-hint">{judging ? "Tap the answer they gave, or Strike if it isn’t on the board." : "The survey answers:"}</p>
       <AnswerBoard round={round} showAll onReveal={(index) => onAction("reveal", { index })} disabled={!judging} />
       {judging && <button className="close sv-strike-btn" onClick={() => onAction("strike")}><XIcon /> Strike — not on the board</button>}
+      {judging && (
+        // Like the TV host's "I need an answer": three seconds, then it's a strike.
+        <button className="secondary sv-time-btn" disabled={!!round.deadline} onClick={() => onAction("countdown")}>
+          {round.deadline ? <>Counting down <ClueTimer deadline={round.deadline} serverNow={game.serverNow} /></> : "Time! — give them 3 seconds"}
+        </button>
+      )}
       {round.phase === "roundEnd" && <button className="wide on" onClick={() => onAction("nextRound")}>{last ? "See final scores" : "Next question"}</button>}
       <RoundControls game={game} onAction={onAction} />
       <section className="controller-players">

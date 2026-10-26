@@ -8,7 +8,12 @@
 // give strikes from the controller; the host can also undo the last ruling in either mode.
 import { numberWordPattern, NUMBER_WORDS, editDistance, stripAccents } from './text.js'
 
-export const SURVEY_TIMES = { readMs: 3000, buzzMs: 20000, faceoffAnswerMs: 15000, chooseMs: 10000, guessMs: 20000, stealMs: 30000, roundEndMs: 9000 }
+// On the show there's no visible clock, but answers have to come fast: the host counts down about three seconds
+// on anyone who stalls, and no answer is a strike. Phones need a little longer for typing, so a face-off answer
+// gets 8 s and each guess 10 s; the stealing team gets longer to confer before its captain answers.
+export const SURVEY_TIMES = { readMs: 3000, buzzMs: 15000, faceoffAnswerMs: 8000, chooseMs: 10000, guessMs: 10000, stealMs: 20000, roundEndMs: 9000 }
+// Hosted games: the host's "Time!" button, like the TV host's three-second count.
+const HOST_COUNT_MS = 3000
 const MAX_PLAYERS = 12
 const MAX_ROUNDS = 8
 // Face-off misses before control goes to a coin toss, so two stumped players can't stall the round.
@@ -364,6 +369,11 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     }
     if (action === 'strike' && playing && ['faceoffAnswer', 'guessing', 'steal'].includes(round.phase)) {
       ruleMiss(game, round.phase === 'faceoffAnswer' ? round.faceoff.answeringId : round.phase === 'guessing' ? round.guesserId : null); return
+    }
+    if (action === 'countdown' && playing && !game.hostless && ['faceoffAnswer', 'guessing', 'steal'].includes(round.phase) && !round.deadline) {
+      round.deadline = Date.now() + HOST_COUNT_MS
+      schedule(game, 'survey', HOST_COUNT_MS, () => timedOut(game, round))
+      event(game, 'countdown')
     }
     if (action === 'choose' && playing && round.phase === 'choose') { choose(game, !!payload.play); emitGame(game); return }
     if (action === 'undo' && playing && game.undo) {
