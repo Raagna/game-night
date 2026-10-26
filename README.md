@@ -19,10 +19,13 @@ Up to 6 players buzz in from their phones.
 ### Survey Says!
 A Family Feud-style game for two teams of up to 12 players in all. Teams face off for control of each "we asked 100 people" question, then guess the top answers. After three strikes, the other team gets one guess to steal everything banked so far. Games are 3 to 6 rounds, and points are multiplied in the later rounds.
 
-Setup offers two question packs, separately or together (*Everything*). You can swap any question before starting.
+Setup offers three question packs, one at a time or all together (*Everything*). You can swap any question before starting.
 
 - **Game Night**: 110 hand-written questions in `src/surveys.json`.
-- **ProtoQA**: 7,628 boards with real survey counts from the [ProtoQA dataset](https://github.com/iesl/protoqa-data). They're loaded from `public/data/surveys-protoqa.json` when Survey Says! opens.
+- **ProtoQA**: 7,619 boards with real survey counts from the [ProtoQA dataset](https://github.com/iesl/protoqa-data), in `public/data/surveys-protoqa.json`.
+- **Feud Sheet**: 406 boards from a shared "Family Feud Question Database" spreadsheet, with the sheet's own answers and points, in `public/data/surveys-sheet.json`.
+
+The ProtoQA and Feud Sheet packs are loaded when Survey Says! opens.
 
 ### With or without a host
 Both games can be played two ways:
@@ -91,11 +94,12 @@ server/               game server (Express + Socket.IO)
   text.js             text helpers for matching answers
 public/
   data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
-                      and the ProtoQA pack for Survey Says! (surveys-protoqa.json)
+                      and the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
   audio/              sound effects
 scripts/
   build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
   build-protoqa-surveys.py  rebuilds public/data/surveys-protoqa.json from the ProtoQA data files
+  build-sheet-surveys.py    rebuilds public/data/surveys-sheet.json from CSV exports of the sheet's tabs
 ```
 
 ## Credits and licence
@@ -103,5 +107,6 @@ scripts/
 - The built-in Jeopardy clues are generated into `public/data/` from a Jeopardy season archive by `scripts/build-question-data.py`.
 - The Survey Says! questions in `src/surveys.json` were written for this project, and their answers and points are invented.
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
+- The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.

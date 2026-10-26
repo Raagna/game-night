@@ -17,22 +17,34 @@ const rememberPlayed = (ids) => { try { localStorage.setItem(PLAYED_KEY, JSON.st
 const shuffle = (list) => list.map((item) => [Math.random(), item]).sort((a, b) => a[0] - b[0]).map(([, item]) => item);
 
 // ---------- Question packs ----------
-// The hand-written pack ships in the bundle. The ProtoQA pack (scripts/build-protoqa-surveys.py) is over a
-// megabyte, so it's fetched from public/data when the host opens Survey Says!
+// The hand-written pack ships in the bundle. The packs with a file are built into public/data by
+// scripts/build-*-surveys.py and fetched when the host opens Survey Says! (ProtoQA alone is over a megabyte).
 const PACK_KEY = "gameNight.survey.pack.v1";
-const PACKS = [{ id: "all", label: "Everything" }, { id: "classic", label: "Game Night" }, { id: "protoqa", label: "ProtoQA" }];
-let protoqa = [], protoqaRequest = null;
-export function loadProtoQA() {
-  protoqaRequest ||= fetch(`${import.meta.env.BASE_URL}data/surveys-protoqa.json`)
-    .then((response) => { if (!response.ok) throw new Error("Couldn’t load the ProtoQA questions."); return response.json(); })
-    .then(({ surveys }) => (protoqa = surveys.map(([id, question, answers]) => ({ id, question, answers: answers.map(([text, points, alts = []]) => ({ text, points, alts })) }))))
-    .catch((error) => { protoqaRequest = null; throw error; });
-  return protoqaRequest;
+const PACKS = [
+  { id: "all", label: "Everything" },
+  { id: "classic", label: "Game Night" },
+  { id: "protoqa", label: "ProtoQA", file: "surveys-protoqa.json" },
+  { id: "sheet", label: "Feud Sheet", file: "surveys-sheet.json" },
+];
+const packLabel = (id) => PACKS.find((pack) => pack.id === id)?.label || id;
+const loaded = { classic: SURVEYS };
+let packsRequest = null;
+const expand = ({ surveys }) => surveys.map(([id, question, answers]) => ({ id, question, answers: answers.map(([text, points, alts = []]) => ({ text, points, alts })) }));
+// Settles once every pack has loaded or failed. A pack that failed is left out, and asked for again next time.
+export function loadPacks() {
+  packsRequest ||= Promise.all(PACKS.filter((pack) => pack.file && !loaded[pack.id]).map((pack) =>
+    fetch(`${import.meta.env.BASE_URL}data/${pack.file}`)
+      .then((response) => { if (!response.ok) throw new Error(`Couldn’t load the ${pack.label} questions.`); return response.json(); })
+      .then((data) => { loaded[pack.id] = expand(data); })
+      .catch(() => {}),
+  )).then(() => { if (PACKS.some((pack) => pack.file && !loaded[pack.id])) packsRequest = null; });
+  return packsRequest;
 }
+const packsLoaded = () => PACKS.every((pack) => !pack.file || loaded[pack.id]);
 const readPack = () => { try { return localStorage.getItem(PACK_KEY) || "all"; } catch { return "all"; } };
 const rememberPack = (pack) => { try { localStorage.setItem(PACK_KEY, pack); } catch {} };
-// Until the ProtoQA pack has loaded (or if it can't), every pack falls back to the hand-written questions.
-const surveysIn = (pack) => (pack === "classic" || !protoqa.length ? SURVEYS : pack === "protoqa" ? protoqa : [...SURVEYS, ...protoqa]);
+// A pack that hasn't loaded (or can't) falls back to the hand-written questions.
+const surveysIn = (pack) => (pack === "all" ? PACKS.flatMap(({ id }) => loaded[id] || []) : loaded[pack] || SURVEYS);
 
 // Questions this browser hasn't played yet come first; once they run out, everything is back in the mix.
 export function pickSurveys(count, exclude = [], pack = readPack()) {
@@ -87,19 +99,17 @@ export function SurveySetup({ onCreate }) {
   const [teamNames, setTeamNames] = useState(["", ""]),
     [rounds, setRounds] = useState(5),
     [pack, setPack] = useState(readPack),
-    [packStatus, setPackStatus] = useState(protoqa.length ? "ready" : "loading"),
+    [packsReady, setPacksReady] = useState(packsLoaded),
     [picks, setPicks] = useState(() => pickSurveys(5, [], pack)),
     [hostless, setHostless] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
-  // Once the ProtoQA pack arrives, deal a fresh set, unless the host has already started swapping questions.
+  // Once the packs arrive, deal a fresh set, unless the host has already started swapping questions.
   const edited = useRef(false);
   useEffect(() => {
-    if (protoqa.length) return;
+    if (packsReady) return;
     let live = true;
-    loadProtoQA()
-      .then(() => { if (!live) return; setPackStatus("ready"); if (!edited.current) setPicks((list) => pickSurveys(list.length, [], pack)); })
-      .catch(() => live && setPackStatus("failed"));
+    loadPacks().then(() => { if (!live) return; setPacksReady(true); if (!edited.current) setPicks((list) => pickSurveys(list.length, [], pack)); });
     return () => { live = false; };
   }, []);
   const multipliers = MULTIPLIERS[rounds];
@@ -116,7 +126,7 @@ export function SurveySetup({ onCreate }) {
     edited.current = false;
     setPicks(pickSurveys(rounds, [], id));
   };
-  const hasProtoqa = pack !== "classic" && packStatus === "ready";
+  const shows = (id) => (pack === "all" || pack === id) && !!loaded[id];
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed(picks.map((survey) => survey.id));
@@ -181,15 +191,22 @@ export function SurveySetup({ onCreate }) {
         <p className="muted sv-hint">
           Answers stay hidden here so you can play too.{" "}
           {pack === "classic" ? "The answers and points are invented for this game, not from a real survey."
-            : packStatus === "loading" ? "Loading the ProtoQA questions…"
-            : packStatus === "failed" ? "The ProtoQA questions couldn’t be loaded, so these are from the Game Night pack."
+            : !packsReady ? "Loading the question packs…"
+            : pack !== "all" && !loaded[pack] ? `The ${packLabel(pack)} questions couldn’t be loaded, so these are from the Game Night pack.`
             : pack === "protoqa" ? "ProtoQA boards use real survey counts, so some answers are dated or oddly spelled."
-            : "ProtoQA boards use real survey counts; the Game Night pack’s answers are invented for this game."}
+            : pack === "sheet" ? "Feud Sheet boards keep the answers and points from a shared Family Feud question spreadsheet."
+            : "The Game Night pack’s answers are invented for this game; ProtoQA and Feud Sheet boards come from Family Feud-style surveys."}
         </p>
-        {hasProtoqa && (
+        {shows("protoqa") && (
           <p className="muted sv-hint sv-credit">
             ProtoQA questions from <a href="https://github.com/iesl/protoqa-data" target="_blank" rel="noreferrer">Boratko et al., 2020</a>,
             used under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> and trimmed to each board’s top answers.
+          </p>
+        )}
+        {shows("sheet") && (
+          <p className="muted sv-hint sv-credit">
+            Feud Sheet questions from the publicly shared <a href="https://docs.google.com/spreadsheets/d/1y5TtM4rXHfv_9BktCiJEW621939RzJucXxhJidJZbfQ/htmlview" target="_blank" rel="noreferrer">“Family Feud Question Database”</a> spreadsheet;
+            its author and licence aren’t known.
           </p>
         )}
         <section className="game-options" aria-labelledby="sv-options-title">
@@ -627,8 +644,8 @@ export function SurveyController({ game, onAction }) {
 // ---------- End of game ----------
 export function SurveyEnd({ game, host, onAction }) {
   const [a, b] = game.teams, winner = a.score === b.score ? null : a.score > b.score ? 0 : 1;
-  // A host who reloaded mid-game hasn't fetched the ProtoQA pack yet; get it in time for "Play again".
-  useEffect(() => { if (host) loadProtoQA().catch(() => {}); }, [host]);
+  // A host who reloaded mid-game hasn't fetched the question packs yet; get them in time for "Play again".
+  useEffect(() => { if (host) loadPacks(); }, [host]);
   const playAgain = () => {
     const surveys = pickSurveys(game.roundCount);
     rememberPlayed(surveys.map((s) => s.id));
