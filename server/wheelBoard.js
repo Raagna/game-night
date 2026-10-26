@@ -8,9 +8,10 @@ export const ROW_WIDTHS = [12, 14, 14, 12]
 export const COLUMNS = 14
 export const VOWELS = 'AEIOU'
 export const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ'
-// Shown on the board from the start; everything else is a letter to guess.
-export const PUNCTUATION = "'-&?!.,"
-const ALLOWED = /^[A-Z'\-&?!.,]+( [A-Z'\-&?!.,]+)*$/
+// Shown on the board from the start; everything else is a letter to guess. The colon is for titles
+// ("ACE VENTURA: PET DETECTIVE").
+export const PUNCTUATION = "'-&?!.,:"
+const ALLOWED = /^[A-Z'\-&?!.,:]+( [A-Z'\-&?!.,:]+)*$/
 // The rows a puzzle of n lines may use, best first.
 const ROW_SETS = { 1: [[1], [2]], 2: [[1, 2]], 3: [[0, 1, 2], [1, 2, 3]], 4: [[0, 1, 2, 3]] }
 const offset = (row) => (COLUMNS - ROW_WIDTHS[row]) / 2

@@ -41,6 +41,7 @@ test('punctuation is not a letter', () => {
 
 test('problems are explained', () => {
   assert.equal(puzzleProblem('Hello there'), null)
+  assert.equal(puzzleProblem('Ace Ventura: Pet Detective'), null, 'a colon shows on the board, for titles')
   assert.match(puzzleProblem('Route 66'), /only letters/)
   assert.match(puzzleProblem('Supercalifragilistic'), /longer than 14/)
   assert.match(puzzleProblem('one two three four five six seven eight nine ten eleven twelve thirteen'), /does not fit/)

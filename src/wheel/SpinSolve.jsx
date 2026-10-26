@@ -37,10 +37,42 @@ const poolOf = (groups) => Object.entries(groups).flatMap(([category, list]) => 
 const MAIN = poolOf(PUZZLES.main), BONUS_POOL = poolOf(PUZZLES.bonus);
 const readPlayed = () => { try { return JSON.parse(localStorage.getItem(PLAYED_KEY)) || []; } catch { return []; } };
 const rememberPlayed = (ids) => { try { localStorage.setItem(PLAYED_KEY, JSON.stringify([...new Set([...readPlayed(), ...ids])].slice(-600))); } catch {} };
-const shuffle = (list) => list.map((item) => [Math.random(), item]).sort((a, b) => a[0] - b[0]).map(([, item]) => item);
+// Fisher–Yates: the Fan Database has tens of thousands of puzzles, so this has to be quick.
+function shuffle(list) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
+
+// ---------- Puzzle packs ----------
+// Game Night's own puzzles ship in the bundle. The Fan Database (built into public/data by
+// scripts/build-fan-puzzles.mjs, about 1.5 MB) is fetched when the host opens Spin & Solve.
+const PACK_KEY = "gameNight.wheel.pack.v1";
+const PACKS = [
+  { id: "all", label: "Everything" },
+  { id: "classic", label: "Game Night" },
+  { id: "fans", label: "Fan Database", file: "puzzles-fans.json" },
+];
+const loaded = { classic: MAIN };
+let packsRequest = null;
+// Settles once every pack has loaded or failed. A pack that failed is left out, and asked for again next time.
+export function loadPacks() {
+  packsRequest ||= Promise.all(PACKS.filter((pack) => pack.file && !loaded[pack.id]).map((pack) =>
+    fetch(`${import.meta.env.BASE_URL}data/${pack.file}`)
+      .then((response) => { if (!response.ok) throw new Error(`Couldn’t load the ${pack.label} puzzles.`); return response.json(); })
+      .then((data) => { loaded[pack.id] = poolOf(data.main); })
+      .catch(() => {}),
+  )).then(() => { if (PACKS.some((pack) => pack.file && !loaded[pack.id])) packsRequest = null; });
+  return packsRequest;
+}
+const packsLoaded = () => PACKS.every((pack) => !pack.file || loaded[pack.id]);
+const readPack = () => { try { return localStorage.getItem(PACK_KEY) || "all"; } catch { return "all"; } };
+const rememberPack = (pack) => { try { localStorage.setItem(PACK_KEY, pack); } catch {} };
+// A pack that hasn't loaded (or can't) falls back to Game Night's own puzzles.
+const puzzlesIn = (pack) => (pack === "all" ? PACKS.flatMap(({ id }) => loaded[id] || []) : loaded[pack] || MAIN);
 
 // Puzzles this browser hasn't played come first, and a game avoids repeating a category while it can.
-export function pickPuzzles(count, keep = [], from = MAIN) {
+export function pickPuzzles(count, keep = [], from = puzzlesIn(readPack())) {
   const played = new Set(readPlayed()), skip = new Set(keep.map((puzzle) => puzzle.id));
   let pool = from.filter((puzzle) => !played.has(puzzle.id) && !skip.has(puzzle.id));
   if (pool.length < count) pool = from.filter((puzzle) => !skip.has(puzzle.id));
@@ -191,9 +223,9 @@ function useSolution(code) {
 
 // Puzzles for a plan, two spares kept back for tiebreakers, and the bonus round's three categories
 // (from the short bonus puzzles, each in a different category).
-function dealPuzzles(plan) {
-  const picks = pickPuzzles(plan.length);
-  return { picks, spares: pickPuzzles(2, picks), bonus: pickPuzzles(3, [], BONUS_POOL) };
+function dealPuzzles(plan, pack = readPack()) {
+  const pool = puzzlesIn(pack), picks = pickPuzzles(plan.length, [], pool);
+  return { picks, spares: pickPuzzles(2, picks, pool), bonus: pickPuzzles(3, [], BONUS_POOL) };
 }
 // The Gift wedge's prize for rounds 1 to 3 and the round-3 Prize Puzzle's trip, from the pack's prize lists.
 function dealPrizes() {
@@ -218,7 +250,18 @@ export function WheelSetup({ onCreate }) {
     [speedUpNow, setSpeedUpNow] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  const [pack, setPack] = useState(readPack), [packsReady, setPacksReady] = useState(packsLoaded);
   const plan = planFor(length, rounds, tossups), labels = planLabels(plan);
+  // Once the Fan Database arrives, deal again from the chosen pack, unless the host has already swapped puzzles.
+  const edited = useRef(false), currentPlan = useRef(plan);
+  currentPlan.current = plan;
+  useEffect(() => {
+    if (packsReady) return;
+    let live = true;
+    loadPacks().then(() => { if (!live) return; setPacksReady(true); if (!edited.current) setDeal(dealPuzzles(currentPlan.current)); });
+    return () => { live = false; };
+  }, []);
+  const choosePack = (id) => { setPack(id); rememberPack(id); edited.current = false; setDeal(dealPuzzles(plan, id)); };
   const roundCount = plan.filter((step) => step.type !== "tossup").length, tossupCount = plan.length - roundCount;
   // A new plan keeps the puzzles already dealt, as far as they go.
   const changePlan = (nextLength, nextRounds, nextTossups) => {
@@ -226,7 +269,10 @@ export function WheelSetup({ onCreate }) {
     const count = planFor(nextLength, nextRounds, nextTossups).length;
     setDeal((deal) => ({ ...deal, picks: count <= deal.picks.length ? deal.picks.slice(0, count) : [...deal.picks, ...pickPuzzles(count - deal.picks.length, [...deal.picks, ...deal.spares])] }));
   };
-  const swap = (index) => setDeal((deal) => ({ ...deal, picks: deal.picks.map((puzzle, i) => (i === index ? pickPuzzles(1, [...deal.picks, ...deal.spares])[0] || puzzle : puzzle)) }));
+  const swap = (index) => {
+    edited.current = true;
+    setDeal((deal) => ({ ...deal, picks: deal.picks.map((puzzle, i) => (i === index ? pickPuzzles(1, [...deal.picks, ...deal.spares])[0] || puzzle : puzzle)) }));
+  };
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed([...picks, ...(withBonus ? bonus : [])].map((puzzle) => puzzle.id));
@@ -296,7 +342,10 @@ export function WheelSetup({ onCreate }) {
         </fieldset>
         <div className="ws-puzzles-head">
           <h2>Puzzles</h2>
-          <button className="chip-btn" onClick={() => setDeal(dealPuzzles(plan))}>New set</button>
+          <div className="ws-packs" role="radiogroup" aria-label="Puzzle pack">
+            {PACKS.map(({ id, label }) => <button key={id} role="radio" aria-checked={pack === id} onClick={() => choosePack(id)}>{label}</button>)}
+          </div>
+          <button className="chip-btn" onClick={() => { edited.current = false; setDeal(dealPuzzles(plan)); }}>New set</button>
         </div>
         <ol className="ws-puzzle-list">
           {picks.map((puzzle, i) => (
@@ -320,7 +369,15 @@ export function WheelSetup({ onCreate }) {
             </div>
           )}
         </div>
-        <p className="muted ws-hint">Puzzles stay hidden here so you can play too. {MAIN.length.toLocaleString()} puzzles in the pack, and {BONUS_POOL.length} bonus puzzles; ones this browser has played are saved for last.</p>
+        <p className="muted ws-hint">
+          Puzzles stay hidden here so you can play too. {puzzlesIn(pack).length.toLocaleString()} puzzles in {pack === "all" ? "all the packs" : "this pack"}, and {BONUS_POOL.length} bonus puzzles; ones this browser has played are saved for last.
+          {" "}{!packsReady ? "Loading the Fan Database…" : pack !== "classic" && !loaded.fans ? "The Fan Database couldn’t be loaded, so these are from the Game Night pack." : ""}
+        </p>
+        {pack !== "classic" && loaded.fans && (
+          <p className="muted ws-hint ws-credit">
+            Fan Database puzzles come from <a href="https://wheeloffortuneanswer.com/" target="_blank" rel="noreferrer">wheeloffortuneanswer.com</a>, a player-maintained list of answers from the official Wheel of Fortune game; its author and licence aren’t known.
+          </p>
+        )}
         <section className="game-options" aria-labelledby="ws-options-title">
           <h2 id="ws-options-title">Game options</h2>
           <label className="game-mode">
@@ -1268,6 +1325,8 @@ function BonusTools({ game, onAction }) {
 // ---------- End of game ----------
 // display: this is the TV screen (not the host controller or a phone), which is the one that plays the tune.
 export function WheelEnd({ game, host, display, onAction }) {
+  // A host who reloaded mid-game hasn't fetched the Fan Database yet; get it in time for "Play again".
+  useEffect(() => { if (host) loadPacks(); }, [host]);
   // The winners tune plays once when the scores appear (not when the TV is reloaded later), and fades out
   // if the screen changes first.
   useEffect(() => {

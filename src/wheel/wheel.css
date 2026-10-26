@@ -30,6 +30,12 @@
 .ws-hint { font-size: 0.875rem; line-height: 1.45; }
 .ws-puzzles-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 10px; }
 .ws-puzzles-head h2 { font-size: 1rem; }
+.ws-packs { display: flex; gap: 4px; margin-left: auto; margin-right: 10px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 999px; }
+.ws-packs button { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; color: var(--text-muted); transition: background-color 160ms ease-out, color 160ms ease-out; }
+.ws-packs button:hover { color: var(--text); }
+.ws-packs button[aria-checked="true"] { background: var(--ws-accent); color: var(--ws-on-accent); }
+.ws-credit a { color: inherit; }
+@media (max-width: 760px) { .ws-puzzles-head { flex-wrap: wrap; gap: 8px; } .ws-packs { margin-left: 0; } }
 .ws-puzzle-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
 .ws-puzzle-list li { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px; background: var(--panel-raised); }
 .ws-p-round { flex-shrink: 0; width: 132px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }

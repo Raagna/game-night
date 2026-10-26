@@ -17,15 +17,18 @@ const errors = [], warnings = [], seen = new Map()
 
 // A rule for each category that can be checked mechanically. Returns a problem, or null.
 const RULES = {
-  'Same Letter': (text) => new Set(text.replace(/[^A-Z ]/g, '').split(' ').map((word) => word[0])).size === 1 ? null : 'every word must start with the same letter',
+  // "&" and other punctuation aren't words ("WITCHES WIZARDS & WARLOCKS").
+  'Same Letter': (text) => new Set(text.replace(/[^A-Z ]/g, '').split(' ').filter(Boolean).map((word) => word[0])).size === 1 ? null : 'every word must start with the same letter',
   'Same Name': (text) => text.includes(' & ') ? null : 'needs " & " between the two names',
-  'Before & After': (text) => text.split(' ').length >= 3 ? null : 'needs at least three words',
+  // Hyphenated parts count: "SQUEAKY-CLEAN FREAK" is squeaky clean + clean freak.
+  'Before & After': (text) => text.split(/[ -]+/).filter(Boolean).length >= 3 ? null : 'needs at least three words',
 }
 
-function checkPool(pool, name, { bonus = false } = {}) {
+// anyCategory: the pack keeps its source's category names. quiet: no warnings about easy puzzles.
+function checkPool(pool, name, { bonus = false, anyCategory = false, quiet = false } = {}) {
   if (!pool || typeof pool !== 'object' || Array.isArray(pool)) { errors.push(`"${name}" must be an object of category: [puzzles]`); return }
   for (const [category, puzzles] of Object.entries(pool)) {
-    if (!CATEGORIES.includes(category)) errors.push(`${name}: unknown category "${category}"`)
+    if (anyCategory ? !category.trim() || category.length > 30 : !CATEGORIES.includes(category)) errors.push(`${name}: unknown category "${category}"`)
     if (!Array.isArray(puzzles)) { errors.push(`${name} / ${category}: must be a list`); continue }
     for (const raw of puzzles) {
       const where = `${name} / ${category}: "${raw}"`
@@ -42,7 +45,7 @@ function checkPool(pool, name, { bonus = false } = {}) {
         if (words < 2 || words > 3) errors.push(`${where}: bonus puzzles are 2 or 3 words`)
         const given = [...BONUS_GIVEN].reduce((sum, letter) => sum + (counts[letter] || 0), 0)
         if (given / letters > 0.6) warnings.push(`${where}: R S T L N E already show ${Math.round((given / letters) * 100)}% of it`)
-      } else if (letters < 8) warnings.push(`${where}: only ${letters} letters, may be too easy`)
+      } else if (letters < 8 && !quiet) warnings.push(`${where}: only ${letters} letters, may be too easy`)
     }
   }
 }
@@ -60,8 +63,14 @@ checkPool(pack.main, 'main')
 checkPool(pack.bonus, 'bonus', { bonus: true })
 checkPrizes(pack.gifts, 'gifts')
 checkPrizes(pack.trips, 'trips')
+// The Fan Database (public/data/puzzles-fans.json, built by scripts/build-fan-puzzles.mjs): its puzzles have
+// to fit, follow the category rules and not repeat ours either, but it keeps the site's category names.
+const fansFile = fileURLToPath(new URL('../public/data/puzzles-fans.json', import.meta.url))
+let fans = null
+try { fans = JSON.parse(readFileSync(fansFile, 'utf8')) } catch {}
+if (fans) checkPool(fans.main, 'fans', { anyCategory: true, quiet: true })
 
-for (const [name, pool] of [['main', pack.main], ['bonus', pack.bonus]]) {
+for (const [name, pool] of [['main', pack.main], ['bonus', pack.bonus], ...(fans ? [['fans', fans.main]] : [])]) {
   const counts = Object.entries(pool || {}).map(([category, puzzles]) => `${category} ${puzzles.length}`)
   const total = Object.values(pool || {}).reduce((sum, puzzles) => sum + puzzles.length, 0)
   console.log(`${name}: ${total} puzzles (${counts.join(', ')})`)

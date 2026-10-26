@@ -40,7 +40,12 @@ A Wheel of Fortune-style word puzzle game for 2 to 6 players on their own, or 2 
 - **The bonus round**: the winner picks a category, spins for a sealed envelope ($40,000 to $100,000, or $1,000,000 with the Million Dollar wedge), gets R S T L N E plus three consonants and a vowel, and has ten seconds to solve it.
 - **Teams**: teammates take turns acting for the team, anyone on it can buzz in on a toss-up, and the whole team plays the bonus round.
 
-The 675 puzzles, 153 bonus puzzles and the gift and trip prizes are in `src/wheel/puzzles.json`, all written for this project. The TV plays peg clicks as the wheel turns, a ding for each letter, the Bankrupt slide, a fanfare for each solve and a ticking bonus clock, all synthesized in the browser and sharing Survey Says!' sound on/off button.
+Setup offers two puzzle packs, one at a time or both together (*Everything*):
+
+- **Game Night**: 675 puzzles, 153 bonus puzzles and the gift and trip prizes in `src/wheel/puzzles.json`, all written for this project.
+- **Fan Database**: 72,164 puzzles in 41 categories from [wheeloffortuneanswer.com](https://wheeloffortuneanswer.com/), a player-maintained list of answers from the official game, in `public/data/puzzles-fans.json`. It's loaded when Spin & Solve opens. The bonus round always uses Game Night's bonus puzzles.
+
+The TV plays peg clicks as the wheel turns, a ding for each letter, the Bankrupt slide, a fanfare for each solve and a ticking bonus clock, all synthesized in the browser and sharing Survey Says!' sound on/off button.
 
 ### With or without a host
 All three games can be played two ways:
@@ -124,13 +129,15 @@ server/               game server (Express + Socket.IO)
   text.js             text helpers for matching answers
 public/
   data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
-                      and the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
+                      the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
+                      and the Spin & Solve Fan Database (puzzles-fans.json)
   audio/              sound effects
 scripts/
   build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
   build-protoqa-surveys.py  rebuilds public/data/surveys-protoqa.json from the ProtoQA data files
   build-sheet-surveys.py    rebuilds public/data/surveys-sheet.json from CSV exports of the sheet's tabs
-  check-wheel-puzzles.mjs   checks the Spin & Solve puzzle pack (npm run check:puzzles)
+  check-wheel-puzzles.mjs   checks the Spin & Solve puzzle packs (npm run check:puzzles)
+  build-fan-puzzles.mjs     rebuilds public/data/puzzles-fans.json from answers collected from wheeloffortuneanswer.com
 docs/
   wheel-of-fortune-plan.md  the Spin & Solve design: rules, server state, socket events and screens
 ```
@@ -140,7 +147,8 @@ docs/
 - The built-in Jeopardy clues are generated into `public/data/` from a Jeopardy season archive by `scripts/build-question-data.py`.
 - The Survey Says! questions in `src/surveys.json` were written for this project, and their answers and points are invented.
 - The Survey Says! sounds and winners tune are synthesized in `src/survey/sounds.js` and are original; no audio from the show is used.
-- The Spin & Solve puzzles, bonus puzzles and prizes in `src/wheel/puzzles.json` were written for this project, and its sounds are synthesized in `src/wheel/sounds.js`; nothing is taken from the show.
+- The Spin & Solve Game Night puzzles, bonus puzzles and prizes in `src/wheel/puzzles.json` were written for this project, and its sounds are synthesized in `src/wheel/sounds.js`; nothing is taken from the show.
+- The Spin & Solve Fan Database pack comes from wheeloffortuneanswer.com, a player-maintained list of answers from the official Wheel of Fortune game. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune* or their owners.
