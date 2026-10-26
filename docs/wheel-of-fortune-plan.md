@@ -213,7 +213,6 @@ It returns `{ MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostA
 | `turn` | control | spin / buy / solve (+ use the Wild Card when allowed) |
 | `spinning` | nobody | animation; then the landing is applied |
 | `consonant` | control | call a consonant at `value` |
-| `vowel` | control | pick a vowel ($250 already taken) |
 | `mystery` | control | take the $1,000s or flip |
 | `expressChoice` | control | pass or play |
 | `express` | control | consonant / vowel / solve, no spinning |

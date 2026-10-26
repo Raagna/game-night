@@ -1,0 +1,192 @@
+/* Spin & Solve — the same night-blue stage as the rest of Game Night, with a magenta accent, the show's
+   green-and-white puzzle board, and a colour for each contestant's podium. */
+
+.wheel-game, .ws-setup {
+  --ws-accent: #ff4fa3;
+  --ws-accent-text: #ff9ccb;
+  --ws-on-accent: #2b0618;
+  --tile-empty: linear-gradient(180deg, #1f9a63 0%, #137a4b 100%);
+  --tile-letter: #f7f7f2;
+  --tile-text: #10142e;
+  --tile-lit: #5aa2ff;
+}
+.ws-brand { color: #ff4fa3; text-shadow: 0 2px 0 #6e0a3b, 0 4px 14px rgb(0 0 0 / 0.35); }
+.wheel-game .primary:not(:disabled), .ws-setup .primary:not(:disabled) { background: var(--ws-accent); color: var(--ws-on-accent); }
+.wheel-game .primary:hover:not(:disabled), .ws-setup .primary:hover:not(:disabled) { background: #ff77b8; }
+.c-0 { --c: #ff5a64; }
+.c-1 { --c: #ffcc2e; }
+.c-2 { --c: #4c8dff; }
+.c-3 { --c: #2fd07e; }
+.c-4 { --c: #b083ff; }
+.c-5 { --c: #ff8a3d; }
+
+/* ---------- Setup ---------- */
+.ws-fieldset { margin: 24px 0 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--field); display: grid; gap: 12px; max-width: 520px; }
+.ws-fieldset legend { padding: 0 6px; font-weight: 700; }
+.ws-rounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ws-rounds button { min-height: 48px; border-radius: 10px; border: 1px solid var(--line-strong); font: 1.2rem var(--display); color: var(--text-muted); transition: background-color 160ms ease-out, color 160ms ease-out; }
+.ws-rounds button:hover { color: var(--text); }
+.ws-rounds button[aria-checked="true"] { background: var(--ws-accent); border-color: var(--ws-accent); color: var(--ws-on-accent); }
+.ws-hint { font-size: 0.875rem; line-height: 1.45; }
+.ws-puzzles-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 10px; }
+.ws-puzzles-head h2 { font-size: 1rem; }
+.ws-puzzle-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.ws-puzzle-list li { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px; background: var(--panel-raised); }
+.ws-p-round { flex-shrink: 0; width: 72px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+.ws-p-category { flex: 1; font-weight: 700; }
+.ws-p-size { font-size: 0.875rem; }
+
+/* ---------- Puzzle board ---------- */
+.wb-board {
+  --tile: clamp(18px, min(3.2vw, 5.4vh), 64px);
+  display: grid; grid-template-columns: repeat(14, var(--tile)); grid-auto-rows: calc(var(--tile) * 1.28); gap: calc(var(--tile) * 0.08);
+  justify-content: center; padding: calc(var(--tile) * 0.22); border-radius: 14px;
+  background: #0a1036; border: 3px solid #2a3a8a; box-shadow: inset 0 0 0 2px #0a1036, 0 0 0 4px rgb(255 79 163 / 0.25);
+}
+.wb-board.is-small { --tile: min(5.3vw, 26px); padding: 6px; border-width: 2px; border-radius: 10px; margin: 10px auto 6px; width: max-content; max-width: 100%; }
+.wb-cell { display: grid; place-items: center; border-radius: calc(var(--tile) * 0.08); font: calc(var(--tile) * 0.82)/1 var(--display); color: var(--tile-text); }
+.wb-cell.is-void { visibility: hidden; }
+.wb-cell.is-empty { background: var(--tile-empty); }
+.wb-cell.is-blank, .wb-cell.is-shown { background: var(--tile-letter); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12); }
+.wb-cell.is-turning { animation: wb-turn 1.4s both; }
+@keyframes wb-turn {
+  0% { background: var(--tile-letter); color: transparent; }
+  12%, 55% { background: var(--tile-lit); color: transparent; box-shadow: 0 0 calc(var(--tile) * 0.4) var(--tile-lit); }
+  70% { background: var(--tile-letter); color: transparent; transform: rotateY(90deg); }
+  100% { background: var(--tile-letter); color: var(--tile-text); transform: none; }
+}
+button.wb-cell { padding: 0; border: 0; cursor: pointer; }
+.wb-cell.is-typed { color: #2547c9; }
+.wb-cell.is-cursor { outline: 3px solid var(--ws-accent); outline-offset: -1px; animation: wb-cursor 1s ease-in-out infinite; }
+@keyframes wb-cursor { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .wb-cell.is-turning { animation-duration: 0.01s; }
+  .wb-cell.is-cursor { animation: none; }
+}
+
+/* ---------- TV ---------- */
+.display.wheel-game { padding-bottom: 60px; }
+/* The wheel on the left, the board and what's happening on the right, the podiums along the bottom. */
+.ws-stage {
+  display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); grid-template-areas: "wheel main" "podiums podiums";
+  align-items: center; gap: 18px 32px; max-width: 1600px; margin: 0 auto;
+}
+.ws-wheel-wrap { grid-area: wheel; }
+.ws-main { grid-area: main; display: grid; justify-items: center; gap: 16px; min-width: 0; }
+.ws-podiums { grid-area: podiums; }
+.ws-board-wrap { display: grid; justify-items: center; gap: 10px; }
+.ws-category { display: flex; align-items: center; gap: 14px; font: clamp(1.2rem, 2.2vw, 1.8rem) var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
+.ws-category span { font: 700 0.85rem "DM Sans", sans-serif; letter-spacing: 0.08em; color: var(--text-muted); }
+.ws-wheel-wrap { position: relative; }
+.ws-wheel svg { width: 100%; max-height: calc(100vh - 250px); max-height: calc(100dvh - 250px); min-height: 240px; display: block; margin: 0 auto; filter: drop-shadow(0 12px 28px rgb(0 0 0 / 0.45)); }
+.ws-wedge-text { font-family: var(--display); letter-spacing: 0.02em; }
+.ws-flash {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font: clamp(2rem, 5vw, 4.2rem) var(--display); letter-spacing: -0.01em; color: #fff;
+  text-shadow: 0 4px 0 rgb(0 0 0 / 0.5), 0 0 30px rgb(0 0 0 / 0.6);
+  animation: ws-flash 1.8s ease-out both;
+}
+.ws-flash.is-bankrupt { color: #fff; -webkit-text-stroke: 2px #000; }
+.ws-flash.is-loseTurn { color: #ffcc2e; }
+@keyframes ws-flash { 0% { opacity: 0; transform: scale(0.6); } 15% { opacity: 1; transform: scale(1.05); } 25%, 80% { transform: scale(1); opacity: 1; } 100% { opacity: 0; } }
+.ws-status { display: grid; justify-items: center; gap: 8px; width: 100%; }
+.ws-status h2 { font: clamp(1.6rem, 3vw, 2.4rem)/1.1 var(--display); letter-spacing: -0.015em; }
+.ws-status > p { font-size: 1.15rem; color: var(--text-muted); }
+.ws-news { font-weight: 800; font-size: 1.2rem; animation: ws-news 300ms ease-out; }
+.ws-news.is-good { color: var(--green-text); }
+.ws-news.is-bad { color: var(--red-text); }
+@keyframes ws-news { from { opacity: 0; transform: translateY(6px); } }
+.ws-paused { padding: 4px 12px; border-radius: 999px; background: var(--panel-raised); font-weight: 700; color: var(--gold); }
+.ws-next { margin-top: 10px; min-width: 220px; min-height: 54px; }
+.ws-used { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 10px; width: 100%; max-width: 560px; }
+.ws-used span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 6px; background: var(--panel-raised); font: 1rem var(--display); color: var(--text); }
+.ws-used span.is-vowel { background: color-mix(in srgb, var(--ws-accent) 24%, var(--panel-raised)); }
+.ws-used span.is-hit { opacity: 0.28; }
+.ws-used span.is-miss { opacity: 0.4; color: var(--red-text); text-decoration: line-through; text-decoration-thickness: 3px; }
+
+.ws-podiums { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.ws-podium {
+  display: grid; gap: 2px; padding: 12px 14px 14px; border-radius: 14px; text-align: center;
+  /* The contestant's colour as a band across the top, like a podium light; it follows the rounded corners. */
+  background: linear-gradient(var(--c) 0 8px, var(--panel) 8px); border: 2px solid transparent;
+  transition: border-color 200ms ease-out, transform 200ms ease-out;
+}
+.ws-podium.is-control { border-color: var(--c); transform: translateY(-4px); box-shadow: 0 10px 26px rgb(0 0 0 / 0.35), 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
+.ws-podium.is-winner { background: linear-gradient(var(--c) 0 8px, color-mix(in srgb, var(--c) 22%, var(--panel)) 8px); }
+.ws-podium.is-away { opacity: 0.55; }
+.ws-podium-name { font-weight: 800; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-podium-name small { font-weight: 500; color: var(--text-muted); }
+.ws-podium-bank { font: clamp(1.6rem, 2.6vw, 2.2rem)/1.1 var(--display); color: var(--c); }
+.ws-podium-total { font-size: 0.9rem; color: var(--text-muted); }
+.ws-podium-total b { color: var(--text); }
+
+.ws-lobby-players { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.ws-lobby-players li { padding: 8px 16px; border-radius: 999px; background: var(--panel-raised); font-weight: 800; font-size: 1.1rem; }
+.ws-lobby-players li[class^="c-"]::before, .ws-final li span::before { content: ""; display: inline-block; width: 0.6em; height: 0.6em; margin-right: 0.5em; border-radius: 50%; background: var(--c); vertical-align: 0.05em; }
+.ws-host-tools .ws-round-tools, .ws-host-tools .ws-player-tools { padding: 12px 16px; }
+.ws-round-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.ws-player-tools ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.ws-player-tools li { display: flex; align-items: center; gap: 8px; }
+.ws-player-tools li input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--field); }
+.ws-player-tools .inline-field input { width: 90px; min-height: 36px; padding: 6px 10px; }
+
+@media (max-width: 900px) {
+  .ws-stage { grid-template-columns: 1fr; grid-template-areas: "main" "wheel" "podiums"; }
+  .wb-board { --tile: clamp(16px, 5.6vw, 48px); }
+  .ws-wheel svg { max-height: 60vh; }
+}
+
+/* ---------- Phone ---------- */
+.ws-my-podium { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: linear-gradient(var(--c) 0 5px, var(--panel) 5px); font-size: 0.9rem; color: var(--text-muted); }
+.ws-my-podium b { display: block; font: 1.4rem var(--display); color: var(--text); }
+.player.wheel-game .player-clue-meta { margin-top: 14px; }
+.player.wheel-game .ws-used { grid-template-columns: repeat(13, 1fr); gap: 3px; margin: 14px auto 0; }
+.player.wheel-game .ws-used span { font-size: 0.8rem; border-radius: 4px; }
+.player.wheel-game .ws-news { font-size: 1rem; margin-top: 4px; }
+.player.wheel-game .clue-timer { margin: 6px auto; }
+.ws-turn { display: grid; gap: 14px; margin-top: 10px; }
+.ws-spin {
+  width: min(62vw, 230px); aspect-ratio: 1; margin: 6px auto 0; display: grid; place-content: center; gap: 4px;
+  border-radius: 50%; color: #fff; font: 2.4rem var(--display); touch-action: manipulation; user-select: none;
+  background: conic-gradient(#e8434f 0 45deg, #ffb627 0 90deg, #3d7bff 0 135deg, #2fbf71 0 180deg, #a970ff 0 225deg, #ff7a2f 0 270deg, #ff5fa8 0 315deg, #20c3d0 0);
+  box-shadow: inset 0 0 0 10px rgb(0 0 0 / 0.25), 0 10px 0 #2a1a4a, 0 18px 30px rgb(0 0 0 / 0.35);
+  text-shadow: 0 3px 0 rgb(0 0 0 / 0.55);
+  transition: transform 1.1s cubic-bezier(0.3, 0, 0.4, 1), box-shadow 90ms ease-out;
+}
+.ws-spin small { font: 700 0.75rem "DM Sans", sans-serif; text-shadow: 0 1px 2px rgb(0 0 0 / 0.8); }
+.ws-spin:active:not(:disabled) { transform: rotate(-40deg) scale(0.97); }
+.ws-spin:disabled { filter: grayscale(0.85) brightness(0.6); }
+.ws-turn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ws-turn-row button { min-height: 58px; display: grid; place-content: center; gap: 2px; font-weight: 800; font-size: 1.05rem; border-radius: 12px; }
+.ws-turn-row small { font-weight: 600; font-size: 0.75rem; opacity: 0.85; }
+.wheel-game .secondary { background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: 12px; min-height: 48px; font-weight: 700; padding: 0 16px; }
+.wheel-game .secondary:disabled { opacity: 0.5; }
+.ws-buy { display: grid; gap: 12px; }
+.ws-vowels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.ws-vowels button { min-height: 64px; border-radius: 12px; background: var(--tile-letter); color: var(--tile-text); font: 1.8rem var(--display); }
+.ws-vowels button:disabled { opacity: 0.25; }
+.ws-keyboard { display: grid; gap: 6px; margin-top: 12px; }
+.ws-key-row { display: flex; justify-content: center; gap: 5px; }
+.ws-key-row button { flex: 0 1 9%; min-width: 0; min-height: 48px; border-radius: 8px; background: var(--tile-letter); color: var(--tile-text); font: 1.15rem var(--display); touch-action: manipulation; }
+.ws-key-row button.is-off { opacity: 0.2; }
+.ws-key-actions button { flex: 0 0 auto; padding: 0 16px; }
+.ws-key-actions button.primary { flex: 1; font: 700 1.05rem "DM Sans", sans-serif; }
+.ws-solve { margin-top: 8px; }
+.ws-solve-top { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 1.15rem; color: var(--ws-accent-text); }
+.ws-solve-top .clue-timer { margin: 0 !important; }
+
+/* ---------- Host controller ---------- */
+.ws-answer { display: grid; gap: 4px; margin: 10px 0; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 2px dashed var(--ws-accent); }
+.ws-answer span { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ws-accent-text); }
+.ws-answer b { font: 1.5rem/1.2 var(--display); letter-spacing: 0.02em; }
+.ws-ctrl-status { display: grid; gap: 4px; margin: 10px 0; }
+.ws-ctrl-status b { font-size: 1.15rem; }
+.controller.wheel-game .clue-timer { margin: 6px 0; }
+
+/* ---------- End ---------- */
+.ws-final { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; width: 100%; max-width: 460px; }
+.ws-final li { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; background: var(--panel); font-size: 1.15rem; font-weight: 700; }
+.ws-final li b { font: 1.5rem var(--display); color: var(--c); }
+.ws-final li.is-winner { background: color-mix(in srgb, var(--c) 20%, var(--panel)); }
+.ws-end-buttons { display: grid; justify-items: center; gap: 12px; }
+.ws-end-buttons a { color: var(--text-muted); font-weight: 700; }

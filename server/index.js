@@ -5,6 +5,7 @@ import { Server } from 'socket.io'
 import { importJeopardyLabs } from './jeopardylabs.js'
 import { NUMBER_WORDS, numberWordPattern, editDistance } from './text.js'
 import { createSurveyGames } from './survey.js'
+import { createWheelGames } from './wheel.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -85,8 +86,10 @@ function emitGame(game) { io.to(game.code).emit('game:update', publicGame(game))
 function clearGameTimers(game) { const timers=gameTimers.get(game.code)||{}; for(const timer of Object.values(timers)) clearTimeout(timer); gameTimers.set(game.code,{}) }
 function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||{}; clearTimeout(timers[name]); timers[name]=setTimeout(fn, ms); gameTimers.set(game.code,timers) }
 const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, gameTimers, cancelLeave })
-// Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register }.
-const modes = { survey }
+const wheel = createWheelGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
+// Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register },
+// and optionally hostJoined(game, socket) for a host screen or controller connecting.
+const modes = { survey, wheel }
 // Looked up with hasOwn because the name comes from the browser ("toString" must not count as a game).
 const modeFor = (kind) => Object.hasOwn(modes, kind) ? modes[kind] : undefined
 const modeOf = (game) => modeFor(game?.kind)
@@ -273,6 +276,7 @@ io.on('connection', (socket) => {
     const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, error: 'Game not found' })
     socket.data.controllerGame = game.code; if (display) game.hostSocketId = socket.id
     socket.join(game.code); ack?.({ ok: true, game: publicGame(game) }); emitGame(game)
+    modeOf(game)?.hostJoined?.(game, socket)
   })
   socket.on('player:join', ({ code, name, returningPlayerId }, ack) => {
     const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, error: 'Game not found' })
