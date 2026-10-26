@@ -67,7 +67,7 @@
 .fib-scoreboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .fib-scoreboard li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); }
 .fib-scoreboard li.is-away { opacity: 0.55; }
-.fib-scoreboard li.is-done { box-shadow: inset 3px 0 0 var(--sv-accent); }
+.fib-scoreboard li.is-done { background: var(--fact-soft); }
 .fib-sb-name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
 .fib-sb-name small { color: var(--text-muted); font-weight: 500; }
 .fib-sb-check { color: var(--text-muted); font-weight: 800; }
