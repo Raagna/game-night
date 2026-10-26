@@ -17,7 +17,12 @@ Up to 6 players buzz in from their phones.
 - **Fast Money finale**: the top two players race the clock through the same five quick clues: $1,000 per right answer, plus a $5,000 bonus each if they get 8 of 10 between them.
 
 ### Survey Says!
-A Family Feud-style game for two teams of up to 12 players in all. Teams face off for control of each "we asked 100 people" question, then guess the top answers. After three strikes, the other team gets one guess to steal everything banked so far. Games are 3 to 6 rounds, and points are multiplied in the later rounds. The questions come from a hand-written pack in `src/surveys.json`. You can swap any question during setup.
+A Family Feud-style game for two teams of up to 12 players in all. Teams face off for control of each "we asked 100 people" question, then guess the top answers. After three strikes, the other team gets one guess to steal everything banked so far. Games are 3 to 6 rounds, and points are multiplied in the later rounds.
+
+Setup offers two question packs, separately or together (*Everything*). You can swap any question before starting.
+
+- **Game Night**: 110 hand-written questions in `src/surveys.json`.
+- **ProtoQA**: 7,628 boards with real survey counts from the [ProtoQA dataset](https://github.com/iesl/protoqa-data). They're loaded from `public/data/surveys-protoqa.json` when Survey Says! opens.
 
 ### With or without a host
 Both games can be played two ways:
@@ -77,7 +82,7 @@ src/                  React client
   questions.js        loads the built-in archive and parses imported question files
   JoinQR.jsx          join QR codes and the phone join link
   shared.jsx          server address, socket connection and shared pieces
-  surveys.json        Survey Says! questions
+  surveys.json        Survey Says! hand-written questions
   topics.json         topic keywords for archive search
 server/               game server (Express + Socket.IO)
   index.js            lobbies, Jeopardy game logic, /health, /lan and the JeopardyLabs import route
@@ -85,15 +90,18 @@ server/               game server (Express + Socket.IO)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers
 public/
-  data/               built-in Jeopardy archive, one file per season (seasons.json is the index)
+  data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
+                      and the ProtoQA pack for Survey Says! (surveys-protoqa.json)
   audio/              sound effects
 scripts/
-  build-question-data.py  rebuilds public/data from a Jeopardy season archive ZIP
+  build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
+  build-protoqa-surveys.py  rebuilds public/data/surveys-protoqa.json from the ProtoQA data files
 ```
 
 ## Credits and licence
 
 - The built-in Jeopardy clues are generated into `public/data/` from a Jeopardy season archive by `scripts/build-question-data.py`.
 - The Survey Says! questions in `src/surveys.json` were written for this project, and their answers and points are invented.
+- The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.
