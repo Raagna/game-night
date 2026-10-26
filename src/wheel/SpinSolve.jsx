@@ -65,7 +65,7 @@ function segmentLabel(game) {
   return `Round ${n} of ${rounds}`;
 }
 const SOLVE_PHASES = ["solving", "tossupSolve", "speedSolve"];
-const CLOCK_PHASES = ["turn", "consonant", "solving", "tossupSolve", "finalSpin", "speedLetter", "speedSolve"];
+const CLOCK_PHASES = ["turn", "consonant", "solving", "tossupSolve", "finalSpin", "speedLetter", "speedSolve", "mystery", "expressChoice", "express"];
 const namesList = (game, list) => list.map((i) => nameOf(game, i)).join(" and ");
 const plural = (count, letter) => (count === 1 ? `one ${letter}` : `${count} ${letter}’s`);
 
@@ -79,7 +79,13 @@ function phaseText(game) {
     case "spinning":
       return { title: `${who} is spinning…`, detail: "" };
     case "consonant":
-      return { title: `${who} landed on ${money(round.value)}`, detail: "Call a consonant" };
+      return { title: `${who} landed on ${landedName(round)}`, detail: landedHint(round) };
+    case "mystery":
+      return { title: `${who}: take the money or flip?`, detail: `Keep ${money(round.landed?.value)} a letter, or turn the wedge over for ${money(10000)} or Bankrupt` };
+    case "expressChoice":
+      return { title: `${who}: play the Express?`, detail: "Keep calling letters at $1,000 each without spinning; any mistake is Bankrupt" };
+    case "express":
+      return { title: `${who} is on the Express!`, detail: `Consonants ${money(1000)} each, vowels ${money(game.vowelCost)}; any mistake is Bankrupt` };
     case "solving":
       return { title: `${who} is solving…`, detail: game.hostless ? "Filling in the blanks" : "Say it out loud, or fill in the blanks" };
     case "tossupReveal": {
@@ -96,21 +102,49 @@ function phaseText(game) {
       return { title: `${who}, solve it now!`, detail: game.hostless ? "As many tries as the clock allows" : "Say it, or fill in the blanks" };
     case "roundEnd":
       if (round.winner == null) return { title: "Nobody solved it", detail: round.tossup ? "Nobody wins the toss-up" : "No money banked this round" };
-      return { title: `${nameOf(game, round.winner)} ${round.tossup ? "wins the toss-up" : "solved it"}!`, detail: round.tossup ? `+${money(round.awarded)}` : `Banks ${money(round.awarded)}` };
+      return {
+        title: `${nameOf(game, round.winner)} ${round.tossup ? "wins the toss-up" : "solved it"}!`,
+        detail: round.tossup ? `+${money(round.awarded)}` : `Banks ${money(round.awarded)}${round.prizesWon?.length ? `, including ${round.prizesWon.map((prize) => prize.name).join(" and ")}` : ""}`,
+      };
     default:
       return { title: "", detail: "" };
   }
 }
 
+// What the last spin landed on, and what calling a consonant there gets you.
+function landedName(round) {
+  const landed = round.landed;
+  if (!landed) return money(round.value);
+  return { gift: "the Gift", million: "the Million Dollar wedge", mystery: "a Mystery wedge", express: "the Express" }[landed.kind] || money(landed.value);
+}
+function landedHint(round) {
+  const landed = round.landed, each = `Call a consonant: ${money(landed?.value)} a letter`;
+  switch (landed?.kind) {
+    case "gift": return round.gift ? `${each}, plus ${round.gift.name} (${money(round.gift.value)})` : each;
+    case "million": return `${each}, and a shot at $1,000,000 in the bonus round`;
+    case "mystery": return `${each}, or flip it for ${money(10000)} or Bankrupt`;
+    case "express": return `${each}, then play the Express or pass`;
+    default: return "Call a consonant";
+  }
+}
+
 // The latest thing that happened this round, in words ("There are 3 L’s!").
-const NEWS = ["hit", "miss", "land", "timeout", "wrongSolve", "skipped"];
+const NEWS = ["hit", "miss", "land", "timeout", "wrongSolve", "skipped", "gift", "million", "wild", "wildUsed", "mysteryTake", "mysteryFlip", "expressPlay", "bankrupt"];
 function latestNews(game) {
   const events = game.events || [], since = events.findLastIndex((e) => e.type === "round");
   const e = events.slice(since + 1).findLast((item) => NEWS.includes(item.type));
   if (!e) return null;
   const who = nameOf(game, e.contestant);
   switch (e.type) {
-    case "hit": return { tone: "good", text: e.vowel ? `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}` : `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}! +${money(e.amount)}` };
+    case "hit": return { tone: "good", text: e.vowel || e.amount == null ? `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}` : `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}! +${money(e.amount)}` };
+    case "gift": return { tone: "good", text: `${who} picks up ${e.name}!` };
+    case "million": return { tone: "good", text: `${who} has the Million Dollar wedge! Solve to keep it` };
+    case "wild": return { tone: "good", text: `${who} picks up the Wild Card!` };
+    case "wildUsed": return { tone: "good", text: `${who} plays the Wild Card for another consonant` };
+    case "mysteryTake": return { tone: "good", text: `${who} takes the money: +${money(e.amount)}` };
+    case "mysteryFlip": return e.won ? { tone: "good", text: `${who} flipped it: ${money(e.amount)}!` } : { tone: "bad", text: `${who} flipped it: Bankrupt!` };
+    case "expressPlay": return { tone: "good", text: `${who} is playing the Express!` };
+    case "bankrupt": return { tone: "bad", text: `${who} went bankrupt on the Express` };
     case "miss": return { tone: "bad", text: `No ${e.letter}` };
     case "land":
       if (e.final) return e.kind === "cash" ? null : { tone: "bad", text: "That doesn’t count for the speed-up: spinning again" };
@@ -150,6 +184,11 @@ function dealPuzzles(plan) {
   const picks = pickPuzzles(plan.length);
   return { picks, spares: pickPuzzles(2, picks), bonus: pickPuzzles(3, [], BONUS_POOL) };
 }
+// The Gift wedge's prize for rounds 1 to 3 and the round-3 Prize Puzzle's trip, from the pack's prize lists.
+function dealPrizes() {
+  const prize = ([name, value]) => ({ name, value });
+  return { gifts: shuffle(PUZZLES.gifts).slice(0, 3).map(prize), trip: prize(shuffle(PUZZLES.trips)[0]) };
+}
 // What setup sends the server for a plan and its puzzles.
 const gameSegments = (plan, picks) => plan.map((step, i) => ({ ...step, ...forServer(picks[i]) }));
 
@@ -178,7 +217,7 @@ export function WheelSetup({ onCreate }) {
     setNotice(""); setBusy(true);
     rememberPlayed([...picks, ...(withBonus ? bonus : [])].map((puzzle) => puzzle.id));
     onCreate(
-      { game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), bonus: withBonus ? bonus.map(forServer) : [], hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after" },
+      { game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), bonus: withBonus ? bonus.map(forServer) : [], ...dealPrizes(), hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after" },
       (error) => { setBusy(false); setNotice(error); },
     );
   };
@@ -210,6 +249,7 @@ export function WheelSetup({ onCreate }) {
             {length === "short" ? "A $1,000 toss-up, two rounds and the final round. About 20 minutes."
               : length === "classic" ? "Like the show: $1,000 and $2,000 toss-ups, rounds 1 and 2, a $3,000 toss-up, round 3 and the final round. About 35 minutes."
               : `${roundCount} rounds${tossupCount ? ` and ${tossupCount} toss-ups` : ", no toss-ups"}.`}
+            {" "}Rounds 1 to 3 have the Wild Card, a Gift and the Million Dollar wedge; round 2 adds two Mystery wedges, and round 3 (Classic, or Custom with 4 or more rounds) the Express wedge and a Prize Puzzle worth a trip.
             {" "}The final round ends in a speed-up: one last spin sets every consonant’s value, vowels are free, and each letter found gives a few seconds to solve. A tie for the lead is settled with a toss-up.
           </p>
         </fieldset>
@@ -321,7 +361,10 @@ function UsedLetters({ round }) {
 const WEDGE_COLORS = ["#e8434f", "#ffb627", "#3d7bff", "#2fbf71", "#a970ff", "#ff7a2f", "#ff5fa8", "#20c3d0"];
 const LIGHT_WEDGES = new Set(["#ffb627", "#20c3d0", "#2fbf71"]);
 // The bonus wheel's envelopes are sealed: they all look the same.
-const wedgeLabel = (wedge) => (wedge.kind === "envelope" ? "?" : wedge.kind === "bankrupt" ? "BANKRUPT" : wedge.kind === "loseTurn" ? "LOSE A TURN" : money(wedge.value).replace(",", ""));
+const WEDGE_LABELS = { envelope: "?", bankrupt: "BANKRUPT", loseTurn: "LOSE A TURN", gift: "GIFT", million: "$1M", mystery: "MYSTERY", express: "EXPRESS" };
+const wedgeLabel = (wedge) => WEDGE_LABELS[wedge.kind] || money(wedge.value).replace(",", "");
+// [fill, dark text] for wedges that aren't plain cash.
+const WEDGE_STYLES = { bankrupt: ["#101014", false], loseTurn: ["#f4f4f4", true], gift: ["#7b2ff7", false], million: ["#101014", false], mystery: ["#b5179e", false], express: ["#ffd23f", true] };
 const ENVELOPE_WHEEL = Array.from({ length: 24 }, () => ({ kind: "envelope" }));
 const point = (angle, radius) => [radius * Math.sin((angle * Math.PI) / 180), -radius * Math.cos((angle * Math.PI) / 180)];
 // Wedge i is centred i × (360 / wedges) degrees clockwise from the pointer at the top, and each wedge is
@@ -350,14 +393,24 @@ function Wheel({ wheel, spin, spinKey }) {
           <circle r="104" fill="#11183f" />
           {wheel.map((wedge, i) => {
             const center = i * size, [x1, y1] = point(center - size / 2, 100), [x2, y2] = point(center + size / 2, 100);
-            const fill = wedge.kind === "envelope" ? (i % 2 ? "#e9e2cc" : "#f2c14e") : wedge.kind === "bankrupt" ? "#101014" : wedge.kind === "loseTurn" ? "#f4f4f4" : wedge.top ? "#dfe3ee" : WEDGE_COLORS[i % WEDGE_COLORS.length];
-            const dark = wedge.kind === "envelope" || wedge.kind === "loseTurn" || wedge.top || LIGHT_WEDGES.has(fill);
+            const [styleFill, styleDark] = WEDGE_STYLES[wedge.kind] || [];
+            const fill = wedge.kind === "envelope" ? (i % 2 ? "#e9e2cc" : "#f2c14e") : styleFill || (wedge.top ? "#dfe3ee" : WEDGE_COLORS[i % WEDGE_COLORS.length]);
+            const dark = wedge.kind === "envelope" || styleDark || wedge.top || (!styleFill && LIGHT_WEDGES.has(fill));
             const label = wedgeLabel(wedge);
+            // The Million Dollar wedge's middle third is the million; the slivers either side are Bankrupt.
+            const [m1x, m1y] = point(center - size / 6, 100), [m2x, m2y] = point(center + size / 6, 100);
             return (
               <g key={i}>
                 <path d={`M0 0 L${x1} ${y1} A100 100 0 0 1 ${x2} ${y2} Z`} fill={fill} stroke="#0b1030" strokeWidth="0.8" />
+                {wedge.kind === "million" && <path d={`M0 0 L${m1x} ${m1y} A100 100 0 0 1 ${m2x} ${m2y} Z`} fill="#1db954" />}
                 <g transform={`rotate(${center - 90})`}>
                   <text x="62" y="0" className="ws-wedge-text" fill={dark ? "#141833" : "#fff"} fontSize={label.length > 5 ? 6.2 : 9} dominantBaseline="middle" textAnchor="middle">{label}</text>
+                  {wedge.wild && (
+                    <g>
+                      <rect x="79" y="-4.6" width="17" height="9.2" rx="1.6" fill="#fff" stroke="#141833" strokeWidth="0.6" />
+                      <text x="87.5" y="0.2" className="ws-wedge-text" fill="#b5179e" fontSize="3.8" dominantBaseline="middle" textAnchor="middle">WILD</text>
+                    </g>
+                  )}
                 </g>
                 <circle cx={point(center - size / 2, 96)[0]} cy={point(center - size / 2, 96)[1]} r="1.6" fill="#f6f2e3" />
               </g>
@@ -374,14 +427,19 @@ function Wheel({ wheel, spin, spinKey }) {
 // A big word across the wheel when it stops on something bad, or the value when it's money.
 function LandingFlash({ game }) {
   const [flash, setFlash] = useState(null);
-  useNewEvents(game, (e) => { if (e.type === "land") setFlash({ ...e }); });
+  useNewEvents(game, (e) => {
+    if (e.type === "land") setFlash({ ...e });
+    // Turning the Mystery wedge over.
+    if (e.type === "mysteryFlip") setFlash({ id: e.id, kind: e.won ? "mysteryWin" : "bankrupt", value: e.amount });
+  });
   useEffect(() => {
     if (!flash) return;
     const timer = setTimeout(() => setFlash(null), 1800);
     return () => clearTimeout(timer);
   }, [flash]);
   if (!flash) return null;
-  const text = flash.kind === "bankrupt" ? "BANKRUPT" : flash.kind === "loseTurn" ? "LOSE A TURN" : money(flash.value);
+  const FLASH = { bankrupt: "BANKRUPT", loseTurn: "LOSE A TURN", gift: "GIFT", million: "$1,000,000", mystery: "MYSTERY", express: "EXPRESS" };
+  const text = flash.kind === "mysteryWin" ? `${money(flash.value)}!` : FLASH[flash.kind] || money(flash.value);
   return <div className={`ws-flash is-${flash.kind}`} key={flash.id} aria-hidden="true">{text}</div>;
 }
 
@@ -398,6 +456,7 @@ function Podiums({ game }) {
             <span className="ws-podium-name">{contestant.name}{!contestant.present && <small> · away</small>}</span>
             <b className="ws-podium-bank money">{money(contestant.roundBank)}</b>
             <span className="ws-podium-total">Total <b className="money">{money(contestant.total)}</b></span>
+            <Extras contestant={contestant} />
           </li>
         );
       })}
@@ -416,6 +475,19 @@ function SpeedUpIn({ game }) {
 // When this browser got the current update, so server times can be turned into local ones.
 const received = new WeakMap();
 const receivedAt = (game) => { if (!received.has(game)) received.set(game, Date.now()); return received.get(game); };
+
+// What a contestant is holding besides money: the Wild Card, the Million Dollar wedge (dashed until the
+// round is solved), and gifts picked up this round.
+function Extras({ contestant }) {
+  if (!contestant || !(contestant.wildCard || contestant.million || contestant.millionThisRound || contestant.roundPrizes?.length)) return null;
+  return (
+    <span className="ws-extras">
+      {contestant.wildCard && <span className="ws-chip is-wild">Wild Card</span>}
+      {(contestant.million || contestant.millionThisRound) && <span className={`ws-chip is-million${contestant.million ? "" : " is-pending"}`}>$1M wedge</span>}
+      {contestant.roundPrizes?.map((prize, i) => <span key={i} className="ws-chip is-gift">{prize.name}</span>)}
+    </span>
+  );
+}
 
 function Clock({ game }) {
   const round = game.round;
@@ -519,6 +591,8 @@ export function WheelDisplay({ game, onAction }) {
             </div>
             <div className="ws-status" role="status">
               {round.speedUp?.value && round.phase !== "roundEnd" && <p className="ws-speedup">Speed-up · consonants {money(round.speedUp.value)} · vowels free</p>}
+              {round.prizePuzzle && round.phase !== "roundEnd" && <p className="ws-prize-puzzle">Prize Puzzle · solve it to win {round.prizePuzzle.name} ({money(round.prizePuzzle.value)})</p>}
+              {round.express && round.phase !== "roundEnd" && <p className="ws-speedup">Express · no spinning · any mistake is Bankrupt</p>}
               <h2>{title}</h2>
               {detail && <p>{detail}</p>}
               {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.text}</p>}
@@ -657,7 +731,36 @@ function TurnActions({ game, playerId }) {
         </button>
         <button className="primary" disabled={sent} onClick={() => emit("solveStart")}>Solve</button>
       </div>
+      {round.wildChance && me.wildCard && round.consonantsLeft && (
+        <button className="secondary ws-wild-btn" disabled={sent} onClick={() => emit("wild")}>Play your Wild Card <small>Another consonant at the same value</small></button>
+      )}
     </div>
+  );
+}
+// Two big choices (Mystery: take or flip; Express: pass or play).
+function ChoiceButtons({ game, playerId, event, options }) {
+  const [sent, setSent] = useState(false);
+  return (
+    <div className="ws-turn-row ws-choice">
+      {options.map((option) => (
+        <button key={option.label} className={option.primary ? "primary" : "secondary"} disabled={sent} onClick={() => { setSent(true); socket.emit(`wheel:${event}`, { code: game.code, playerId, ...option.payload }); }}>
+          {option.label} <small>{option.note}</small>
+        </button>
+      ))}
+    </div>
+  );
+}
+// On the Express: consonants without spinning, vowels at $250, or solve.
+function ExpressActions({ game, playerId }) {
+  const round = game.round, me = game.contestants[round.control], [sent, setSent] = useState(false);
+  const canBuy = round.vowelsLeft && me.roundBank >= game.vowelCost;
+  const emit = (name, extra = {}) => { setSent(true); socket.emit(`wheel:${name}`, { code: game.code, playerId, ...extra }); };
+  return (
+    <>
+      <Keyboard allowed={sent ? "" : CONSONANTS + (canBuy ? VOWELS : "")} used={round.called.join("")} onKey={(letter) => emit(VOWELS.includes(letter) ? "buyVowel" : "consonant", { letter })} />
+      <p className="muted ws-hint">{canBuy ? `Vowels cost ${money(game.vowelCost)}.` : round.vowelsLeft ? `Vowels need ${money(game.vowelCost)}.` : "No vowels left."}</p>
+      <button className="primary ws-solve-now" disabled={sent} onClick={() => emit("solveStart")}>Solve</button>
+    </>
   );
 }
 
@@ -678,6 +781,31 @@ function PlayerAction({ game, playerId }) {
       return <>{status("Speed-up! Spin one last time", true)}<p className="muted">Consonants will be worth the spin plus $1,000 for the rest of the round.</p><Clock game={game} /><SpinButton key={turnKey} game={game} playerId={playerId} hint="For the speed-up" /></>;
     case "speedLetter":
       return <>{status(`Call a letter: consonants ${money(round.value)}, vowels free`, true)}<Clock game={game} /><SpeedLetterPicker key={turnKey} game={game} playerId={playerId} /></>;
+    case "mystery":
+      return (
+        <>
+          {status("Take the money, or flip the wedge?", true)}
+          <Clock game={game} />
+          <ChoiceButtons key={turnKey} game={game} playerId={playerId} event="mystery" options={[
+            { label: "Take the money", note: `${money(round.landed?.value)} a letter`, payload: { flip: false } },
+            { label: "Flip it!", note: `${money(10000)} or Bankrupt`, payload: { flip: true }, primary: true },
+          ]} />
+        </>
+      );
+    case "expressChoice":
+      return (
+        <>
+          {status("All aboard the Express?", true)}
+          <p className="muted">Keep calling consonants at $1,000 each without spinning. Any mistake is Bankrupt.</p>
+          <Clock game={game} />
+          <ChoiceButtons key={turnKey} game={game} playerId={playerId} event="express" options={[
+            { label: "Pass", note: "Play on normally", payload: { play: false } },
+            { label: "Play", note: "No more spinning", payload: { play: true }, primary: true },
+          ]} />
+        </>
+      );
+    case "express":
+      return <>{status("Express! Call a consonant, buy a vowel or solve", true)}<Clock game={game} /><ExpressActions key={turnKey} game={game} playerId={playerId} /></>;
     case "turn":
       return <>{status("Your turn!", true)}<Clock game={game} /><TurnActions key={turnKey} game={game} playerId={playerId} /></>;
     case "spinning":
@@ -685,7 +813,8 @@ function PlayerAction({ game, playerId }) {
     case "consonant":
       return (
         <>
-          {status(`${money(round.value)} — call a consonant`, true)}
+          {status(round.landed && round.landed.kind !== "cash" ? `You landed on ${landedName(round)}!` : `${money(round.value)} — call a consonant`, true)}
+          {round.landed && round.landed.kind !== "cash" && <p className="muted">{landedHint(round)}</p>}
           <Clock game={game} />
           <ConsonantPicker key={turnKey} game={game} playerId={playerId} />
         </>
@@ -741,6 +870,7 @@ export function WheelPlayer({ game, playerId }) {
         <span>This round <b className="money">{money(me?.roundBank)}</b></span>
         <span>Total <b className="money">{money(me?.total)}</b></span>
       </div>
+      <Extras contestant={me} />
       {game.status === "bonus" ? (
         <BonusPlayer game={game} playerId={playerId} />
       ) : game.status === "lobby" || !round ? (
@@ -997,7 +1127,7 @@ export function WheelEnd({ game, host, onAction }) {
   const playAgain = () => {
     const { picks, spares, bonus } = dealPuzzles(game.plan), bonusPicks = game.hasBonus ? bonus : [];
     rememberPlayed([...picks, ...bonusPicks].map((puzzle) => puzzle.id));
-    onAction("replay", { segments: gameSegments(game.plan, picks), spares: spares.map(forServer), bonus: bonusPicks.map(forServer) });
+    onAction("replay", { segments: gameSegments(game.plan, picks), spares: spares.map(forServer), bonus: bonusPicks.map(forServer), ...dealPrizes() });
   };
   return (
     <main className="end wheel-game">
@@ -1013,7 +1143,11 @@ export function WheelEnd({ game, host, onAction }) {
       <ol className="ws-final">
         {ranked.map((contestant) => (
           <li key={contestant.i} className={`${colorOf(contestant.i)}${contestant.i === game.winner ? " is-winner" : ""}`}>
-            <span>{contestant.name}{contestant.consolation > 0 && <small>includes {money(contestant.consolation)} for playing</small>}</span>
+            <span>
+              {contestant.name}
+              {contestant.prizes?.length > 0 && <small>won {contestant.prizes.map((prize) => prize.name).join(", ")}</small>}
+              {contestant.consolation > 0 && <small>includes {money(contestant.consolation)} for playing</small>}
+            </span>
             <b className="money">{money(contestant.total)}</b>
           </li>
         ))}

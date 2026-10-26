@@ -9,6 +9,15 @@
 //
 // Toss-ups reveal one tile at a time; the first contestant to buzz in gets one try, and a miss locks them
 // out while the tiles keep coming. The winner banks the toss-up's value and starts the next round.
+// Rounds 1 to 3 have the show's special wedges. The Wild Card sits on one cash wedge: whoever calls a right
+// letter there keeps it, and can spend it on a second consonant at the same value or a fourth consonant in
+// the bonus round. The Gift wedge and the Million Dollar wedge (a sliver between two Bankrupts) pay $500 a
+// letter plus the gift, or the chance at $1,000,000 in the bonus round, both kept only by solving the round.
+// Round 2's two Mystery wedges pay $1,000 a letter, or can be flipped for $10,000 or Bankrupt. Round 3's
+// Express wedge pays $1,000 a letter and lets the contestant keep calling letters without spinning, with any
+// mistake counting as Bankrupt; round 3 is also the Prize Puzzle, worth a trip to whoever solves it.
+// Bankrupt takes the round's money and gifts, and the Wild Card or Million Dollar wedge, from any round.
+//
 // The final round plays normally until the speed-up (two minutes in, or straight away): one last spin
 // sets the value of every consonant for the rest of the round (plus $1,000), vowels are free, and each
 // letter found gives that contestant a few seconds to solve. A tie for the lead after that is settled by
@@ -52,24 +61,35 @@ export const BONUS_PICKS = { consonants: 3, vowels: 1 }
 export const BONUS_ENVELOPES = [100000, 40000, 45000, 40000, 50000, 40000, 45000, 40000, 55000, 40000, 45000, 40000, 60000, 40000, 45000, 40000, 50000, 40000, 45000, 40000, 75000, 40000, 45000, 40000]
 export const MILLION_PRIZE = 1000000
 const TOP_VALUES = [2500, 3500, 3500, 5000]
-// Each round's 24 wedges, clockwise from the top-value wedge. Numbers are cash wedges. Special wedges
-// stand in as the cash value in STAND_IN until they're in play.
+// Each round's 24 wedges, clockwise from the top-value wedge. Numbers are cash wedges.
 const LAYOUTS = [
   ['TOP', 600, 700, 600, 650, 500, 700, 'BANKRUPT', 600, 550, 500, 600, 'MILLION', 650, 'GIFT', 700, 'LOSE', 800, 500, 650, 500, 900, 'BANKRUPT', 600],
   ['TOP', 600, 'MYSTERY', 700, 600, 650, 500, 700, 'BANKRUPT', 600, 550, 500, 'MILLION', 650, 'GIFT', 700, 'LOSE', 800, 'MYSTERY', 650, 500, 900, 'BANKRUPT', 600],
   ['TOP', 600, 700, 'EXPRESS', 650, 500, 700, 'BANKRUPT', 600, 550, 500, 600, 'MILLION', 650, 'GIFT', 700, 'LOSE', 800, 500, 650, 500, 900, 'BANKRUPT', 600],
   ['TOP', 600, 700, 600, 650, 500, 700, 'BANKRUPT', 600, 550, 500, 600, 800, 650, 900, 700, 'LOSE', 800, 500, 650, 500, 900, 'BANKRUPT', 600],
 ]
-const STAND_IN = { MILLION: 900, GIFT: 500, MYSTERY: 1000, EXPRESS: 1000 }
+// While someone holds the Million Dollar wedge, its spot is a plain $900 wedge.
+const MILLION_STAND_IN = 900
+// What the special wedges pay for each letter, as on the show.
+export const SPECIAL_VALUES = { gift: 500, million: 500, mystery: 1000, express: 1000 }
+export const MYSTERY_PRIZE = 10000
+// The Wild Card, the Million Dollar wedge and the Gift are on the wheel in rounds 1 to 3 (never the final round);
+// round 2 adds the Mystery wedges, round 3 the Express wedge and the Prize Puzzle.
+export const SPECIAL_ROUNDS = 3
+const DEFAULT_GIFT = { name: 'A surprise gift', value: 1000 }, DEFAULT_TRIP = { name: 'A trip for two', value: 8000 }
 
 // The wheel for a round (1-based); rounds after the fourth, and the final round, use the fourth round's wheel.
-export function buildWheel(roundNumber) {
+export function buildWheel(roundNumber, { million = true } = {}) {
   const index = Math.min(Math.max(roundNumber, 1), LAYOUTS.length) - 1
   return LAYOUTS[index].map((wedge) =>
     wedge === 'TOP' ? { kind: 'cash', value: TOP_VALUES[index], top: true }
       : wedge === 'BANKRUPT' ? { kind: 'bankrupt' }
       : wedge === 'LOSE' ? { kind: 'loseTurn' }
-      : { kind: 'cash', value: typeof wedge === 'number' ? wedge : STAND_IN[wedge] })
+      : wedge === 'MILLION' ? (million ? { kind: 'million', value: SPECIAL_VALUES.million } : { kind: 'cash', value: MILLION_STAND_IN })
+      : wedge === 'GIFT' ? { kind: 'gift', value: SPECIAL_VALUES.gift }
+      : wedge === 'MYSTERY' ? { kind: 'mystery', value: SPECIAL_VALUES.mystery }
+      : wedge === 'EXPRESS' ? { kind: 'express', value: SPECIAL_VALUES.express }
+      : { kind: 'cash', value: wedge })
 }
 
 const text = (value, max) => String(value ?? '').trim().slice(0, max)
@@ -95,8 +115,11 @@ function cleanConfig(config) {
   const spares = (Array.isArray(config?.spares) ? config.spares : []).slice(0, 3).map(cleanPuzzle).filter(usable)
   // The bonus round's three category choices (fewer is fine; none means no bonus round).
   const bonus = (Array.isArray(config?.bonus) ? config.bonus : []).slice(0, 3).map(cleanPuzzle).filter(usable)
+  // The Gift wedge's prize in rounds 1 to 3, and the Prize Puzzle's trip in round 3.
+  const prize = (raw) => { const name = text(raw?.name, 40), value = Math.trunc(Number(raw?.value)); return name && value >= 100 && value <= 50000 ? { name, value } : null }
+  const gifts = (Array.isArray(config?.gifts) ? config.gifts : []).slice(0, SPECIAL_ROUNDS).map(prize).filter(Boolean)
   return {
-    segments, spares, bonus, hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
+    segments, spares, bonus, gifts, trip: prize(config?.trip), hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
     speedUp: config?.speedUp === 'start' ? 'start' : 'after',
   }
 }
@@ -131,7 +154,12 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     player.contestant = game.contestants.length
     game.contestants.push(freshContestant(player.name))
   }
-  const freshContestant = (name) => ({ name, total: 0, roundBank: 0, solvedAny: false, consolation: 0 })
+  // roundPrizes: gifts picked up this round, kept only on a solve; prizes: everything won so far.
+  // wildCard and million carry over from round to round until used, or lost to Bankrupt.
+  const freshContestant = (name) => ({
+    name, total: 0, roundBank: 0, solvedAny: false, consolation: 0,
+    roundPrizes: [], prizes: [], wildCard: false, million: false, millionThisRound: false,
+  })
 
   // ---------- The puzzle ----------
   // A letter is showing if it has been called, or (in a toss-up) its tile has been turned on its own.
@@ -183,6 +211,9 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
         called: round.called, misses: round.called.filter((letter) => !round.puzzle.counts[letter]),
         consonantsLeft: lettersLeft(round, CONSONANTS), vowelsLeft: lettersLeft(round, VOWELS), blanks: hiddenLetters(round).length,
         wheel: round.wheel, spin: round.spin, value: round.value, lastSolve: round.lastSolve,
+        // Not which Mystery wedge holds the $10,000: that stays on the server.
+        landed: round.landed && { kind: round.landed.kind, value: round.landed.value }, wildChance: !!round.wildChance, express: round.express,
+        gift: round.gift, prizePuzzle: round.prizePuzzle, mysteryFlipped: round.mysteryFlipped, prizesWon: round.prizesWon,
         tossup: isTossup(round) ? { value: round.tossupValue, lockedOut: round.lockedOut, eligible: round.eligible } : null,
         speedUp: round.speedUp, speedUpAt: round.speedUp ? null : round.speedUpAt,
         winner: round.winner, awarded: round.awarded, solution: ended ? round.puzzle.text : undefined,
@@ -224,9 +255,10 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   const PHASE_TIME = {
     turn: 'decideMs', consonant: 'letterMs', solving: 'solveMs', spinning: 'spinMs', roundEnd: 'roundEndMs',
     tossupSolve: 'quickSolveMs', finalSpin: 'decideMs', speedLetter: 'letterMs', speedSolve: 'quickSolveMs',
+    mystery: 'decideMs', expressChoice: 'decideMs', express: 'letterMs',
   }
   // Phases waiting on the contestant in control: the host can pause these clocks.
-  const ACTOR_PHASES = ['turn', 'consonant', 'solving', 'tossupSolve', 'finalSpin', 'speedLetter', 'speedSolve']
+  const ACTOR_PHASES = ['turn', 'consonant', 'solving', 'tossupSolve', 'finalSpin', 'speedLetter', 'speedSolve', 'mystery', 'expressChoice', 'express']
   function phaseMs(game, phase) {
     const key = PHASE_TIME[phase]
     // With a host, the host moves on from a finished round.
@@ -257,19 +289,29 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     // Nobody spun for the speed-up: the wheel gets spun for them.
     else if (phase === 'finalSpin') spinWheel(game, 0.6)
     else if (phase === 'tossupSolve') lockOut(game, 'timeout')
-    // A speed-up solve lasts until the clock runs out, however many tries that takes.
-    else { event(game, 'timeout', { contestant: round.control }); passControl(game) }
+    // Not deciding in time takes the safe choice: the Mystery money, or passing on the Express.
+    else if (phase === 'mystery') chooseMystery(game, false)
+    else if (phase === 'expressChoice') chooseExpress(game, false)
+    // A speed-up solve lasts until the clock runs out, however many tries that takes. On the Express,
+    // running out of time is Bankrupt.
+    else {
+      event(game, 'timeout', { contestant: round.control })
+      if (round.express) goBankrupt(game, 'express')
+      passControl(game)
+    }
     emitGame(game)
   }
 
   // ---------- Segments ----------
   function startSegment(game) {
     const segment = game.segments[game.segmentIndex], puzzle = segment.puzzle
-    game.contestants.forEach((contestant) => { contestant.roundBank = 0 })
+    game.contestants.forEach((contestant) => Object.assign(contestant, { roundBank: 0, roundPrizes: [], millionThisRound: false }))
     game.round = {
       type: segment.type, n: segment.n, puzzle: { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) },
       phase: null, shown: [], revealed: [], called: [], control: null, actorId: null, deadline: null, pausedMs: null,
-      wheel: null, spin: null, value: null, lastSolve: null, winner: null, awarded: 0,
+      wheel: null, spin: null, value: null, lastSolve: null, winner: null, awarded: 0, prizesWon: [],
+      // landed: the wedge the last spin stopped on; wildChance: the value a Wild Card would call a second consonant at.
+      landed: null, wildChance: null, express: false, gift: null, prizePuzzle: null, mysteryTenK: null, mysteryFlipped: false,
     }
     event(game, 'round', { segment: game.segmentIndex, type: segment.type })
     if (segment.type === 'tossup' || segment.type === 'tiebreak') startTossup(game, segment)
@@ -277,8 +319,21 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     sendSecret(game)
   }
   function startMainRound(game, segment) {
-    const round = game.round
-    round.wheel = buildWheel(segment.type === 'final' ? LAYOUTS.length : segment.n)
+    const round = game.round, special = segment.type === 'round' && segment.n <= SPECIAL_ROUNDS
+    const nobodyHolds = (flag) => !game.contestants.some((contestant) => contestant[flag])
+    round.wheel = buildWheel(segment.type === 'final' ? LAYOUTS.length : segment.n, { million: special && nobodyHolds('million') })
+    if (special) {
+      round.gift = game.config.gifts[segment.n - 1] || DEFAULT_GIFT
+      if (segment.n === SPECIAL_ROUNDS) round.prizePuzzle = game.config.trip || DEFAULT_TRIP
+      // The Wild Card goes on a random cash wedge (not the top value), unless someone already has it.
+      if (nobodyHolds('wildCard')) {
+        const cash = round.wheel.map((wedge, i) => (wedge.kind === 'cash' && !wedge.top ? i : -1)).filter((i) => i >= 0)
+        round.wheel[cash[Math.floor(random() * cash.length)]].wild = true
+      }
+      // Which Mystery wedge hides the $10,000 is decided now and never sent to the screens.
+      const mysteries = round.wheel.map((wedge, i) => (wedge.kind === 'mystery' ? i : -1)).filter((i) => i >= 0)
+      if (mysteries.length) round.mysteryTenK = mysteries[Math.floor(random() * mysteries.length)]
+    }
     if (segment.type === 'final') { round.speedUp = null; round.speedUpAt = Date.now() + (game.config.speedUp === 'start' ? 0 : WHEEL_TIMES.speedUpAfterMs) }
     // The winner of the toss-up just before starts the round; otherwise control rotates from round to round.
     const start = game.startNext != null && present(game, game.startNext) ? game.startNext : firstPresent(game, (segment.n - 1) % Math.max(1, game.contestants.length))
@@ -398,6 +453,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const round = game.round
     round.control = contestant
     round.actorId = contestant == null ? null : members(game, contestant).find((player) => player.socketId)?.id || null
+    round.express = false; round.landed = null; round.wildChance = null
     if (!round.speedUp) round.value = null
     setPhase(game, round.speedUp?.value ? 'speedLetter' : round.speedUp ? 'finalSpin' : 'turn')
   }
@@ -411,7 +467,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function spin(game, power) {
     const round = game.round
     // Once every consonant is showing, only vowels and solving are left.
-    if (round.phase === 'turn' && lettersLeft(round, CONSONANTS)) spinWheel(game, power)
+    if (round.phase === 'turn' && lettersLeft(round, CONSONANTS)) { round.wildChance = null; spinWheel(game, power) }
     else if (round.phase === 'finalSpin') spinWheel(game, power)
   }
   function spinWheel(game, power) {
@@ -422,49 +478,135 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     setPhase(game, 'spinning')
   }
   function land(game) {
-    const round = game.round, wedge = round.wheel[Math.floor(round.spin.slot / SLOTS_PER_WEDGE)]
-    event(game, 'land', { contestant: round.control, kind: wedge.kind, value: wedge.value, final: !!round.speedUp })
+    const round = game.round, index = Math.floor(round.spin.slot / SLOTS_PER_WEDGE), wedge = round.wheel[index]
+    // The Million Dollar wedge is three slots: Bankrupt, the million, Bankrupt.
+    const kind = wedge.kind === 'million' && round.spin.slot % SLOTS_PER_WEDGE !== 1 ? 'bankrupt' : wedge.kind
+    event(game, 'land', { contestant: round.control, kind, value: wedge.value, wild: !!wedge.wild, final: !!round.speedUp })
     // The final spin only sets the speed-up's value: anything that isn't money is spun again.
     if (round.speedUp) {
-      if (wedge.kind !== 'cash') { spinWheel(game, 0.6); return }
+      if (kind !== 'cash') { spinWheel(game, 0.6); return }
       round.speedUp.value = wedge.value + SPEED_UP_BONUS
       round.value = round.speedUp.value
       event(game, 'speedUpValue', { value: round.value })
       setPhase(game, 'speedLetter')
       return
     }
-    if (wedge.kind === 'bankrupt') { bankOf(game).roundBank = 0; passControl(game) }
-    else if (wedge.kind === 'loseTurn') passControl(game)
-    else { round.value = wedge.value; setPhase(game, 'consonant') }
+    if (kind === 'bankrupt') { goBankrupt(game); passControl(game) }
+    else if (kind === 'loseTurn') passControl(game)
+    else { round.landed = { index, kind, value: wedge.value, wild: !!wedge.wild }; round.value = wedge.value; setPhase(game, 'consonant') }
   }
+  // Bankrupt takes the round's money and gifts, and the Wild Card and Million Dollar wedge even if they were
+  // won in an earlier round. Money banked in earlier rounds is safe.
+  function goBankrupt(game, why = null) {
+    Object.assign(bankOf(game), { roundBank: 0, roundPrizes: [], millionThisRound: false, wildCard: false, million: false })
+    if (why) event(game, 'bankrupt', { contestant: game.round.control, why })
+  }
+  // A consonant after a spin, or during the Express (no spin, $1,000 a letter, and a miss is Bankrupt).
   function callConsonant(game, letter) {
-    const round = game.round
-    if (round.phase !== 'consonant' || !CONSONANTS.includes(letter) || round.called.includes(letter)) return
+    const round = game.round, express = round.phase === 'express'
+    if ((round.phase !== 'consonant' && !express) || !CONSONANTS.includes(letter) || round.called.includes(letter)) return
     round.called.push(letter)
-    const count = round.puzzle.counts[letter] || 0
-    if (!count) { event(game, 'miss', { contestant: round.control, letter }); passControl(game); return }
+    round.wildChance = null
+    const count = round.puzzle.counts[letter] || 0, contestant = bankOf(game)
+    const landed = express ? { kind: 'express', value: SPECIAL_VALUES.express } : round.landed
+    if (!count) {
+      event(game, 'miss', { contestant: round.control, letter })
+      if (express) goBankrupt(game, 'express')
+      passControl(game)
+      return
+    }
     round.shown.push(letter)
-    bankOf(game).roundBank += round.value * count
-    event(game, 'hit', { contestant: round.control, letter, count, amount: round.value * count })
     round.value = null
-    if (allShown(round)) win(game, round.control)
-    else setPhase(game, 'turn')
+    // On a Mystery wedge the money waits for the choice: take it, or flip the wedge over.
+    if (landed.kind === 'mystery') { round.mysteryCount = count; event(game, 'hit', { contestant: round.control, letter, count, amount: null }); setPhase(game, 'mystery'); return }
+    contestant.roundBank += landed.value * count
+    event(game, 'hit', { contestant: round.control, letter, count, amount: landed.value * count })
+    claimWedge(game, landed)
+    if (allShown(round)) { win(game, round.control); return }
+    if (express) { setPhase(game, 'express'); return }
+    if (landed.kind === 'express') { setPhase(game, 'expressChoice'); return }
+    // Holding the Wild Card, they can call a second consonant for the same value straight away.
+    if (!landed.usedWild) round.wildChance = landed.value
+    setPhase(game, 'turn')
+  }
+  // A right letter on the Gift, the Million Dollar wedge or the Wild Card picks it up and takes it off the wheel.
+  function claimWedge(game, landed) {
+    const round = game.round, contestant = bankOf(game), wedge = round.wheel[landed.index]
+    if (landed.kind === 'gift' && round.gift) {
+      contestant.roundPrizes.push(round.gift)
+      event(game, 'gift', { contestant: round.control, ...round.gift })
+      round.gift = null
+      round.wheel[landed.index] = { kind: 'cash', value: SPECIAL_VALUES.gift }
+    }
+    if (landed.kind === 'million') {
+      contestant.millionThisRound = true
+      event(game, 'million', { contestant: round.control })
+      round.wheel[landed.index] = { kind: 'cash', value: MILLION_STAND_IN }
+    }
+    if (landed.wild && wedge?.wild) {
+      contestant.wildCard = true
+      delete wedge.wild
+      event(game, 'wild', { contestant: round.control })
+    }
+  }
+  function useWild(game) {
+    const round = game.round, contestant = bankOf(game)
+    if (round.phase !== 'turn' || !round.wildChance || !contestant.wildCard || !lettersLeft(round, CONSONANTS)) return
+    contestant.wildCard = false
+    round.landed = { kind: 'cash', value: round.wildChance, usedWild: true }
+    round.value = round.wildChance
+    round.wildChance = null
+    event(game, 'wildUsed', { contestant: round.control })
+    setPhase(game, 'consonant')
+  }
+  function chooseMystery(game, flip) {
+    const round = game.round, contestant = bankOf(game), landed = round.landed
+    if (round.phase !== 'mystery') return
+    if (!flip) {
+      contestant.roundBank += landed.value * round.mysteryCount
+      event(game, 'mysteryTake', { contestant: round.control, amount: landed.value * round.mysteryCount })
+    } else {
+      // Flipping gives up the letter money for whatever is on the back. After that, neither wedge can be flipped.
+      const won = landed.index === round.mysteryTenK
+      round.mysteryFlipped = true
+      round.wheel = round.wheel.map((wedge) => (wedge.kind === 'mystery' ? { kind: 'cash', value: SPECIAL_VALUES.mystery } : wedge))
+      event(game, 'mysteryFlip', { contestant: round.control, won, amount: won ? MYSTERY_PRIZE : 0 })
+      if (!won) { goBankrupt(game); passControl(game); return }
+      contestant.roundBank += MYSTERY_PRIZE
+    }
+    if (allShown(round)) { win(game, round.control); return }
+    round.wildChance = landed.value
+    setPhase(game, 'turn')
+  }
+  function chooseExpress(game, play) {
+    const round = game.round
+    if (round.phase !== 'expressChoice') return
+    if (play) { round.express = true; event(game, 'expressPlay', { contestant: round.control }); setPhase(game, 'express'); return }
+    round.wildChance = SPECIAL_VALUES.express
+    setPhase(game, 'turn')
   }
   function buyVowel(game, letter) {
-    const round = game.round, bank = bankOf(game)
-    if (round.phase !== 'turn' || !isVowel(letter) || round.called.includes(letter) || bank.roundBank < VOWEL_COST || !lettersLeft(round, VOWELS)) return
+    const round = game.round, bank = bankOf(game), express = round.phase === 'express'
+    if ((round.phase !== 'turn' && !express) || !isVowel(letter) || round.called.includes(letter) || bank.roundBank < VOWEL_COST || !lettersLeft(round, VOWELS)) return
     bank.roundBank -= VOWEL_COST
     round.called.push(letter)
+    round.wildChance = null
     const count = round.puzzle.counts[letter] || 0
-    if (!count) { event(game, 'miss', { contestant: round.control, letter, vowel: true }); passControl(game); return }
+    if (!count) {
+      event(game, 'miss', { contestant: round.control, letter, vowel: true })
+      if (express) goBankrupt(game, 'express')
+      passControl(game)
+      return
+    }
     round.shown.push(letter)
     event(game, 'hit', { contestant: round.control, letter, count, amount: 0, vowel: true })
     if (allShown(round)) win(game, round.control)
-    else setPhase(game, 'turn')
+    else setPhase(game, express ? 'express' : 'turn')
   }
   function startSolve(game) {
     const round = game.round
-    if (round.phase !== 'turn' && round.phase !== 'speedLetter') return
+    if (!['turn', 'speedLetter', 'express'].includes(round.phase)) return
+    round.wildChance = null
     event(game, 'solving', { contestant: round.control })
     setPhase(game, round.phase === 'speedLetter' ? 'speedSolve' : 'solving')
   }
@@ -482,27 +624,36 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     if (round.phase === 'tossupSolve') { if (correct) winTossup(game, round.control); else lockOut(game); return }
     if (correct) { win(game, round.control); return }
     event(game, 'wrongSolve', { contestant: round.control, text: round.lastSolve?.text || null })
-    // In the speed-up, wrong tries are allowed until the clock runs out.
-    if (round.phase !== 'speedSolve') passControl(game)
+    // In the speed-up, wrong tries are allowed until the clock runs out. On the Express, a wrong solve is Bankrupt.
+    if (round.phase === 'speedSolve') return
+    if (round.express) goBankrupt(game, 'express')
+    passControl(game)
   }
+  // Solving banks the round's money and gifts (and the Prize Puzzle's trip). Cash and prizes together are
+  // worth at least $1,000. A Million Dollar wedge picked up this round is now theirs to keep.
   function win(game, contestant) {
     const round = game.round, winner = game.contestants[contestant]
+    const prizes = [...winner.roundPrizes, ...(round.prizePuzzle ? [round.prizePuzzle] : [])]
+    const prizeValue = prizes.reduce((sum, prize) => sum + prize.value, 0)
     round.shown = Object.keys(round.puzzle.counts)
     round.winner = contestant
-    round.awarded = Math.max(winner.roundBank, SOLVE_MINIMUM)
+    round.prizesWon = prizes
+    round.awarded = Math.max(winner.roundBank, SOLVE_MINIMUM - prizeValue) + prizeValue
     winner.total += round.awarded
+    winner.prizes.push(...prizes)
+    if (winner.millionThisRound) winner.million = true
     winner.solvedAny = true
-    game.contestants.forEach((other) => { other.roundBank = 0 })
-    round.actorId = null
-    event(game, 'solve', { contestant, amount: round.awarded })
+    game.contestants.forEach((other) => Object.assign(other, { roundBank: 0, roundPrizes: [], millionThisRound: false }))
+    round.actorId = null; round.express = false; round.wildChance = null
+    event(game, 'solve', { contestant, amount: round.awarded, prizes })
     setPhase(game, 'roundEnd')
   }
   // Nobody solved it (the host gave up on it, or a toss-up ran out): show it, nobody banks anything.
   function endRoundUnsolved(game) {
     const round = game.round
     round.shown = Object.keys(round.puzzle.counts)
-    round.winner = null; round.awarded = 0; round.actorId = null; round.control = null
-    game.contestants.forEach((contestant) => { contestant.roundBank = 0 })
+    round.winner = null; round.awarded = 0; round.actorId = null; round.control = null; round.express = false; round.wildChance = null
+    game.contestants.forEach((contestant) => Object.assign(contestant, { roundBank: 0, roundPrizes: [], millionThisRound: false }))
     event(game, 'roundSkipped')
     setPhase(game, 'roundEnd')
   }
@@ -746,7 +897,9 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'kickPlayer') kick(game, payload.playerId)
     if (action === 'replay') {
-      try { if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares, bonus: payload.bonus })) } catch {}
+      try {
+        if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares, bonus: payload.bonus, ...(payload.gifts && { gifts: payload.gifts, trip: payload.trip }) }))
+      } catch {}
       clearGameTimers(game)
       Object.assign(game, freshPlay(game.config), { status: 'lobby', lastEvent: null })
       game.contestants.forEach((contestant, i) => { game.contestants[i] = freshContestant(contestant.name) })
@@ -768,6 +921,9 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     on('buyVowel', (game, { letter }) => buyVowel(game, letterIn(letter)))
     on('letter', (game, { letter }) => speedLetter(game, letterIn(letter)))
     on('solveStart', (game) => startSolve(game))
+    on('wild', (game) => useWild(game))
+    on('mystery', (game, { flip }) => chooseMystery(game, !!flip))
+    on('express', (game, { play }) => chooseExpress(game, !!play))
     on('solve', (game, { playerId, guess }) => solve(game, playerId, guess))
     // The bonus round's player, on their own connection.
     const onBonus = (name, handle) => socket.on(`wheel:${name}`, (payload = {}) => {

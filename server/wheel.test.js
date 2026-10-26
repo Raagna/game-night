@@ -556,3 +556,200 @@ test('the host controller is sent the bonus answer once a category is picked', (
   h.act(game, 'p1', 'bonusPick', { index: 0 })
   assert.deepEqual(got, ['GLASS JAR'])
 })
+
+// ---------- Special wedges ----------
+// Wedge positions: round 1's Million (12), Gift (14) and, with the harness's default random numbers, the
+// Wild Card on wedge 11; round 2's Mystery wedges (2 and 18); round 3's Express (3).
+const MILLION = 12, GIFT = 14, WILD = 11, MYSTERY_A = 2, MYSTERY_B = 18, EXPRESS = 3
+const SPA = { name: 'Spa weekend', value: 3000 }, TRIP = { name: 'Trip to Lisbon', value: 8500 }
+function specialGame(h, extra = {}) {
+  return newGame(h, { segments: [round('Hello world'), round('Hello world'), round('Hello world'), round('Tea set')], gifts: [SPA, SPA, SPA], trip: TRIP, ...extra })
+}
+// Nobody solves the rounds before round n.
+function toRound(h, game, n, randoms = []) {
+  while (game.round.n < n) { h.api.hostAction(game, 'revealPuzzle', {}); h.randoms(randoms); h.api.hostAction(game, 'nextSegment', {}) }
+}
+const spinSlot = (h, game, playerId, slot) => {
+  h.randoms([(slot + 0.5) / (24 * SLOTS_PER_WEDGE), 0.5])
+  h.act(game, playerId, 'spin')
+  h.fire()
+}
+
+test('rounds 1 to 3 carry the special wedges; the final round has none', () => {
+  const kinds = (n, opts) => buildWheel(n, opts).map((w) => w.kind)
+  const count = (list, kind) => list.filter((k) => k === kind).length
+  assert.deepEqual([1, 2, 3].map((n) => count(kinds(n), 'million')), [1, 1, 1])
+  assert.deepEqual([1, 2, 3].map((n) => count(kinds(n), 'gift')), [1, 1, 1])
+  assert.equal(count(kinds(2), 'mystery'), 2)
+  assert.equal(count(kinds(3), 'express'), 1)
+  assert.ok(kinds(4).every((k) => ['cash', 'bankrupt', 'loseTurn'].includes(k)))
+  assert.deepEqual(buildWheel(1, { million: false })[MILLION], { kind: 'cash', value: 900 })
+  const h = harness(), game = specialGame(h)
+  assert.equal(game.round.wheel[WILD].wild, true)
+  assert.equal(game.round.wheel.filter((w) => w.wild).length, 1)
+})
+
+test('the Gift pays $500 a letter plus the gift, kept only by solving; prizes count toward the $1,000 minimum', () => {
+  const h = harness(), game = specialGame(h)
+  h.spinTo(game, 'p1', GIFT)
+  h.act(game, 'p1', 'consonant', { letter: 'D' })
+  assert.equal(game.contestants[0].roundBank, 500)
+  assert.deepEqual(game.contestants[0].roundPrizes, [SPA])
+  assert.deepEqual(game.round.wheel[GIFT], { kind: 'cash', value: 500 }, 'one gift per round')
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'HELLOWORL' })
+  // $500 in cash and a $3,000 gift: already past $1,000, so no top-up.
+  assert.equal(game.contestants[0].total, 500 + SPA.value)
+  assert.deepEqual(game.contestants[0].prizes, [SPA])
+})
+
+test('Bankrupt takes the round’s gift', () => {
+  const h = harness(), game = specialGame(h)
+  h.spinTo(game, 'p1', GIFT)
+  h.act(game, 'p1', 'consonant', { letter: 'D' })
+  h.spinTo(game, 'p1', BANKRUPT)
+  assert.deepEqual(game.contestants[0].roundPrizes, [])
+})
+
+test('the Million Dollar wedge: the middle third is the million, its edges are Bankrupt, and only solving keeps it', () => {
+  const h = harness(), game = specialGame(h)
+  spinSlot(h, game, 'p1', MILLION * SLOTS_PER_WEDGE)
+  assert.equal(game.lastEvent.type, 'control', 'the edge is Bankrupt')
+  assert.equal(game.round.control, 1)
+  h.spinTo(game, 'p2', MILLION)
+  h.act(game, 'p2', 'consonant', { letter: 'L' })
+  assert.equal(game.contestants[1].roundBank, 1500)
+  assert.equal(game.contestants[1].millionThisRound, true)
+  assert.deepEqual(game.round.wheel[MILLION], { kind: 'cash', value: 900 })
+  h.act(game, 'p2', 'solveStart')
+  h.act(game, 'p2', 'solve', { guess: 'HEOWORD' })
+  assert.equal(game.contestants[1].million, true)
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.equal(game.round.wheel[MILLION].kind, 'cash', 'not on the wheel while someone holds it')
+  // Bankrupt in a later round takes it away again.
+  h.spinTo(game, 'p2', 8)
+  assert.equal(game.contestants[1].million, false)
+})
+
+test('the Wild Card: picked up with a right letter, then a second consonant at the same value', () => {
+  const h = harness(), game = specialGame(h)
+  h.spinTo(game, 'p1', WILD)
+  h.act(game, 'p1', 'consonant', { letter: 'L' })
+  assert.equal(game.contestants[0].wildCard, true)
+  assert.equal(game.round.wheel[WILD].wild, undefined)
+  assert.equal(h.api.publicGame(game).round.wildChance, true)
+  h.act(game, 'p1', 'wild')
+  assert.equal(game.round.phase, 'consonant')
+  assert.equal(game.round.value, 600)
+  h.act(game, 'p1', 'consonant', { letter: 'D' })
+  assert.equal(game.contestants[0].roundBank, 1800 + 600)
+  assert.equal(game.contestants[0].wildCard, false, 'used up')
+  assert.equal(h.api.publicGame(game).round.wildChance, false)
+})
+
+test('the Wild Card is kept without solving, but lost to Bankrupt', () => {
+  const h = harness(), game = specialGame(h)
+  h.spinTo(game, 'p1', WILD)
+  h.act(game, 'p1', 'consonant', { letter: 'L' })
+  h.act(game, 'p1', 'buyVowel', { letter: 'O' })
+  assert.equal(h.api.publicGame(game).round.wildChance, false, 'only straight after a consonant')
+  h.spinTo(game, 'p1', LOSE_TURN)
+  h.act(game, 'p2', 'solveStart')
+  h.act(game, 'p2', 'solve', { guess: 'HEWRD' })
+  assert.equal(game.contestants[0].wildCard, true)
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.ok(!game.round.wheel.some((w) => w.wild), 'no Wild Card on the wheel while someone holds it')
+  // Round 2 starts with Bo; he loses his turn, then Ann lands on Bankrupt (wedge 8 on round 2's wheel).
+  h.spinTo(game, 'p2', LOSE_TURN)
+  h.spinTo(game, 'p1', 8)
+  assert.equal(game.contestants[0].wildCard, false)
+})
+
+test('Mystery: take $1,000 a letter, or flip it for $10,000 or Bankrupt; then neither can be flipped', () => {
+  const h = harness(), game = specialGame(h)
+  // Round 2, with the $10,000 behind the first Mystery wedge.
+  toRound(h, game, 2, [0.5, 0])
+  const p = game.round.actorId, c = game.round.control
+  h.spinTo(game, p, MYSTERY_B)
+  h.act(game, p, 'consonant', { letter: 'L' })
+  assert.equal(game.round.phase, 'mystery')
+  assert.equal(game.contestants[c].roundBank, 0, 'nothing until the choice')
+  assert.equal(JSON.stringify(h.api.publicGame(game)).includes('mysteryTenK'), false)
+  h.act(game, p, 'mystery', { flip: false })
+  assert.equal(game.contestants[c].roundBank, 3000)
+  h.spinTo(game, p, MYSTERY_B)
+  h.act(game, p, 'consonant', { letter: 'D' })
+  h.act(game, p, 'mystery', { flip: true })
+  assert.equal(game.contestants[c].roundBank, 0, 'the back of this one was Bankrupt')
+  assert.notEqual(game.round.control, c)
+  assert.deepEqual([game.round.wheel[MYSTERY_A], game.round.wheel[MYSTERY_B]], [{ kind: 'cash', value: 1000 }, { kind: 'cash', value: 1000 }])
+})
+
+test('flipping the right Mystery wedge wins $10,000; not deciding in time takes the money', () => {
+  const h = harness(), game = specialGame(h)
+  toRound(h, game, 2, [0.5, 0])
+  const p = game.round.actorId, c = game.round.control
+  h.spinTo(game, p, MYSTERY_A)
+  h.act(game, p, 'consonant', { letter: 'L' })
+  h.fire()
+  assert.equal(game.contestants[c].roundBank, 3000, 'timed out: took the money')
+  h.spinTo(game, p, MYSTERY_A)
+  h.act(game, p, 'consonant', { letter: 'D' })
+  h.act(game, p, 'mystery', { flip: true })
+  assert.equal(game.contestants[c].roundBank, 3000 + 10000)
+  assert.equal(game.round.phase, 'turn')
+})
+
+test('Express: $1,000 a letter, then keep calling without spinning; a miss is Bankrupt', () => {
+  const h = harness(), game = specialGame(h)
+  toRound(h, game, 3)
+  const p = game.round.actorId, c = game.round.control
+  h.spinTo(game, p, EXPRESS)
+  h.act(game, p, 'consonant', { letter: 'L' })
+  assert.equal(game.round.phase, 'expressChoice')
+  assert.equal(game.contestants[c].roundBank, 3000)
+  h.act(game, p, 'express', { play: true })
+  assert.equal(game.round.phase, 'express')
+  h.act(game, p, 'spin')
+  assert.equal(game.round.phase, 'express', 'no spinning on the Express')
+  h.act(game, p, 'consonant', { letter: 'D' })
+  assert.equal(game.contestants[c].roundBank, 4000)
+  h.act(game, p, 'buyVowel', { letter: 'O' })
+  assert.equal(game.contestants[c].roundBank, 3750)
+  assert.equal(game.round.phase, 'express')
+  h.act(game, p, 'consonant', { letter: 'Z' })
+  assert.equal(game.contestants[c].roundBank, 0)
+  assert.equal(game.lastEvent.type, 'control')
+  assert.ok(game.recentEvents.some((e) => e.type === 'bankrupt' && e.why === 'express'))
+})
+
+test('Express: passing plays on normally; solving on the Express wins the Prize Puzzle’s trip', () => {
+  const h = harness(), game = specialGame(h)
+  toRound(h, game, 3)
+  const p = game.round.actorId, c = game.round.control
+  assert.deepEqual(h.api.publicGame(game).round.prizePuzzle, TRIP)
+  h.spinTo(game, p, EXPRESS)
+  h.act(game, p, 'consonant', { letter: 'L' })
+  h.act(game, p, 'express', { play: false })
+  assert.equal(game.round.phase, 'turn')
+  h.spinTo(game, p, EXPRESS)
+  h.act(game, p, 'consonant', { letter: 'D' })
+  h.act(game, p, 'express', { play: true })
+  h.act(game, p, 'solveStart')
+  h.act(game, p, 'solve', { guess: 'HEOWOR' })
+  assert.equal(game.round.winner, c)
+  assert.equal(game.contestants[c].total, 3000 + 1000 + TRIP.value)
+  assert.deepEqual(game.contestants[c].prizes, [TRIP])
+})
+
+test('on the Express, a wrong solve or running out of time is Bankrupt', () => {
+  const h = harness(), game = specialGame(h)
+  toRound(h, game, 3)
+  const p = game.round.actorId, c = game.round.control
+  h.spinTo(game, p, EXPRESS)
+  h.act(game, p, 'consonant', { letter: 'L' })
+  h.act(game, p, 'express', { play: true })
+  h.fire()
+  assert.equal(game.contestants[c].roundBank, 0)
+  assert.notEqual(game.round.control, c)
+})

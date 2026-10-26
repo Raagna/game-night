@@ -72,7 +72,7 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
   align-items: center; gap: 18px 32px; max-width: 1600px; margin: 0 auto;
 }
 .ws-wheel-wrap { grid-area: wheel; }
-.ws-main { grid-area: main; display: grid; justify-items: center; gap: 16px; min-width: 0; }
+.ws-main { grid-area: main; display: grid; justify-items: center; gap: 10px; min-width: 0; }
 .ws-podiums { grid-area: podiums; }
 .ws-board-wrap { display: grid; justify-items: center; gap: 10px; }
 .ws-category { display: flex; align-items: center; gap: 14px; font: clamp(1.2rem, 2.2vw, 1.8rem) var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -89,7 +89,7 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
 .ws-flash.is-bankrupt { color: #fff; -webkit-text-stroke: 2px #000; }
 .ws-flash.is-loseTurn { color: #ffcc2e; }
 @keyframes ws-flash { 0% { opacity: 0; transform: scale(0.6); } 15% { opacity: 1; transform: scale(1.05); } 25%, 80% { transform: scale(1); opacity: 1; } 100% { opacity: 0; } }
-.ws-status { display: grid; justify-items: center; gap: 8px; width: 100%; }
+.ws-status { display: grid; justify-items: center; gap: 6px; width: 100%; }
 .ws-status h2 { font: clamp(1.6rem, 3vw, 2.4rem)/1.1 var(--display); letter-spacing: -0.015em; }
 .ws-status > p { font-size: 1.15rem; color: var(--text-muted); }
 .ws-news { font-weight: 800; font-size: 1.2rem; animation: ws-news 300ms ease-out; }
@@ -100,6 +100,11 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
 .ws-speedup { padding: 6px 16px; border-radius: 999px; background: var(--ws-accent); color: var(--ws-on-accent); font: 1rem var(--display); letter-spacing: 0.04em; text-transform: uppercase; animation: ws-pulse 1.2s ease-in-out infinite alternate; }
 @keyframes ws-pulse { to { box-shadow: 0 0 22px rgb(255 79 163 / 0.65); } }
 .ws-speedup-in { font-weight: 500; opacity: 0.8; }
+.ws-prize-puzzle { padding: 6px 16px; border-radius: 999px; background: #7b2ff7; color: #fff; font-weight: 800; }
+.ws-wild-btn { display: grid; gap: 2px; min-height: 54px; background: #fff !important; color: #b5179e; font-weight: 800; }
+.ws-wild-btn small { font-weight: 600; font-size: 0.75rem; color: #5a1450; }
+.ws-choice { margin-top: 12px; }
+.ws-choice button { min-height: 76px; font-size: 1.15rem; }
 /* Where the wheel goes in a main round: the toss-up's value, big. */
 .ws-tossup-panel { display: grid; place-items: center; align-content: center; gap: 6px; aspect-ratio: 1; max-height: calc(100dvh - 250px); margin: 0 auto; width: 100%; border-radius: 50%; background: radial-gradient(circle, #24318a 0%, #11183f 70%); box-shadow: inset 0 0 0 6px rgb(255 79 163 / 0.5); }
 .ws-tossup-panel span { font: 700 1rem "DM Sans", sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ws-accent-text); }
@@ -107,7 +112,7 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
 .ws-tossup-panel p { min-height: 1.5em; font-weight: 700; font-size: 1.15rem; color: var(--text-muted); }
 @media (prefers-reduced-motion: reduce) { .ws-speedup { animation: none; } }
 .ws-next { margin-top: 10px; min-width: 220px; min-height: 54px; }
-.ws-used { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 10px; width: 100%; max-width: 560px; }
+.ws-used { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 6px; width: 100%; max-width: 560px; }
 .ws-used span { display: grid; place-items: center; aspect-ratio: 1; border-radius: 6px; background: var(--panel-raised); font: 1rem var(--display); color: var(--text); }
 .ws-used span.is-vowel { background: color-mix(in srgb, var(--ws-accent) 24%, var(--panel-raised)); }
 .ws-used span.is-hit { opacity: 0.28; }
@@ -123,6 +128,14 @@ button.wb-cell { padding: 0; border: 0; cursor: pointer; }
 .ws-podium.is-control { border-color: var(--c); transform: translateY(-4px); box-shadow: 0 10px 26px rgb(0 0 0 / 0.35), 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
 .ws-podium.is-winner { background: linear-gradient(var(--c) 0 8px, color-mix(in srgb, var(--c) 22%, var(--panel)) 8px); }
 .ws-podium.is-away { opacity: 0.55; }
+/* The Wild Card, the Million Dollar wedge and gifts a contestant is holding. */
+.ws-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; }
+.ws-chip { padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.02em; }
+.ws-chip.is-wild { background: #fff; color: #b5179e; }
+.ws-chip.is-million { background: #1db954; color: #04210f; }
+.ws-chip.is-million.is-pending { background: transparent; color: #5be39a; box-shadow: inset 0 0 0 2px #1db954; }
+.ws-chip.is-gift { background: #7b2ff7; color: #fff; }
+.player .ws-extras { margin-top: 8px; }
 /* Locked out of a toss-up, or not in a tiebreaker. */
 .ws-podium.is-out { opacity: 0.4; filter: grayscale(0.7); }
 .ws-podium-name { font-weight: 800; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
