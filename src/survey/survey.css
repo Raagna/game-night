@@ -36,6 +36,9 @@
 .sv-packs button[aria-checked="true"] { background: #ff8a3d; color: #2a1205; }
 .sv-credit { margin-top: 4px; font-size: 0.8125rem; }
 .sv-credit a { color: inherit; }
+.sv-sound { position: fixed; left: 16px; bottom: 14px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: var(--panel-raised); border: 1px solid var(--line-strong); color: var(--text); font-size: 0.85rem; font-weight: 700; }
+.sv-sound svg { width: 18px; height: 18px; }
+.sv-sound[aria-pressed="false"] { color: var(--text-muted); }
 .sv-question-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
 .sv-question-list li { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px; background: var(--panel-raised); }
 .sv-q-round { flex-shrink: 0; width: 92px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); display: grid; }

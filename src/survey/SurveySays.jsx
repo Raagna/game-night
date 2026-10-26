@@ -4,6 +4,7 @@ import { socket, tone, ClueTimer } from "../shared";
 import { LobbyJoin, JoinCorner } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import SURVEYS from "../surveys.json";
+import { useSound, useEventSounds, playWinnersTune } from "./sounds";
 import "./survey.css";
 
 // ---------- Picking questions ----------
@@ -283,17 +284,34 @@ function TeamPanel({ game, team }) {
   );
 }
 
-// Big red X's across the TV when someone strikes out.
+// The TV's buzzes and dings, and big red X's across it when someone strikes out.
 function useStrikeFlash(game) {
   const [flash, setFlash] = useState(null);
+  useEventSounds(game, (e) => { if (e.type === "strike") setFlash({ count: e.count || 1, at: e.at }); });
   useEffect(() => {
-    const e = game.lastEvent;
-    if (!e || Date.now() - e.at > 4000) return;
-    if (e.type === "strike") { playStrike(); setFlash({ count: e.count || 1, at: e.at }); const t = setTimeout(() => setFlash(null), 1300); return () => clearTimeout(t); }
-    if (e.type === "hit") playHit();
-    if (e.type === "roundWon") { tone(523, 0.18); setTimeout(() => tone(659, 0.18), 160); setTimeout(() => tone(784, 0.4), 320); }
-  }, [game.lastEvent?.at]);
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 1300);
+    return () => clearTimeout(t);
+  }, [flash]);
   return flash;
+}
+
+const SpeakerIcon = ({ off }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+    {off ? <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      : <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+  </svg>
+);
+// Sound on/off for the TV (remembered in this browser). Until someone clicks the page, browsers keep it silent.
+function SoundToggle() {
+  const [muted, toggle, waiting] = useSound();
+  return (
+    <button className="sv-sound" aria-pressed={!muted} onClick={toggle}>
+      <SpeakerIcon off={muted} />
+      {muted ? "Sound off" : waiting ? "Click for sound" : "Sound on"}
+    </button>
+  );
 }
 
 function LastGuess({ game }) {
@@ -385,6 +403,7 @@ export function SurveyDisplay({ game, onAction }) {
   const last = game.roundIndex >= game.roundCount - 1;
   return (
     <main className="display survey">
+      <SoundToggle />
       <header className="display-bar">
         <div className="brand survey-brand">SURVEY SAYS!</div>
         {game.status !== "lobby" ? (
@@ -642,10 +661,17 @@ export function SurveyController({ game, onAction }) {
 }
 
 // ---------- End of game ----------
-export function SurveyEnd({ game, host, onAction }) {
+// display: this is the TV screen (not the host controller or a phone), which is the one that plays the tune.
+export function SurveyEnd({ game, host, display, onAction }) {
   const [a, b] = game.teams, winner = a.score === b.score ? null : a.score > b.score ? 0 : 1;
   // A host who reloaded mid-game hasn't fetched the question packs yet; get them in time for "Play again".
   useEffect(() => { if (host) loadPacks(); }, [host]);
+  // The winners tune plays once when the scores appear (not when the TV is reloaded later), and fades out
+  // if the screen changes first.
+  useEffect(() => {
+    const finished = game.events?.findLast((e) => e.type === "complete");
+    if (display && finished && game.serverNow - finished.at < 15000) return playWinnersTune();
+  }, [display]);
   const playAgain = () => {
     const surveys = pickSurveys(game.roundCount);
     rememberPlayed(surveys.map((s) => s.id));
@@ -653,6 +679,7 @@ export function SurveyEnd({ game, host, onAction }) {
   };
   return (
     <main className="end survey">
+      {display && <SoundToggle />}
       <div className="brand survey-brand">SURVEY SAYS!</div>
       <h1>{winner == null ? "It’s a tie!" : `${teamName(game, winner)} win!`}</h1>
       <div className="sv-final-scores">
