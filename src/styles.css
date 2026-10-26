@@ -776,6 +776,8 @@ input, textarea, select { caret-color: var(--gold); }
 .hub-card--survey::after { background: #ff8a3d; }
 .hub-card--wheel { --card-accent: #ff4fa3; background: linear-gradient(160deg, #2a1050 0%, var(--panel) 70%); }
 .hub-card--wheel::after { background: #ff4fa3; }
+.hub-card--fib { --card-accent: #3ddc97; background: linear-gradient(160deg, #0d3550 0%, var(--panel) 70%); }
+.hub-card--fib::after { background: #3ddc97; }
 .hub-card-name { font: clamp(1.8rem, 3.4vw, 2.3rem)/1 var(--display); letter-spacing: -0.02em; color: var(--card-accent); }
 .hub-card-tag { justify-self: start; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.08); font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
 .hub-card-blurb { line-height: 1.5; color: var(--text-muted); }

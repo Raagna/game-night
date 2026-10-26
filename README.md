@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeopardy!, Survey Says! and Spin & Solve. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve and Fib or Fact. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -47,11 +47,21 @@ Setup offers two puzzle packs, one at a time or both together (*Everything*):
 
 The TV plays peg clicks as the wheel turns, a ding for each letter, the Bankrupt slide, a fanfare for each solve and a ticking bonus clock, all synthesized in the browser and sharing Survey Says!' sound on/off button.
 
-### With or without a host
-All three games can be played two ways:
+### Fib or Fact
+A bluffing trivia game for 2 to 8 players (best with 4 or more), played on clues from the built-in Jeopardy archive. Each clue, one player picks one of three categories. Everyone reads the clue and writes a fake answer (a "fib") on their phone. Then the fibs and the real answer are shuffled together and everyone votes for the one they think is the fact.
 
-- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace).
+- **Scoring**: 1,000 for finding the fact, and 500 for every player your fib fools. Points double halfway through the game and triple on the final clue.
+- **Fibs**: typing the real answer, or a copy of someone else's fib, is turned away and you write another. If there aren't enough fibs to choose from, "house fibs" (other answers from the same Jeopardy category) fill the vote up to four choices.
+- **The reveal**: the fibs that fooled somebody are shown one at a time, least popular first, with who fell for each and who wrote it, and then the fact.
+- **Game length**: 5, 7 or 9 clues. Setup loads three random seasons of the archive and deals three categories for each clue; you can swap any clue's categories before starting. The final clue comes from the hardest rows.
+
+The TV plays a pop for each fib and vote, a sliding "wah-wah" for each fib that fooled someone, a bell and fanfare for the fact and a ticking count at the end of each clock, sharing the other games' sound on/off button.
+
+### With or without a host
+All four games can be played two ways:
+
+- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, the reveals and scores move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
 
 ## How to play
 
@@ -87,7 +97,7 @@ To make a production build in `dist/`:
 npm run build
 ```
 
-To run the Spin & Solve tests (the board layout and the game rules, with Node's built-in test runner):
+To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact rules, with Node's built-in test runner):
 
 ```bash
 npm test
@@ -111,6 +121,7 @@ src/                  React client
   Hub.jsx             the Game Night home page
   survey/             Survey Says! screens and styles
   wheel/              Spin & Solve screens, styles, sounds and its puzzle pack (puzzles.json)
+  fib/                Fib or Fact screens, styles and sounds
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -125,8 +136,9 @@ server/               game server (Express + Socket.IO)
   survey.js           Survey Says! game logic and answer matching
   wheel.js            Spin & Solve game logic (wheel.test.js tests it)
   wheelBoard.js       Spin & Solve puzzle board layout (wheelBoard.test.js tests it)
+  fib.js              Fib or Fact game logic (fib.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
-  text.js             text helpers for matching answers
+  text.js             text helpers for matching answers, including Jeopardy responses
 public/
   data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
                       the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
@@ -151,5 +163,6 @@ docs/
 - The Spin & Solve Fan Database pack comes from wheeloffortuneanswer.com, a player-maintained list of answers from the official Wheel of Fortune game. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
+- Fib or Fact uses the same built-in Jeopardy clues. Its sounds are synthesized in `src/fib/sounds.js` and are original.
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.

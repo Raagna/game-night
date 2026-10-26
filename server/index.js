@@ -3,9 +3,10 @@ import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
 import { Server } from 'socket.io'
 import { importJeopardyLabs } from './jeopardylabs.js'
-import { NUMBER_WORDS, numberWordPattern, editDistance } from './text.js'
+import { answersMatch } from './text.js'
 import { createSurveyGames } from './survey.js'
 import { createWheelGames } from './wheel.js'
+import { createFibGames } from './fib.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -33,23 +34,6 @@ function cancelLeave(code, playerId) { const key=leaveKey(code,playerId); clearT
 
 const id = () => Math.random().toString(36).slice(2, 8).toUpperCase()
 const clone = (x) => JSON.parse(JSON.stringify(x))
-// Lowercases, strips accents, a leading "what is"/"who's" and leading articles (a/an/the), turns number words into digits ("four" = "4"), then drops spaces and punctuation.
-const normalizeAnswer = (value) => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/&/g,' and ').replace(/[’'`]/g,"'").trim()
-  .replace(/^(what|who|where|when|why|how)('s|\s+(is|are|was|were))\s+/,'')
-  .replace(/^(a|an|the)\s+/,'')
-  .replace(numberWordPattern,(word)=>String(NUMBER_WORDS[word]))
-  .replace(/[^a-z0-9]/g,'')
-// Accepted spellings of the correct answer: as written, and with any "(optional)" part removed, e.g. "(Frank) Sinatra".
-const answerVariants = (answer) => { const raw=String(answer || ''); return [...new Set([raw, raw.replace(/\([^)]*\)/g,' '), raw.replace(/[()]/g,' ')].map(normalizeAnswer).filter(Boolean))] }
-function answersMatch(response, answer) {
-  const given=normalizeAnswer(response); if(!given) return false
-  return answerVariants(answer).some((expected) => {
-    if(given===expected) return true
-    if(/^\d+$/.test(expected)) return false // numbers and years must be exact
-    const allowed=expected.length>=12 ? 2 : expected.length>=4 ? 1 : 0
-    return allowed>0 && Math.abs(given.length-expected.length)<=allowed && editDistance(given,expected)<=allowed
-  })
-}
 const connectedPlayers = (game) => [...game.players.values()].filter((player) => player.socketId)
 function assignLowestConnected(game) {
   const players = connectedPlayers(game)
@@ -87,10 +71,11 @@ function clearGameTimers(game) { const timers=gameTimers.get(game.code)||{}; for
 function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||{}; clearTimeout(timers[name]); timers[name]=setTimeout(fn, ms); gameTimers.set(game.code,timers) }
 const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, gameTimers, cancelLeave })
 const wheel = createWheelGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
+const fib = createFibGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave })
 // Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register },
 // and optionally hostJoined(game, socket) for a host screen or controller connecting and maxPlayers(game)
 // when the limit depends on the game (Spin & Solve teams take more phones than solo play).
-const modes = { survey, wheel }
+const modes = { survey, wheel, fib }
 // Looked up with hasOwn because the name comes from the browser ("toString" must not count as a game).
 const modeFor = (kind) => Object.hasOwn(modes, kind) ? modes[kind] : undefined
 const modeOf = (game) => modeFor(game?.kind)
