@@ -12,7 +12,7 @@
   --slot: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%);
   --slot-revealed: linear-gradient(180deg, #2a5cff 0%, #1638c4 100%);
 }
-.survey-brand, .ws-brand, .fib-brand { background-image: linear-gradient(180deg, color-mix(in srgb, var(--table) 30%, #fff) 0%, var(--table) 42%, color-mix(in srgb, var(--table) 55%, #000) 50%, var(--table) 57%, color-mix(in srgb, var(--table) 65%, #fff) 100%); }
+.survey-brand, .ws-brand, .fib-brand, .pc-brand { background-image: linear-gradient(180deg, color-mix(in srgb, var(--table) 30%, #fff) 0%, var(--table) 42%, color-mix(in srgb, var(--table) 55%, #000) 50%, var(--table) 57%, color-mix(in srgb, var(--table) 65%, #fff) 100%); }
 .team-0 { --team: var(--team-0); --team-soft: var(--team-0-soft); }
 .team-1 { --team: var(--team-1); --team-soft: var(--team-1-soft); }
 .survey-setup { --team-0: #ff6b6b; --team-1: #4cc9f0; }

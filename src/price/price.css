@@ -1,0 +1,139 @@
+/* Price Check — the pinball cabinet's sky-blue table. Products sit on a shelf of white photo cards; every price
+   (tags, bids, budgets, totals) is on the dot-matrix display. The table colour comes from --table (styles.css). */
+
+/* ---------- Products ---------- */
+.pc-product { margin: 0; display: grid; grid-template-rows: auto 1fr; gap: 10px; min-width: 0; text-align: center; }
+.pc-photo {
+  display: grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 260px; justify-self: center;
+  padding: 10px; border-radius: 14px; background: var(--chrome-hi);
+  box-shadow: inset 0 0 0 1px var(--chrome), 0 0 0 3px #15101e, 0 0 0 5px var(--chrome-lo), 0 10px 20px rgb(0 0 0 / 0.45);
+}
+.pc-photo { min-width: 0; overflow: hidden; }
+.pc-photo img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
+.pc-photo span { font: 2.4rem var(--display); color: #9aa1ad; }
+.pc-product figcaption { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.pc-name { order: -1; font: 1.5rem/1.1 var(--display); letter-spacing: -0.01em; text-wrap: balance; overflow-wrap: anywhere; }
+.pc-brandname, .pc-size { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
+.pc-tag { margin-top: 4px; font-size: 1.5rem; }
+.pc-product.is-small .pc-photo { max-width: 170px; padding: 8px; }
+.pc-product.is-small .pc-name { font: 700 1rem/1.25 "DM Sans", system-ui, sans-serif; }
+.pc-product.is-small .pc-tag { font-size: 1.5rem; }
+
+/* ---------- TV ---------- */
+.display.pc { padding-bottom: 60px; }
+.pc-center { gap: 14px; }
+.pc-rule { font: clamp(1.25rem, 2.2vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.01em; text-wrap: balance; max-width: 34ch; }
+.pc-callout { font-size: 1.5rem; }
+.pc-bid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 32px; align-items: center; width: 100%; max-width: 980px; }
+.pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
+.pc-bid:not(:has(.pc-bids)) { grid-template-columns: minmax(0, 340px); justify-content: center; }
+.pc-bid .pc-callout { grid-column: 1 / -1; justify-self: center; }
+
+.pc-shelf { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1100px; display: grid; gap: clamp(12px, 1.6vw, 24px); }
+.pc-shelf.count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 900px; }
+.pc-shelf.count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pc-shelf.count-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.pc-shelf.count-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.pc-shelf > li { transition: opacity 240ms ease-out, transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.pc-shelf > li.is-lit { transform: translateY(-6px); }
+.pc-shelf > li.is-lit .pc-photo { box-shadow: inset 0 0 0 1px var(--chrome), 0 0 0 4px var(--table), 0 0 0 7px #15101e, 0 0 0 9px var(--chrome), 0 12px 24px rgb(0 0 0 / 0.5); }
+.pc-shelf > li.is-dim { opacity: 0.55; }
+.pc-pickers { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
+.pc-pickers b { color: var(--table); }
+.pc-verdict { margin-top: 4px; padding: 4px 10px; border-radius: 999px; font-size: 0.9rem; font-weight: 800; background: var(--panel-raised); }
+.pc-verdict.is-higher { color: var(--green-text); }
+.pc-verdict.is-lower { color: var(--red-text); }
+.pc-placed { font-weight: 700; color: var(--text-muted); }
+
+/* Bids and cart totals, highest first; the winner's row is lit, anyone over is struck through and dimmed. */
+.pc-bids { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: 100%; max-width: 560px; text-align: left; }
+.pc-bids li { display: grid; grid-template-columns: minmax(0, 1fr) auto 5.5em; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); }
+.pc-bids span { font: 1.5rem/1.1 var(--display); overflow-wrap: anywhere; }
+.pc-bids b { font-size: 1.5rem; }
+.pc-bids em { font-style: normal; font-weight: 800; text-align: right; color: var(--text-muted); }
+.pc-bids .is-won { background: color-mix(in srgb, var(--table) 20%, var(--panel)); border-color: var(--table); }
+.pc-bids .is-won em { color: var(--table); }
+.pc-bids .is-over { opacity: 0.6; }
+.pc-bids .is-over span { text-decoration: line-through; text-decoration-thickness: 2px; }
+
+.pc-showcases { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 1100px; }
+.pc-showcase {
+  display: grid; gap: 12px; align-content: start; padding: 20px 22px; text-align: left;
+  border: 6px solid transparent; border-radius: 18px;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--chrome-ramp) border-box;
+  box-shadow: var(--bezel);
+}
+.pc-showcase.is-won { background: linear-gradient(color-mix(in srgb, var(--table) 18%, var(--panel)), color-mix(in srgb, var(--table) 18%, var(--panel))) padding-box, var(--chrome-ramp) border-box; }
+.pc-showcase h2 { font: 1.4rem var(--display); letter-spacing: -0.01em; }
+.pc-showcase ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pc-showcase li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 1rem; }
+.pc-showcase li b { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pc-showcase dl { margin: 4px 0 0; display: grid; gap: 8px; }
+.pc-showcase dl div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pc-showcase dt { font-weight: 700; color: var(--text-muted); }
+.pc-showcase dd { margin: 0; font-size: 1.5rem; }
+.pc-status-line { font-weight: 700; color: var(--text-muted); }
+.pc-win { font: 1.4rem var(--display); color: var(--table); }
+.pc-gain { font-weight: 800; color: var(--table); font-size: 0.9rem; }
+
+/* ---------- Phone ---------- */
+.player.pc { text-align: center; }
+.player.pc > .pc-product { margin-top: 14px; }
+.player.pc .pc-photo { max-width: 200px; }
+.pc-form { display: grid; gap: 14px; margin-top: 16px; text-align: left; }
+.pc-bid-form { margin-top: 16px; }
+.pc-money-input { display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; border-radius: 10px; background: var(--dmd-bg); box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.8), 0 0 0 2px #2a2a2e, 0 0 0 3px var(--chrome-lo); }
+.pc-money-input span { font: 800 1.5rem/1.2 var(--dot); color: var(--dmd); }
+.pc-money-input input { flex: 1; min-width: 0; padding: 0.3em 0.2em 0.3em 0; border: 0; border-radius: 0 10px 10px 0; font-size: 1.5rem; caret-color: var(--dmd); outline: none; }
+.pc-money-input input::placeholder { color: rgb(255 138 36 / 0.3); }
+.pc-money-input:focus-within { box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.8), 0 0 0 2px var(--gold), 0 0 0 4px var(--chrome-lo); }
+.pc-hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pc-hl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+.pc-hl .pc-product { grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: none; align-items: center; text-align: left; gap: 10px; }
+.pc-hl .pc-photo { width: 64px; padding: 4px; border-radius: 10px; box-shadow: 0 0 0 2px var(--chrome-lo); }
+.pc-hl figcaption { align-items: flex-start; }
+.pc-hl .pc-name { font-size: 1rem; }
+.pc-hl .pc-tag { font-size: 1.5rem; }
+/* Higher / Lower and the showcase prediction are paired lamps: dark with a hollow ring off, lit with it filled on. */
+.pc-calls { display: grid; gap: 6px; }
+.pc-calls.is-big { grid-template-columns: 1fr 1fr; gap: 10px; }
+.pc-calls button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: #160d24; color: var(--text-muted); font-weight: 800; }
+.pc-calls.is-big button { min-height: 64px; font: 1.5rem var(--display); color: var(--text); }
+.pc-calls button::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; }
+.pc-calls button[aria-checked="true"] { background: radial-gradient(90% 130% at 50% 25%, color-mix(in srgb, var(--table) 55%, var(--chrome-hi)) 0%, var(--table) 55%, color-mix(in srgb, var(--table) 72%, var(--bg-deep)) 100%); border-color: var(--table); color: var(--on-table); }
+.pc-calls button[aria-checked="true"]::before { background: currentColor; }
+.pc-picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pc-picks > li, .pc-shelf > li { min-width: 0; }
+.pc-picks button { position: relative; width: 100%; padding: 10px; border-radius: 18px; border: 2px solid var(--line-strong); background: var(--panel); text-align: center; transition: border-color 160ms ease-out, background-color 160ms ease-out; }
+.pc-picks button:hover:not(:disabled) { border-color: var(--chrome); }
+.pc-picks button[aria-pressed="true"] { border-color: var(--table); background: color-mix(in srgb, var(--table) 16%, var(--panel)); }
+.pc-picks .pc-photo { max-width: 140px; }
+.pc-place { position: absolute; z-index: 1; top: 6px; left: 6px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--table); color: var(--on-table); font: 1.1rem var(--display); box-shadow: 0 0 0 3px #15101e, 0 0 0 5px var(--chrome); }
+.pc-form-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.pc-form-row > * { min-height: 52px; }
+.pc-form .primary { min-height: 54px; font-size: 1rem; }
+.pc-showcase-list { list-style: none; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); display: grid; gap: 6px; font-weight: 700; }
+
+/* ---------- Host controller ---------- */
+.pc-ctrl-prices { margin: 14px 0; }
+.pc-ctrl-prices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.pc-ctrl-prices li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); font-weight: 700; }
+.pc-ctrl-prices li b { flex-shrink: 0; font-size: 1rem; }
+
+@media (max-width: 1100px) {
+  .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-shelf.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .pc-bid, .pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 1fr); }
+  .pc-showcases { grid-template-columns: 1fr; }
+}
+/* A 720p TV: smaller photos so a shelf and its prices fit. */
+@media (max-height: 800px) and (min-width: 761px) {
+  .display.pc .pc-photo { max-width: min(260px, 34vh); }
+  .display.pc .pc-bid:has(.pc-bids) .pc-photo { max-width: min(220px, 26vh); }
+  .display.pc .pc-rule { font-size: 1.5rem; }
+  .display.pc .pc-center { gap: 10px; }
+  .display.pc .pc-product.is-small .pc-photo { max-width: min(170px, 22vh); }
+  .display.pc .pc-shelf.count-6 .pc-photo { max-width: min(150px, 19vh); }
+}

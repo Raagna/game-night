@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve and Fib or Fact. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve, Fib or Fact and Price Check. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -57,11 +57,27 @@ A bluffing trivia game for 2 to 8 players (best with 4 or more), played on clues
 
 The TV plays a pop for each fib and vote, a sliding "wah-wah" for each fib that fooled someone, a bell and fanfare for the fact and a ticking count at the end of each clock, sharing the other games' sound on/off button.
 
-### With or without a host
-All four games can be played two ways:
+### Price Check
+A price-guessing game for 2 to 8 players on real prices: what shoppers paid for groceries and household goods at US stores. Everyone plays every round on their phone at once.
 
-- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, the reveals and scores move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
+- **Closest Bid**: everyone bids secretly on one product; closest without going over wins 500 (an exact bid earns 500 more). If everybody goes over, everyone bids again, under the lowest bid.
+- **Higher or Lower**: five products, each shown with a wrong price; call whether the real one is higher or lower (100 each, 200 more for all five).
+- **Pick the Priciest**: three sets of three products; pick the most expensive in each (200 each).
+- **Price Order**: put four products in order, cheapest first (100 per product in its place, 200 more for a perfect order).
+- **Grocery Run**: fill a cart as close to the budget as you can without going over (400 to the closest).
+- **The Showcase**: the top two players each bid on a bundle of big-ticket prizes; closest without going over wins 1,500, and within $250 of your own showcase wins both (1,500 more). Everyone else predicts the winner (300 if they're right).
+- **Game length**: Short (four rounds and the showcase, about 20 minutes) or Classic (eight rounds, about 35 minutes). Setup deals the products; "New products" deals again.
+
+Prices come from two packs:
+
+- **Open Prices**: real receipt prices from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py` into `public/data/prices-openprices.json` (fetched when Price Check opens). Product photos load from Open Food Facts.
+- **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project with estimated typical US prices.
+
+### With or without a host
+All five games can be played two ways:
+
+- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact and Price Check, the reveals and scores move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
 
 ## How to play
 
@@ -97,7 +113,7 @@ To make a production build in `dist/`:
 npm run build
 ```
 
-To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact rules, with Node's built-in test runner):
+To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact and Price Check rules, with Node's built-in test runner):
 
 ```bash
 npm test
@@ -122,6 +138,7 @@ src/                  React client
   survey/             Survey Says! screens and styles
   wheel/              Spin & Solve screens, styles, sounds and its puzzle pack (puzzles.json)
   fib/                Fib or Fact screens, styles and sounds
+  price/              Price Check screens, styles and its showcase pack (showcase.json)
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -137,12 +154,14 @@ server/               game server (Express + Socket.IO)
   wheel.js            Spin & Solve game logic (wheel.test.js tests it)
   wheelBoard.js       Spin & Solve puzzle board layout (wheelBoard.test.js tests it)
   fib.js              Fib or Fact game logic (fib.test.js tests it)
+  price.js            Price Check game logic (price.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers, including Jeopardy responses
 public/
   data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
                       the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
-                      and the Spin & Solve Fan Database (puzzles-fans.json)
+                      the Spin & Solve Fan Database (puzzles-fans.json)
+                      and the Price Check prices (prices-openprices.json)
   audio/              sound effects
 scripts/
   build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
@@ -150,6 +169,7 @@ scripts/
   build-sheet-surveys.py    rebuilds public/data/surveys-sheet.json from CSV exports of the sheet's tabs
   check-wheel-puzzles.mjs   checks the Spin & Solve puzzle packs (npm run check:puzzles)
   build-fan-puzzles.mjs     rebuilds public/data/puzzles-fans.json from answers collected from wheeloffortuneanswer.com
+  build-openprices-pack.py  rebuilds public/data/prices-openprices.json from the Open Prices API
 docs/
   wheel-of-fortune-plan.md  the Spin & Solve design: rules, server state, socket events and screens
 ```
@@ -164,5 +184,6 @@ docs/
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Fib or Fact uses the same built-in Jeopardy clues. Its sounds are synthesized in `src/fib/sounds.js` and are original.
-- Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune* or their owners.
+- Price Check's prices come from [Open Prices](https://prices.openfoodfacts.org), an Open Food Facts project, under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/); the pack built from it is released under the same licence. Product photos are from Open Food Facts under CC BY-SA. The showcase prices in `src/price/showcase.json` are our own estimates. See [CREDITS.md](CREDITS.md).
+- Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune*, *The Price Is Right* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.

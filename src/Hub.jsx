@@ -28,9 +28,16 @@ const GAMES = [
     tag: "2–8 players",
     blurb: "Write a fake answer to a real Jeopardy clue, then spot the real one among everyone’s fakes. Score for finding the fact — and for every friend your fib fools.",
   },
+  {
+    id: "price",
+    name: "Price Check",
+    tag: "2–8 players",
+    blurb: "Bid on real products at real store prices — closest without going over wins. Call prices higher or lower, fill a cart on a budget, then the leaders bid on a showcase.",
+  },
 ];
 
-// One drawn glyph per table, in the same stroke: the clue board, the survey board, the wheel, the two answers.
+// One drawn glyph per table, in the same stroke: the clue board, the survey board, the wheel, the two answers,
+// the price tag.
 function TableGlyph({ id }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" };
   return (
@@ -38,6 +45,7 @@ function TableGlyph({ id }) {
       {id === "jeopardy" && <g {...common}>{[6, 19, 32].flatMap((x) => [8, 22].map((y) => <rect key={`${x}${y}`} x={x} y={y} width="10" height="10" rx="1.5" />))}<path d="M8 40h32" /></g>}
       {id === "survey" && <g {...common}><rect x="6" y="7" width="36" height="34" rx="3" /><path d="M12 15h16M12 22h20M12 29h12" /><path d="M33 27l6 6M39 27l-6 6" /></g>}
       {id === "wheel" && <g {...common}><circle cx="24" cy="25" r="16" />{[0, 45, 90, 135].map((a) => <path key={a} d="M24 9v32" transform={`rotate(${a} 24 25)`} />)}<path d="M20 4h8l-4 5z" fill="currentColor" /></g>}
+      {id === "price" && <g {...common}><path d="M6 24V8h16l20 20-14 14z" /><circle cx="14" cy="16" r="3" /><path d="M22 30l8-8" /></g>}
       {id === "fib" && <g {...common}><path d="M6 10h22v14H15l-6 5v-5H6z" /><path d="M20 28v6h13l6 5v-5h3V20h-8" /><path d="M14 15.5l4 4M18 15.5l-4 4" /><path d="M27 30l2.5 2.5L34 28" /></g>}
     </svg>
   );

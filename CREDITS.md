@@ -57,3 +57,25 @@ have fewer than 5 letters, break their category's rule or repeat a Game Night pu
 The peg clicks, letter dings, Bankrupt slide, fanfares and bonus clock are synthesized in the browser by
 `src/wheel/sounds.js`, using the building blocks in `src/survey/sounds.js` (and the same winners tune). There are
 no recordings or samples.
+
+## Price Check Open Prices pack
+
+`public/data/prices-openprices.json` is built from [Open Prices](https://prices.openfoodfacts.org), an
+[Open Food Facts](https://world.openfoodfacts.org) project that collects prices from shop receipts and price tags,
+contributed by its community.
+
+- The price data is made available under the [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+  The pack is a derived database and is released under the ODbL too.
+- Product names, brands and sizes come from the Open Food Facts database (ODbL), and product photos, loaded from
+  `images.openfoodfacts.org`, are under [CC BY-SA](https://creativecommons.org/licenses/by-sa/3.0/) by their contributors.
+
+Changes made for this game: only US-dollar prices for whole products paid at US shops, not on sale, from the two
+years before the newest price, and between $0.50 and $80 are kept; products need a name and a photo; each
+product's price is the median of its receipts; products that look the same are merged; all-caps names are put in
+title case. `scripts/build-openprices-pack.py` rebuilds the file and documents every rule.
+
+## Price Check showcase pack
+
+The big-ticket items in `src/price/showcase.json` were written for this project. Their prices are our own
+estimates of typical US prices in 2026, not quotes from any shop.
+
