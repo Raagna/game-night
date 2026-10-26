@@ -254,22 +254,44 @@ function makeGame(code, rawConfig) {
   }
 }
 
+// Rooms the host closed by going back to the settings. Their codes aren't handed out again for a while, so a
+// phone holding an old code is told the game was closed rather than landing in someone else's new room.
+const closedGames = new Map()
+const CLOSED_CODE_MS = 12 * 60 * 60 * 1000
+const wasClosed = (code) => closedGames.has(String(code || '').toUpperCase())
+function forgetOldClosedGames() { const now=Date.now(); for (const [code, at] of closedGames) if (now - at > CLOSED_CODE_MS) closedGames.delete(code) }
+// Back to settings: end the room. Every phone, TV and controller in it is told, taken out of it, and the room is freed.
+function closeGame(game) {
+  clearGameTimers(game); gameTimers.delete(game.code)
+  for (const timer of game.holds?.values() || []) clearTimeout(timer)
+  for (const playerId of game.players.keys()) cancelLeave(game.code, playerId)
+  games.delete(game.code); closedGames.set(game.code, Date.now())
+  io.to(game.code).emit('game:closed', { code: game.code })
+  io.in(game.code).socketsLeave(game.code)
+}
+
 io.on('connection', (socket) => {
   socket.on('host:create', (config, ack) => {
-    let code; do { code = id() } while (games.has(code))
+    forgetOldClosedGames()
+    let code; do { code = id() } while (games.has(code) || closedGames.has(code))
     const mode = modeFor(config?.game)
     let game; try { game = mode ? mode.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
     game.hostSocketId = socket.id; games.set(code, game)
     socket.join(code); ack?.({ ok: true, code, game: publicGame(game) })
   })
+  socket.on('host:close', ({ code } = {}, ack) => {
+    const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return ack?.({ ok: false })
+    closeGame(game); ack?.({ ok: true })
+  })
   socket.on('host:join', ({ code, display }, ack) => {
-    const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, error: 'Game not found' })
+    const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), error: 'Game not found' })
     socket.data.controllerGame = game.code; if (display) game.hostSocketId = socket.id
     socket.join(game.code); ack?.({ ok: true, game: publicGame(game) }); emitGame(game)
     modeOf(game)?.hostJoined?.(game, socket)
   })
   socket.on('player:join', ({ code, name, returningPlayerId }, ack) => {
-    const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, error: 'Game not found' })
+    const game = games.get(code?.toUpperCase())
+    if (!game) return ack?.(wasClosed(code) ? { ok: false, closed: true, error: 'The host closed this game. Ask for the new code.' } : { ok: false, error: 'Game not found' })
     const returning = game.players.get(returningPlayerId)
     if (returning) {
       cancelLeave(game.code, returning.id)
@@ -420,4 +442,5 @@ app.get('/import/jeopardylabs', async (req, res) => {
   try { res.json({ ok: true, board: await importJeopardyLabs(req.query.url) }) }
   catch (error) { res.status(400).json({ ok: false, error: error.name === 'TimeoutError' ? 'JeopardyLabs took too long to answer. Try again.' : error.message }) }
 })
-httpServer.listen(3001, () => console.log('Jeopardy server listening on http://localhost:3001'))
+const PORT = Number(process.env.PORT) || 3001
+httpServer.listen(PORT, () => console.log(`Game Night server listening on http://localhost:${PORT}`))
