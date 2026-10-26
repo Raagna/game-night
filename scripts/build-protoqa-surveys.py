@@ -17,7 +17,7 @@ ProtoQA has two kinds of question:
 
 Only answers worth at least MIN_POINTS are kept, the top MAX_ANSWERS of them, and a question needs
 MIN_ANSWERS of those. Boards whose counts add up to less than MIN_TOTAL (most of the board is missing)
-or more than 100 (a bad transcription) are left out, as are questions with cut-off or garbled text,
+or more than 100 (a bad transcription) are left out, as are questions with cut-off ("..") or garbled text,
 questions already in src/surveys.json, repeats, and anything matching BLOCKED (not for a party).
 Pass --report to list everything that was left out and why.
 """
@@ -55,7 +55,8 @@ DROP_IDS = {"train_q690", "train_q2255", "train_q3856", "train_q4097", "train_q4
 KEEP_CROWDSOURCED = {f"r{i}" for i in """1q2 1q6 1q7 1q9 1q10 1q16 1q17 1q18 1q20 2q3 2q4 2q5 2q6 2q14 2q15 2q19 2q20 2q21 2q23 2q25
 2q26 2q27 2q32 2q40 2q42 2q46 2q47""".split()}
 
-WORD = r"[A-Za-z][A-Za-z'\u2019]*"
+# A word starts with a letter that doesn't follow a digit, so "4th" and "10am" stay lowercase.
+WORD = r"(?<![0-9])[A-Za-z][A-Za-z'\u2019]*"
 ACRONYMS = set("tv ceo dvd cd atm usa fbi cia ufo pc bbq suv vip iq gps nfl nba mlb nhl abc nbc cbs cnn mtv hbo espn dj mri er icu pta pda mp3 rv".split())
 STOP = set("a an the of to in on at for with and or your you my is are be do does that this it".split())
 GENERIC = set("name something someone somewhere thing things people person might would could can most often usually always really probably typically commonly frequently many they them their he she him his her we our us i when what where who which why how there will have has am was give me tell find found see expect lot lots youd".split())
@@ -64,9 +65,11 @@ CONTRACTIONS = {w.replace("'", ""): w for w in """you're don't can't won't isn't
 weren't haven't hasn't they're i'm i've you've you'll you'd what's that's there's she's let's who's""".split()}
 # Words to keep capitalised when a Title Case Question Is Made Sentence Case, on top of those learned from the data.
 PROPER = set("""i american americans america christmas halloween thanksgiving easter valentine's hawaii mexico canada
-california florida texas new york vegas las paris france italy italian england english french spanish mexican
+california florida texas york vegas las paris france italy italian england english french spanish mexican
 monday tuesday wednesday thursday friday saturday sunday january february march april june july august september
-october november december santa claus disney disneyland superman batman elvis hollywood tv dvd usa us god""".split())
+october november december santa claus disney disneyland superman batman elvis hollywood god""".split())
+# "New" is only a name in front of these ("New York", "New Year's"), not in "a new car".
+NEW_NAMES = set("york yorks jersey orleans england zealand mexico hampshire year year's years".split())
 
 
 def words(text):
@@ -135,15 +138,18 @@ def tidy_question(text, proper):
     if is_title_case(tokens):
         def recase(m):
             word = m.group(0)
-            if len(word) > 1 and word.isupper():
-                return word  # TV, USA
             lower = word.lower()
+            if (len(word) > 1 and word.isupper()) or lower in ACRONYMS:
+                return word.upper()  # TV, USA
+            if lower == "new":
+                after = re.match(r"\s+([A-Za-z'’]+)", m.string[m.end():])
+                return "New" if after and after.group(1).lower().replace("’", "'") in NEW_NAMES else "new"
             return word[0].upper() + lower[1:] if lower in proper or lower.split("'")[0] in proper else lower
         text = re.sub(WORD, recase, text)
     text = re.sub(r"\bi\b", "I", text)
     text = text[0].upper() + text[1:]
     text = re.sub(r"\s*[:;,]$", "", text)
-    if not re.search(r"[.?!]$", text):
+    if not re.search(r"[.?!][\"'\u201d\u2019]*$", text):
         text += "?" if text.lower().startswith(WH_WORDS) else "."
     return text.replace(" ?", "?")
 
@@ -155,12 +161,12 @@ def display(answer):
         word = m.group(0)
         if word.lower() in ACRONYMS:
             return word.upper()
-        return re.sub(r"^(Ma?c)([a-z])", lambda mc: mc.group(1) + mc.group(2).upper(), word[0].upper() + word[1:]) if len(word) > 4 else word[0].upper() + word[1:]
+        return re.sub(r"^(Mc)([a-z])", lambda mc: mc.group(1) + mc.group(2).upper(), word[0].upper() + word[1:]) if len(word) > 4 else word[0].upper() + word[1:]
     return re.sub(WORD, recase, answer)
 
 
 def garbled(text):
-    return "..." in text or "\u2026" in text or re.search(r"[\x00-\x1f\x7f-\x9f\ufffd]", text)
+    return ".." in text or "\u2026" in text or re.search(r"[\x00-\x1f\x7f-\x9f\ufffd]", text)
 
 
 def scraped_answers(row):
