@@ -24,6 +24,13 @@ const GAMES = [
     blurb: "Spin the wheel, call a letter and cash in for every time it shows up. Buy vowels, dodge Bankrupt, and solve the puzzle to bank the round.",
     className: "hub-card--wheel",
   },
+  {
+    id: "fib",
+    name: "Fib or Fact",
+    tag: "2–8 players",
+    blurb: "Write a fake answer to a real Jeopardy clue, then spot the real one among everyone’s fakes. Score for finding the fact — and for every friend your fib fools.",
+    className: "hub-card--fib",
+  },
 ];
 
 export function BackToHub() {

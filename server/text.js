@@ -13,3 +13,22 @@ export function editDistance(a, b) {
   }
   return d[a.length][b.length]
 }
+
+// ---------- Jeopardy-style responses ----------
+// Lowercases, strips accents, a leading "what is"/"who's" and leading articles (a/an/the), turns number words into digits ("four" = "4"), then drops spaces and punctuation.
+export const normalizeAnswer = (value) => stripAccents(value).toLowerCase().replace(/&/g,' and ').replace(/[’'`]/g,"'").trim()
+  .replace(/^(what|who|where|when|why|how)('s|\s+(is|are|was|were))\s+/,'')
+  .replace(/^(a|an|the)\s+/,'')
+  .replace(numberWordPattern,(word)=>String(NUMBER_WORDS[word]))
+  .replace(/[^a-z0-9]/g,'')
+// Accepted spellings of the correct answer: as written, and with any "(optional)" part removed, e.g. "(Frank) Sinatra".
+const answerVariants = (answer) => { const raw=String(answer || ''); return [...new Set([raw, raw.replace(/\([^)]*\)/g,' '), raw.replace(/[()]/g,' ')].map(normalizeAnswer).filter(Boolean))] }
+export function answersMatch(response, answer) {
+  const given=normalizeAnswer(response); if(!given) return false
+  return answerVariants(answer).some((expected) => {
+    if(given===expected) return true
+    if(/^\d+$/.test(expected)) return false // numbers and years must be exact
+    const allowed=expected.length>=12 ? 2 : expected.length>=4 ? 1 : 0
+    return allowed>0 && Math.abs(given.length-expected.length)<=allowed && editDistance(given,expected)<=allowed
+  })
+}

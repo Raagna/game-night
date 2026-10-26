@@ -1,0 +1,141 @@
+/* Fib or Fact — the same night-blue stage as the rest of Game Night, with a mint accent for the fact and coral
+   for the fibs. It reuses Survey Says!' layout classes (sv-*), which read their accent from these variables. */
+
+.fib, .fib-setup {
+  --sv-accent: #3ddc97;
+  --sv-accent-text: #7ff0bd;
+  --sv-on-accent: #04261a;
+  --fact: #3ddc97;
+  --fact-soft: rgb(61 220 151 / 0.16);
+  --fib: #ff7a6b;
+  --fib-soft: rgb(255 122 107 / 0.16);
+}
+.fib-brand { color: #3ddc97; text-shadow: 0 2px 0 #0b5a37, 0 4px 14px rgb(0 0 0 / 0.35); }
+.fib .primary, .fib-setup .primary { background: var(--sv-accent); color: var(--sv-on-accent); }
+.fib .primary:hover:not(:disabled), .fib-setup .primary:hover:not(:disabled) { background: #6be8b1; }
+
+/* ---------- Setup ---------- */
+.fib-length { margin-top: 24px; max-width: 520px; }
+.fib-lengths { grid-template-columns: repeat(3, 1fr); }
+.fib-setup .sv-rounds button[aria-checked="true"], .fib-setup .sv-packs button[aria-checked="true"] { background: var(--sv-accent); border-color: var(--sv-accent); color: var(--sv-on-accent); }
+.fib-setup .sv-q-round em { color: var(--sv-accent-text); }
+.fib-setup .sv-questions-head .chip-btn { margin-left: auto; }
+.fib-q-categories { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.fib-q-categories span { padding: 4px 10px; border-radius: 999px; background: var(--field); border: 1px solid var(--line); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; }
+
+/* ---------- Display ---------- */
+.display.fib { padding-bottom: 60px; }
+.fib-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); gap: 28px; align-items: start; max-width: 1400px; margin: 4px auto 0; }
+.fib-stage:has(> :only-child) { grid-template-columns: minmax(0, 1fr); max-width: 960px; }
+.fib-center { display: grid; justify-items: center; gap: 18px; min-width: 0; }
+.fib .sv-round-label em { background: var(--sv-accent); color: var(--sv-on-accent); }
+.fib-headline { font: clamp(1.6rem, 3.2vw, 2.8rem)/1.1 var(--display); letter-spacing: -0.015em; text-wrap: balance; }
+
+.fib-categories { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; width: 100%; max-width: 980px; }
+.fib-categories li { display: grid; place-items: center; min-height: 130px; padding: 18px; border-radius: 16px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.18); font: clamp(1.1rem, 2vw, 1.6rem)/1.15 var(--display); text-transform: uppercase; text-wrap: balance; box-shadow: var(--shadow); }
+
+.fib-clue { width: 100%; max-width: 1040px; display: grid; gap: 12px; padding: clamp(18px, 3vw, 34px); border-radius: 18px; background: #050c33; border: 3px solid var(--sv-accent); box-shadow: inset 0 0 0 2px #050c33, inset 0 0 0 4px rgb(61 220 151 / 0.3), var(--shadow); }
+.fib-clue-category { justify-self: center; padding: 4px 14px; border-radius: 999px; background: var(--sv-accent); color: var(--sv-on-accent); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.fib-clue p { font: clamp(1.4rem, 3vw, 2.5rem)/1.25 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
+.fib-clue.is-small { padding: 14px 22px; gap: 8px; }
+.fib-clue.is-small p { font-size: clamp(1rem, 1.8vw, 1.45rem); }
+
+.fib-options { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1040px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.fib-options.count-3, .fib-options.count-5, .fib-options.count-6, .fib-options.count-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fib-option { position: relative; display: grid; align-content: center; gap: 4px; min-height: clamp(62px, 9vh, 92px); padding: 10px 16px; border-radius: 12px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.2); transition: opacity 240ms ease-out, background-color 240ms ease-out; }
+.fib-option-text { font: clamp(1rem, 1.9vw, 1.5rem)/1.15 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
+.fib-option-tag { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.02em; }
+.fib-option.is-fib { background: #2a1240; border-color: var(--fib); opacity: 0.8; }
+.fib-option.is-fib .fib-option-tag { color: var(--fib); }
+.fib-option.is-fact { background: #0b3d2a; border-color: var(--fact); }
+.fib-option.is-fact .fib-option-tag { color: var(--fact); }
+.fib-option.is-current { opacity: 1; transform: scale(1.03); box-shadow: 0 0 0 4px rgb(255 255 255 / 0.18), var(--shadow); }
+
+.fib-spotlight { width: 100%; max-width: 760px; display: grid; gap: 8px; padding: 20px 24px; border-radius: 18px; background: var(--panel-raised); border: 2px solid var(--line-strong); animation: fib-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.fib-spotlight-text { font: clamp(1.6rem, 3.4vw, 2.8rem)/1.1 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
+.fib-spotlight-voters { font-size: 1.15rem; font-weight: 700; color: var(--text-muted); min-height: 1.4em; }
+.fib-spotlight-verdict { font: clamp(1.3rem, 2.6vw, 2.1rem) var(--display); letter-spacing: -0.01em; }
+.fib-spotlight.is-fib { border-color: var(--fib); background: #2a1240; }
+.fib-spotlight.is-fib .fib-spotlight-verdict { color: var(--fib); animation: fib-stamp 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+.fib-spotlight.is-fact { border-color: var(--fact); background: #0b3d2a; }
+.fib-spotlight.is-fact .fib-spotlight-verdict { color: var(--fact); animation: fib-stamp 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+@keyframes fib-in { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fib-stamp { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.fib-scoreboard { padding: 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); text-align: left; }
+.fib-scoreboard h2 { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.fib-scoreboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fib-scoreboard li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); }
+.fib-scoreboard li.is-away { opacity: 0.55; }
+.fib-scoreboard li.is-done { box-shadow: inset 3px 0 0 var(--sv-accent); }
+.fib-sb-name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.fib-sb-name small { color: var(--text-muted); font-weight: 500; }
+.fib-sb-check { color: var(--text-muted); font-weight: 800; }
+.is-done .fib-sb-check { color: var(--sv-accent); }
+.fib-scoreboard .money { font: 1.05rem var(--display); color: var(--gold); }
+
+.fib-clue-scores { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 760px; display: grid; gap: 8px; text-align: left; }
+.fib-clue-scores li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--panel-raised); animation: fib-in 380ms both; }
+.fib-clue-scores li:nth-child(2) { animation-delay: 60ms; }
+.fib-clue-scores li:nth-child(3) { animation-delay: 120ms; }
+.fib-clue-scores li:nth-child(n+4) { animation-delay: 180ms; }
+.fib-cs-name { font-weight: 800; font-size: 1.15rem; overflow-wrap: anywhere; }
+.fib-cs-why { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.fib-cs-why em { font-style: normal; font-size: 0.8rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+.fib-cs-why .is-fact { background: var(--fact-soft); color: var(--fact); }
+.fib-cs-why .is-fib { background: var(--fib-soft); color: var(--fib); }
+.fib-cs-gain { font-weight: 800; color: var(--sv-accent-text); min-width: 5ch; text-align: right; }
+.fib-clue-scores .money { font: 1.3rem var(--display); color: var(--gold); min-width: 5ch; text-align: right; }
+
+.fib-lobby-players { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 760px; }
+.fib-lobby-players li { min-height: 38px; display: grid; place-items: center; padding: 0 14px; border-radius: 999px; background: var(--fact-soft); font-weight: 700; }
+
+/* ---------- Phone ---------- */
+.player.fib { text-align: center; }
+.fib-my-score { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 16px 0 12px; padding: 12px 16px; border-radius: 14px; background: var(--fact-soft); border: 2px solid var(--sv-accent); }
+.fib-my-score span { font-weight: 800; }
+.fib-my-score b { font: 1.8rem/1 var(--display); color: var(--sv-accent); }
+.player.fib .fib-clue { margin-top: 10px; padding: 16px; gap: 10px; border-width: 2px; }
+.player.fib .fib-clue p { font: 600 1.15rem/1.4 "DM Sans", system-ui, sans-serif; letter-spacing: 0; }
+.player.fib .fib-clue.is-small p { font-size: 0.95rem; }
+.fib-form input:focus { border-color: var(--sv-accent); }
+.fib-mine { color: var(--sv-accent-text); }
+.fib-pick, .fib-vote { display: grid; gap: 10px; margin-top: 16px; text-align: left; }
+.fib-pick-btn { min-height: 64px; padding: 12px 16px; border-radius: 14px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.2); font: 1.05rem/1.2 var(--display); text-transform: uppercase; text-align: center; }
+.fib-pick-btn:hover { border-color: var(--sv-accent); }
+.fib-vote ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.fib-vote button { width: 100%; min-height: 56px; display: grid; gap: 2px; padding: 10px 16px; border-radius: 12px; background: var(--panel-raised); border: 2px solid var(--line-strong); font-weight: 800; font-size: 1.05rem; text-transform: uppercase; text-align: left; overflow-wrap: anywhere; }
+.fib-vote button:hover:not(:disabled) { border-color: var(--sv-accent); }
+.fib-vote button:disabled { opacity: 0.5; }
+.fib-vote button small { font-size: 0.75rem; font-weight: 700; text-transform: none; color: var(--text-muted); }
+.fib-my-result { margin-top: 10px; }
+
+/* ---------- Host controller ---------- */
+.controller.fib .fib-clue { margin: 14px 0 12px; padding: 14px; }
+.controller.fib .fib-clue p { font: 600 1.05rem/1.4 "DM Sans", system-ui, sans-serif; letter-spacing: 0; }
+.controller.fib .controller-answer span { color: var(--sv-accent); }
+.fib-ctrl-hint { margin-bottom: 12px; font-size: 0.9rem; }
+.fib-ctrl-fibs { margin: 12px 0; }
+.fib-ctrl-fibs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.fib-ctrl-fibs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); }
+.fib-ctrl-fibs q { flex: 1; font-weight: 700; overflow-wrap: anywhere; }
+.fib-ctrl-fibs li > span { color: var(--text-muted); font-size: 0.85rem; }
+.controller.fib .fib-clue-scores { margin: 12px 0; }
+.controller.fib .wide { margin: 8px 0; }
+.fib-player-tools ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fib-player-tools li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fib-player-tools li input { flex: 1; min-width: 120px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); font-weight: 700; font-size: 16px; }
+.fib-player-tools .money { min-width: 4ch; text-align: right; font-weight: 800; color: var(--gold); }
+
+/* ---------- End ---------- */
+.end.fib .place-1 { background: var(--sv-accent); border-color: var(--sv-accent); color: var(--sv-on-accent); }
+.end.fib .place-1 .rank, .end.fib .place-1 strong { color: var(--sv-on-accent); }
+
+@media (max-width: 900px) {
+  .fib-stage { grid-template-columns: minmax(0, 1fr); }
+  .fib-options.count-3, .fib-options.count-5, .fib-options.count-6, .fib-options.count-9 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fib-spotlight, .fib-spotlight-verdict, .fib-clue-scores li { animation: none !important; }
+  .fib-option.is-current { transform: none; }
+}
