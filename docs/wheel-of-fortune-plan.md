@@ -295,19 +295,22 @@ Events for sound (`lastEvent` / `events`, numbered like Survey Says!): `spin`, `
 
 ```json
 {
-  "main":  [["p001", "Phrase", "A PENNY FOR YOUR THOUGHTS"], …],
-  "bonus": [["b001", "Thing", "FOLDING CHAIR"], …],
-  "prizes": [["Trip to Lisbon", 6500], …]
+  "main":  { "Phrase": ["A penny for your thoughts", …], "Thing": […], … },
+  "bonus": { "Thing": ["Folding chair", …], … },
+  "gifts": [["Spa weekend", 3000], …],
+  "trips": [["Trip to Lisbon", 8500], …]
 }
 ```
 
-- **Main pool: about 500 puzzles.** Mostly everyday phrases and figures of speech, like the show, spread over the categories: Phrase, Thing, Things, Place, Person, Proper Name, Food & Drink, Around the House, Living Thing, Event, Fun & Games, Occupation, What Are You Doing?, Before & After, Rhyme Time, Same Name, Same Letter, Landmark, On the Map, Character, Title.
-- **Bonus pool: about 150.** Two or three words, deliberately light on R S T L N E.
+Puzzles are written in normal case and shown in capitals. A puzzle's id is its text in capitals, which the check script keeps unique.
+
+- **Main pool: about 500 puzzles** (675 so far). Mostly everyday phrases and figures of speech, like the show, spread over the categories: Phrase, Thing, Things, Place, Person, Proper Name, Food & Drink, Around the House, Living Thing, Event, Fun & Games, Occupation, What Are You Doing?, Before & After, Rhyme Time, Same Name, Same Letter, Landmark, On the Map, Character, Title.
+- **Bonus pool: about 150** (153 so far). Two or three words, deliberately light on R S T L N E.
 - **Toss-ups** come from the main pool.
 - A game uses about 10 puzzles, so 500 is roughly 50 games before repeats. Already-played puzzles are remembered in `localStorage` (like `gameNight.survey.played.v1`) and skipped.
 - Setup lists the chosen puzzles by category only, with a swap button for each. The answers stay hidden, because the host may also be playing.
 
-`scripts/check-wheel-puzzles.mjs` (Node, uses `server/wheelBoard.js`) checks every puzzle: only A–Z and the allowed punctuation, fits the board, no duplicates across pools, known category, bonus puzzles at most 3 words, Before & After puzzles really share a word, Same Letter puzzles really start with the same letter. Run it whenever the pack changes.
+`scripts/check-wheel-puzzles.mjs` (Node, uses `server/wheelBoard.js`) checks every puzzle: only A–Z and the allowed punctuation, fits the board, no duplicates across pools, known category, bonus puzzles 2 or 3 words, every word of a Same Letter puzzle starts with the same letter, Same Name puzzles have " & ", Before & After puzzles have at least three words (whether they share a word can't be checked mechanically). It warns about main puzzles with fewer than 8 letters, and about bonus puzzles where R S T L N E already show more than 60% of the letters. Run it with `npm run check:puzzles` whenever the pack changes. `npm test` runs the board layout tests.
 
 **Crossword puzzles** (words in any order, linked by a clue) are left out of v1. They need a different board layout and different solve checking.
 
