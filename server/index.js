@@ -12,9 +12,9 @@ const io = new Server(httpServer, { cors: { origin: '*' } })
 const games = new Map()
 const gameTimers = new Map()
 const MAX_PLAYERS = 6
-const isSurvey = (game) => game?.kind === 'survey'
-// Jeopardy-only events ignore Survey Says! games, which share the same code space.
-const jGame = (code) => { const game=games.get(code); return isSurvey(game) ? undefined : game }
+// Jeopardy games have no `kind`. Every other game sets one and runs through its module in `modes` (below).
+// Jeopardy-only events ignore those games, which share the same code space.
+const jGame = (code) => { const game=games.get(code); return game?.kind ? undefined : game }
 // Phones drop their connection when the screen locks or the browser is backgrounded. Give them this long to come back before the game moves on without them.
 const RECONNECT_GRACE_MS = 20000
 const leaveTimers = new Map()
@@ -65,7 +65,7 @@ function assignLowestConnected(game) {
 }
 
 function publicGame(game) {
-  if(isSurvey(game)) return survey.publicGame(game)
+  const mode=modeOf(game); if(mode) return mode.publicGame(game)
   const activeQuestion=game.activeQuestion ? clone(game.activeQuestion) : null
   const board=game.hostless ? clone(game.boards[game.boardIndex]) : game.boards[game.boardIndex]
   if(game.hostless) board?.forEach((category)=>category.questions.forEach((question)=>delete question.answer))
@@ -85,6 +85,11 @@ function emitGame(game) { io.to(game.code).emit('game:update', publicGame(game))
 function clearGameTimers(game) { const timers=gameTimers.get(game.code)||{}; for(const timer of Object.values(timers)) clearTimeout(timer); gameTimers.set(game.code,{}) }
 function schedule(game, name, ms, fn) { const timers=gameTimers.get(game.code)||{}; clearTimeout(timers[name]); timers[name]=setTimeout(fn, ms); gameTimers.set(game.code,timers) }
 const survey = createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, gameTimers, cancelLeave })
+// Each module provides { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register }.
+const modes = { survey }
+// Looked up with hasOwn because the name comes from the browser ("toString" must not count as a game).
+const modeFor = (kind) => Object.hasOwn(modes, kind) ? modes[kind] : undefined
+const modeOf = (game) => modeFor(game?.kind)
 function markUsed(game) { const active=game.activeQuestion; if (!active || active.final) return; const question=game.boards[game.boardIndex]?.[active.categoryIndex]?.questions?.[active.questionIndex]; if(question) question.used=true }
 function startFinal(game) { clearGameTimers(game); clearHolds(game, true); game.status='final'; game.activeQuestion={final:true,question:clone(game.final)}; game.preBuzzDeadline=null; game.clueDeadline=null; game.answerDeadline=null; game.finalDeadline=Date.now()+50000; game.finalTimeUp=false; game.reveal=false; game.buzzerOpen=false; schedule(game,'final',50000,()=>revealFinal(game)); emitGame(game) }
 function returnToBoard(game) { clearGameTimers(game); markUsed(game); game.activeQuestion=null; game.preBuzzDeadline=null; game.clueDeadline=null; game.cluePausedRemaining=null; game.answerDeadline=null; game.buzzerOpen=false; game.buzzerOpenedAt=null; game.buzzedPlayer=null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.answeringPlayerId=null; game.reveal=false; game.incorrectPlayerIds=[]; game.skipVotes=[]; const boardDone=game.boards[game.boardIndex]?.every((category)=>category.questions.every((question)=>question.used)); if(game.hostless && boardDone) return nextBoard(game); emitGame(game) }
@@ -259,7 +264,8 @@ function makeGame(code, rawConfig) {
 io.on('connection', (socket) => {
   socket.on('host:create', (config, ack) => {
     let code; do { code = id() } while (games.has(code))
-    let game; try { game = config?.game === 'survey' ? survey.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
+    const mode = modeFor(config?.game)
+    let game; try { game = mode ? mode.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
     game.hostSocketId = socket.id; games.set(code, game)
     socket.join(code); ack?.({ ok: true, code, game: publicGame(game) })
   })
@@ -278,17 +284,17 @@ io.on('connection', (socket) => {
       ack?.({ ok: true, playerId: returning.id, game: publicGame(game), rejoined: true }); emitGame(game)
       return
     }
-    const maxPlayers = isSurvey(game) ? survey.MAX_PLAYERS : MAX_PLAYERS
+    const mode = modeOf(game), maxPlayers = mode ? mode.MAX_PLAYERS : MAX_PLAYERS
     if (!['lobby', 'playing'].includes(game.status)) return ack?.({ ok: false, error: 'This game is no longer accepting new players.' })
     if (game.players.size >= maxPlayers) return ack?.({ ok: false, error: `This game already has the maximum of ${maxPlayers} players.` })
     const clean = String(name || '').trim().slice(0, 20); if (!clean) return ack?.({ ok: false, error: 'Enter a name' })
     const player = { id: id(), name: clean, score: 0, socketId: socket.id }
-    game.players.set(player.id, player); if (isSurvey(game)) survey.playerJoined(game, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
+    game.players.set(player.id, player); mode?.playerJoined(game, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
     ack?.({ ok: true, playerId: player.id, game: publicGame(game) }); emitGame(game)
   })
   socket.on('host:action', ({ code, action, payload }) => {
     const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return
-    if (isSurvey(game)) return survey.hostAction(game, action, payload || {})
+    const mode = modeOf(game); if (mode) return mode.hostAction(game, action, payload || {})
     if (action === 'start') { game.status = 'playing'; const players=connectedPlayers(game); game.turnPlayerId=players[Math.floor(Math.random()*players.length)]?.id || null }
     if (action === 'select') {
       beginClue(game, payload.categoryIndex, payload.questionIndex); return
@@ -389,7 +395,7 @@ io.on('connection', (socket) => {
     game.skipVotes=game.skipVotes.includes(playerId) ? game.skipVotes.filter((id)=>id!==playerId) : [...game.skipVotes, playerId]
     if(!checkSkip(game)) emitGame(game)
   })
-  survey.register(socket)
+  for (const mode of Object.values(modes)) mode.register(socket)
   socket.on('disconnect', () => {
     for (const game of games.values()) {
       if (game.hostSocketId === socket.id) { game.hostSocketId = null; emitGame(game) }
@@ -397,7 +403,7 @@ io.on('connection', (socket) => {
         player.socketId = null
         emitGame(game)
         const key=leaveKey(game.code,pid); clearTimeout(leaveTimers.get(key))
-        leaveTimers.set(key, setTimeout(() => { leaveTimers.delete(key); const current=games.get(game.code); if (current) (isSurvey(current) ? survey.playerLeft : playerLeft)(current, pid) }, RECONNECT_GRACE_MS))
+        leaveTimers.set(key, setTimeout(() => { leaveTimers.delete(key); const current=games.get(game.code); if (current) (modeOf(current)?.playerLeft ?? playerLeft)(current, pid) }, RECONNECT_GRACE_MS))
       }
     }
   })
