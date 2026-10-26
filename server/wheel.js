@@ -1,10 +1,18 @@
 // Spin & Solve — a word-puzzle game in the style of Wheel of Fortune.
 //
-// Each round is a hidden phrase. The contestant in control spins the wheel and calls a consonant, which
-// earns the spin's value for every time it appears; then they can spin again, buy a vowel for $250 or
-// solve. Landing on Bankrupt empties their round bank; Bankrupt, Lose a Turn, a letter that isn't in the
-// puzzle, a wrong solve or running out of time passes control to the next contestant. Solving banks the
-// round (at least $1,000); everyone else's round bank is lost.
+// A game is a list of segments, like the show: toss-ups, main rounds, and a final round that ends in a
+// speed-up. In a main round the contestant in control spins the wheel and calls a consonant, which earns
+// the spin's value for every time it appears; then they can spin again, buy a vowel for $250 or solve.
+// Landing on Bankrupt empties their round bank; Bankrupt, Lose a Turn, a letter that isn't in the puzzle,
+// a wrong solve or running out of time passes control. Solving banks the round (at least $1,000);
+// everyone else's round bank is lost.
+//
+// Toss-ups reveal one tile at a time; the first contestant to buzz in gets one try, and a miss locks them
+// out while the tiles keep coming. The winner banks the toss-up's value and starts the next round.
+// The final round plays normally until the speed-up (two minutes in, or straight away): one last spin
+// sets the value of every consonant for the rest of the round (plus $1,000), vowels are free, and each
+// letter found gives that contestant a few seconds to solve. A tie for the lead after that is settled by
+// a tiebreaker toss-up, and anyone who solved nothing gets $1,000 for playing.
 //
 // The server picks where every spin lands and only applies it once the wheel has stopped on the TV, so
 // all screens agree and no phone can fake a spin. The solution never goes out with the game state:
@@ -13,14 +21,22 @@
 // "read it exactly as written". In hosted games the host can also judge a solve said out loud.
 import { layoutPuzzle, puzzleProblem, normalizePuzzle, letterCounts, isLetter, isVowel, CONSONANTS, VOWELS } from './wheelBoard.js'
 
-export const WHEEL_TIMES = { decideMs: 10000, letterMs: 10000, solveMs: 20000, spinMs: 5200, roundEndMs: 9000 }
-// Relaxed pace doubles the clocks people play against (not the spin or the pause between rounds).
-const RELAXED = new Set(['decideMs', 'letterMs', 'solveMs'])
+export const WHEEL_TIMES = {
+  decideMs: 10000, letterMs: 10000, solveMs: 20000, quickSolveMs: 10000, spinMs: 5200, roundEndMs: 9000,
+  tossupRevealMs: 1100, tossupLastMs: 6000, speedUpAfterMs: 120000,
+}
+// Relaxed pace doubles the clocks people play against (not the spin, the toss-up tiles or the pause between rounds).
+const RELAXED = new Set(['decideMs', 'letterMs', 'solveMs', 'quickSolveMs'])
 const MAX_PLAYERS = 6
-const MAX_ROUNDS = 5
+const MAX_SEGMENTS = 12
 export const VOWEL_COST = 250
-// Solving for less than this is raised to it, as on the show.
+// Solving a round for less than this is raised to it, as on the show.
 export const SOLVE_MINIMUM = 1000
+// Added to the final spin's value for the speed-up.
+export const SPEED_UP_BONUS = 1000
+// For anyone who solved nothing all game.
+export const CONSOLATION = 1000
+export const TIEBREAK_VALUE = 1000
 export const SLOTS_PER_WEDGE = 3
 const TOP_VALUES = [2500, 3500, 3500, 5000]
 // Each round's 24 wedges, clockwise from the top-value wedge. Numbers are cash wedges. Special wedges
@@ -33,7 +49,7 @@ const LAYOUTS = [
 ]
 const STAND_IN = { MILLION: 900, GIFT: 500, MYSTERY: 1000, EXPRESS: 1000 }
 
-// The wheel for a round (1-based); rounds after the fourth use the fourth round's wheel.
+// The wheel for a round (1-based); rounds after the fourth, and the final round, use the fourth round's wheel.
 export function buildWheel(roundNumber) {
   const index = Math.min(Math.max(roundNumber, 1), LAYOUTS.length) - 1
   return LAYOUTS[index].map((wedge) =>
@@ -44,12 +60,30 @@ export function buildWheel(roundNumber) {
 }
 
 const text = (value, max) => String(value ?? '').trim().slice(0, max)
+const cleanPuzzle = (puzzle) => ({ category: text(puzzle?.category, 30) || 'Phrase', text: normalizePuzzle(text(puzzle?.text, 80)) })
+const usable = (puzzle) => !puzzleProblem(puzzle.text)
+// The game's order of play: toss-ups and main rounds as sent by setup, with the last main round made the
+// final round and the main rounds numbered. `puzzles` (just main rounds) is accepted too.
+function cleanSegments(config) {
+  const raw = Array.isArray(config?.segments) ? config.segments : (Array.isArray(config?.puzzles) ? config.puzzles : []).map((puzzle) => ({ ...puzzle, type: 'round' }))
+  const segments = raw.slice(0, MAX_SEGMENTS).map((segment) => {
+    const puzzle = cleanPuzzle(segment)
+    if (segment?.type === 'tossup') return { type: 'tossup', value: Math.max(100, Math.min(10000, Math.trunc(Number(segment.value)) || 1000)), puzzle }
+    return { type: 'round', puzzle }
+  }).filter((segment) => usable(segment.puzzle))
+  const rounds = segments.filter((segment) => segment.type === 'round')
+  if (!rounds.length) throw new Error('A game needs at least one puzzle.')
+  rounds.forEach((segment, i) => { segment.n = i + 1 })
+  rounds.at(-1).type = 'final'
+  return segments
+}
 function cleanConfig(config) {
-  const puzzles = (Array.isArray(config?.puzzles) ? config.puzzles : []).slice(0, MAX_ROUNDS)
-    .map((puzzle) => ({ category: text(puzzle?.category, 30) || 'Phrase', text: normalizePuzzle(text(puzzle?.text, 80)) }))
-    .filter((puzzle) => !puzzleProblem(puzzle.text))
-  if (!puzzles.length) throw new Error('A game needs at least one puzzle.')
-  return { puzzles, hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show' }
+  const segments = cleanSegments(config)
+  const spares = (Array.isArray(config?.spares) ? config.spares : []).slice(0, 3).map(cleanPuzzle).filter(usable)
+  return {
+    segments, spares, hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
+    speedUp: config?.speedUp === 'start' ? 'start' : 'after',
+  }
 }
 
 export function createWheelGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave, random = Math.random }) {
@@ -69,47 +103,72 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const config = cleanConfig(rawConfig)
     return {
       kind: 'wheel', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config,
-      contestants: [], segments: segmentsFor(config.puzzles), segmentIndex: 0, round: null, clocksPaused: false, lastEvent: null,
+      contestants: [], ...freshPlay(config), lastEvent: null,
     }
   }
-  const segmentsFor = (puzzles) => puzzles.map((puzzle, i) => ({ type: 'round', n: i + 1, puzzle }))
+  // Everything a new game (or a replay) starts from.
+  const freshPlay = (config) => ({
+    segments: config.segments.map((segment) => ({ ...segment })), spares: [...config.spares],
+    segmentIndex: 0, round: null, clocksPaused: false, startNext: null, winner: null,
+  })
   // Everyone plays for themselves: each new phone is a new contestant, with its own podium.
   function playerJoined(game, player) {
     player.contestant = game.contestants.length
-    game.contestants.push({ name: player.name, total: 0, roundBank: 0, solvedAny: false })
+    game.contestants.push(freshContestant(player.name))
   }
+  const freshContestant = (name) => ({ name, total: 0, roundBank: 0, solvedAny: false, consolation: 0 })
 
   // ---------- The puzzle ----------
-  const shownSet = (round) => new Set(round.shown)
-  const allShown = (round) => { const shown = shownSet(round); return Object.keys(round.puzzle.counts).every((letter) => shown.has(letter)) }
-  const lettersLeft = (round, set) => { const shown = shownSet(round); return Object.keys(round.puzzle.counts).some((letter) => set.includes(letter) && !shown.has(letter)) }
+  // A letter is showing if it has been called, or (in a toss-up) its tile has been turned on its own.
+  // Positions count the puzzle's letters in reading order, which is also the board's order.
+  const lettersOf = (round) => [...round.puzzle.text].filter(isLetter)
+  function shownFlags(round) {
+    const called = new Set(round.shown), turned = new Set(round.revealed)
+    return lettersOf(round).map((ch, k) => called.has(ch) || turned.has(k))
+  }
+  const allShown = (round) => shownFlags(round).every(Boolean)
+  const lettersLeft = (round, set) => { const flags = shownFlags(round); return lettersOf(round).some((ch, k) => set.includes(ch) && !flags[k]) }
   // The letters still hidden, in reading order: what a fill-in-the-blanks solve has to supply.
-  const hiddenLetters = (round) => { const shown = shownSet(round); return [...round.puzzle.text].filter((ch) => isLetter(ch) && !shown.has(ch)) }
+  const hiddenLetters = (round) => { const flags = shownFlags(round); return lettersOf(round).filter((_, k) => !flags[k]) }
   // The puzzle as someone tried to solve it, with their letters in the blanks ("_" where they left one).
   function attempt(round, guess) {
-    const shown = shownSet(round), letters = [...guess]
-    return [...round.puzzle.text].map((ch) => (isLetter(ch) && !shown.has(ch) ? letters.shift() || '_' : ch)).join('')
+    const flags = shownFlags(round), letters = [...guess]
+    let k = 0
+    return [...round.puzzle.text].map((ch) => (isLetter(ch) && !flags[k++] ? letters.shift() || '_' : ch)).join('')
   }
   function publicBoard(round, reveal) {
-    const shown = shownSet(round)
-    return round.puzzle.rows.map((row) => row.map((cell) => cell && (cell.letter ? { ch: reveal || shown.has(cell.ch) ? cell.ch : '', letter: true } : { ch: cell.ch, letter: false })))
+    const flags = shownFlags(round)
+    let k = 0
+    return round.puzzle.rows.map((row) => row.map((cell) => {
+      if (!cell) return null
+      if (!cell.letter) return { ch: cell.ch, letter: false }
+      return { ch: reveal || flags[k++] ? cell.ch : '', letter: true }
+    }))
   }
+  const isTossup = (round) => round.type === 'tossup' || round.type === 'tiebreak'
 
   function publicGame(game) {
     const round = game.round, ended = round?.phase === 'roundEnd' || game.status === 'complete'
     const segment = game.segments[game.segmentIndex]
     return {
       kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
-      pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST,
+      pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, winner: game.winner, speedUpMode: game.config.speedUp,
+      // The order of play without the puzzles, so "Play again" can deal new ones for the same game.
+      plan: game.config.segments.map(({ type, value }) => ({ type: type === 'final' ? 'round' : type, value })),
       players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId })),
       contestants: game.contestants.map((contestant, i) => ({ ...contestant, present: present(game, i) })),
-      segment: { index: game.segmentIndex, count: game.segments.length, type: segment?.type, n: segment?.n },
+      segment: {
+        index: game.segmentIndex, count: game.segments.length, type: segment?.type, n: segment?.n, value: segment?.value,
+        rounds: game.segments.filter((s) => s.type === 'round' || s.type === 'final').length,
+      },
       round: round && {
-        phase: round.phase, category: round.puzzle.category, board: publicBoard(round, ended),
+        type: round.type, phase: round.phase, category: round.puzzle.category, board: publicBoard(round, ended),
         control: round.control, actorId: round.actorId, deadline: round.deadline, pausedMs: round.pausedMs,
         called: round.called, misses: round.called.filter((letter) => !round.puzzle.counts[letter]),
         consonantsLeft: lettersLeft(round, CONSONANTS), vowelsLeft: lettersLeft(round, VOWELS), blanks: hiddenLetters(round).length,
         wheel: round.wheel, spin: round.spin, value: round.value, lastSolve: round.lastSolve,
+        tossup: isTossup(round) ? { value: round.tossupValue, lockedOut: round.lockedOut, eligible: round.eligible } : null,
+        speedUp: round.speedUp, speedUpAt: round.speedUp ? null : round.speedUpAt,
         winner: round.winner, awarded: round.awarded, solution: ended ? round.puzzle.text : undefined,
       },
       serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
@@ -126,9 +185,12 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   const hostJoined = (game, socket) => sendSecret(game, socket)
 
   // ---------- Phases and their clocks ----------
-  const PHASE_TIME = { turn: 'decideMs', consonant: 'letterMs', solving: 'solveMs', spinning: 'spinMs', roundEnd: 'roundEndMs' }
+  const PHASE_TIME = {
+    turn: 'decideMs', consonant: 'letterMs', solving: 'solveMs', spinning: 'spinMs', roundEnd: 'roundEndMs',
+    tossupSolve: 'quickSolveMs', finalSpin: 'decideMs', speedLetter: 'letterMs', speedSolve: 'quickSolveMs',
+  }
   // Phases waiting on the contestant in control: the host can pause these clocks.
-  const ACTOR_PHASES = ['turn', 'consonant', 'solving']
+  const ACTOR_PHASES = ['turn', 'consonant', 'solving', 'tossupSolve', 'finalSpin', 'speedLetter', 'speedSolve']
   function phaseMs(game, phase) {
     const key = PHASE_TIME[phase]
     // With a host, the host moves on from a finished round.
@@ -136,9 +198,13 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     return WHEEL_TIMES[key] * (game.config.pace === 'relaxed' && RELAXED.has(key) ? 2 : 1)
   }
   function setPhase(game, phase) {
-    const round = game.round, ms = phaseMs(game, phase)
+    const round = game.round
+    // Once the final round's two minutes are up, the speed-up starts at the next turn.
+    if (phase === 'turn' && speedUpDue(game)) { startSpeedUp(game); return }
+    const ms = phaseMs(game, phase)
     round.phase = phase; round.deadline = null; round.pausedMs = null
     clearGameTimers(game)
+    if (phase === 'tossupReveal') { if (!game.clocksPaused) scheduleReveal(game); return }
     if (!ms || (ACTOR_PHASES.includes(phase) && !round.actorId)) return
     if (game.clocksPaused && ACTOR_PHASES.includes(phase)) { round.pausedMs = ms; return }
     runClock(game, ms)
@@ -152,36 +218,128 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     if (game.round !== round || round.phase !== phase || game.status !== 'playing') return
     if (phase === 'spinning') land(game)
     else if (phase === 'roundEnd') { nextSegment(game); return }
+    // Nobody spun for the speed-up: the wheel gets spun for them.
+    else if (phase === 'finalSpin') spinWheel(game, 0.6)
+    else if (phase === 'tossupSolve') lockOut(game, 'timeout')
+    // A speed-up solve lasts until the clock runs out, however many tries that takes.
     else { event(game, 'timeout', { contestant: round.control }); passControl(game) }
     emitGame(game)
   }
 
-  // ---------- Rounds ----------
+  // ---------- Segments ----------
   function startSegment(game) {
     const segment = game.segments[game.segmentIndex], puzzle = segment.puzzle
     game.contestants.forEach((contestant) => { contestant.roundBank = 0 })
     game.round = {
-      n: segment.n, puzzle: { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) }, wheel: buildWheel(segment.n),
-      phase: 'turn', shown: [], called: [], control: null, actorId: null, deadline: null, pausedMs: null,
-      spin: null, value: null, lastSolve: null, winner: null, awarded: 0,
+      type: segment.type, n: segment.n, puzzle: { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) },
+      phase: null, shown: [], revealed: [], called: [], control: null, actorId: null, deadline: null, pausedMs: null,
+      wheel: null, spin: null, value: null, lastSolve: null, winner: null, awarded: 0,
     }
-    event(game, 'round', { n: segment.n })
-    // Control rotates from round to round: contestant 1 starts round 1, contestant 2 round 2, and so on.
-    giveControl(game, firstPresent(game, (segment.n - 1) % Math.max(1, game.contestants.length)))
+    event(game, 'round', { segment: game.segmentIndex, type: segment.type })
+    if (segment.type === 'tossup' || segment.type === 'tiebreak') startTossup(game, segment)
+    else startMainRound(game, segment)
     sendSecret(game)
   }
+  function startMainRound(game, segment) {
+    const round = game.round
+    round.wheel = buildWheel(segment.type === 'final' ? LAYOUTS.length : segment.n)
+    if (segment.type === 'final') { round.speedUp = null; round.speedUpAt = Date.now() + (game.config.speedUp === 'start' ? 0 : WHEEL_TIMES.speedUpAfterMs) }
+    // The winner of the toss-up just before starts the round; otherwise control rotates from round to round.
+    const start = game.startNext != null && present(game, game.startNext) ? game.startNext : firstPresent(game, (segment.n - 1) % Math.max(1, game.contestants.length))
+    game.startNext = null
+    giveControl(game, start)
+  }
   function nextSegment(game) {
-    if (game.segmentIndex >= game.segments.length - 1) { finish(game); return }
+    if (game.segmentIndex >= game.segments.length - 1 && !addTiebreak(game)) { finish(game); return }
     game.segmentIndex++
     startSegment(game)
     emitGame(game)
   }
+  // After the last segment, a tie for the lead is played off with a toss-up between the tied contestants,
+  // for as long as there are spare puzzles.
+  function addTiebreak(game) {
+    const tied = leaders(game)
+    if (tied.length < 2 || !game.spares.length) return false
+    game.segments.push({ type: 'tiebreak', value: TIEBREAK_VALUE, puzzle: game.spares.shift(), eligible: tied })
+    return true
+  }
+  function leaders(game) {
+    const top = Math.max(...game.contestants.map((contestant) => contestant.total))
+    return game.contestants.map((contestant, i) => (contestant.total === top ? i : -1)).filter((i) => i >= 0)
+  }
   function finish(game) {
     clearGameTimers(game)
+    if (game.contestants.length) {
+      const top = leaders(game)
+      game.winner = top.length === 1 ? top[0] : null
+    }
+    // Decided before the consolation money, which only goes to contestants who solved nothing.
+    for (const contestant of game.contestants) if (!contestant.solvedAny && !contestant.consolation) { contestant.consolation = CONSOLATION; contestant.total += CONSOLATION }
     game.status = 'complete'
     if (game.round) { game.round.phase = 'roundEnd'; game.round.deadline = null; game.round.actorId = null }
     event(game, 'complete')
     emitGame(game)
+  }
+
+  // ---------- Toss-ups ----------
+  function startTossup(game, segment) {
+    const round = game.round
+    round.tossupValue = segment.value
+    round.lockedOut = []
+    round.eligible = segment.eligible || null
+    // The order the tiles turn over in.
+    round.order = lettersOf(round).map((_, k) => k).map((k) => [random(), k]).sort((a, b) => a[0] - b[0]).map(([, k]) => k)
+    if (segment.type === 'tossup') game.startNext = null
+    setPhase(game, 'tossupReveal')
+  }
+  const canBuzz = (game, contestant) => {
+    const round = game.round
+    return contestant != null && present(game, contestant) && !round.lockedOut.includes(contestant) && (!round.eligible || round.eligible.includes(contestant))
+  }
+  // A tile every second or so, until one letter is left; then a last few seconds to buzz in.
+  function scheduleReveal(game) {
+    const round = game.round
+    schedule(game, 'wheel', round.blanksLeft <= 1 ? WHEEL_TIMES.tossupLastMs : WHEEL_TIMES.tossupRevealMs, () => revealTick(game, round))
+  }
+  function revealTick(game, round) {
+    if (game.round !== round || round.phase !== 'tossupReveal' || game.status !== 'playing') return
+    const flags = shownFlags(round), hidden = flags.filter((shown) => !shown).length
+    if (hidden <= 1) { endRoundUnsolved(game); emitGame(game); return }
+    const next = round.order.find((k) => !flags[k])
+    round.revealed.push(next)
+    round.blanksLeft = hidden - 1
+    event(game, 'tile')
+    scheduleReveal(game)
+    emitGame(game)
+  }
+  function buzz(game, playerId) {
+    const round = game.round, contestant = game.players.get(playerId)?.contestant
+    if (round?.phase !== 'tossupReveal' || !canBuzz(game, contestant)) return
+    round.control = contestant; round.actorId = playerId
+    event(game, 'buzz', { contestant })
+    setPhase(game, 'tossupSolve')
+  }
+  // A wrong toss-up solve (or none in time): that contestant sits out the rest of it, and the tiles keep coming.
+  function lockOut(game, why = 'wrongSolve') {
+    const round = game.round
+    event(game, why, { contestant: round.control, text: why === 'wrongSolve' ? round.lastSolve?.text || null : null })
+    round.lockedOut.push(round.control)
+    round.control = null; round.actorId = null
+    const anyone = game.contestants.some((_, i) => canBuzz(game, i))
+    if (anyone) setPhase(game, 'tossupReveal')
+    else endRoundUnsolved(game)
+  }
+  function winTossup(game, contestant) {
+    const round = game.round, winner = game.contestants[contestant]
+    round.shown = Object.keys(round.puzzle.counts)
+    round.winner = contestant
+    round.awarded = round.tossupValue
+    winner.total += round.awarded
+    winner.solvedAny = true
+    round.actorId = null
+    if (round.type === 'tossup') game.startNext = contestant
+    event(game, 'solve', { contestant, amount: round.awarded, tossup: true })
+    setPhase(game, 'roundEnd')
   }
 
   // ---------- Turns ----------
@@ -196,8 +354,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const round = game.round
     round.control = contestant
     round.actorId = contestant == null ? null : members(game, contestant).find((player) => player.socketId)?.id || null
-    round.value = null
-    setPhase(game, 'turn')
+    if (!round.speedUp) round.value = null
+    setPhase(game, round.speedUp?.value ? 'speedLetter' : round.speedUp ? 'finalSpin' : 'turn')
   }
   function passControl(game) {
     const round = game.round
@@ -209,8 +367,11 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function spin(game, power) {
     const round = game.round
     // Once every consonant is showing, only vowels and solving are left.
-    if (round.phase !== 'turn' || !lettersLeft(round, CONSONANTS)) return
-    const slots = round.wheel.length * SLOTS_PER_WEDGE
+    if (round.phase === 'turn' && lettersLeft(round, CONSONANTS)) spinWheel(game, power)
+    else if (round.phase === 'finalSpin') spinWheel(game, power)
+  }
+  function spinWheel(game, power) {
+    const round = game.round, slots = round.wheel.length * SLOTS_PER_WEDGE
     // jitter is where in its slot the pointer stops (-0.4 to 0.4 of a slot), so every screen draws the same landing.
     round.spin = { id: (round.spin?.id || 0) + 1, slot: Math.floor(random() * slots), jitter: random() * 0.8 - 0.4, power: Math.min(1, Math.max(0, Number(power) || 0.6)), ms: WHEEL_TIMES.spinMs }
     event(game, 'spin', { contestant: round.control })
@@ -218,7 +379,16 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   }
   function land(game) {
     const round = game.round, wedge = round.wheel[Math.floor(round.spin.slot / SLOTS_PER_WEDGE)]
-    event(game, 'land', { contestant: round.control, kind: wedge.kind, value: wedge.value })
+    event(game, 'land', { contestant: round.control, kind: wedge.kind, value: wedge.value, final: !!round.speedUp })
+    // The final spin only sets the speed-up's value: anything that isn't money is spun again.
+    if (round.speedUp) {
+      if (wedge.kind !== 'cash') { spinWheel(game, 0.6); return }
+      round.speedUp.value = wedge.value + SPEED_UP_BONUS
+      round.value = round.speedUp.value
+      event(game, 'speedUpValue', { value: round.value })
+      setPhase(game, 'speedLetter')
+      return
+    }
     if (wedge.kind === 'bankrupt') { bankOf(game).roundBank = 0; passControl(game) }
     else if (wedge.kind === 'loseTurn') passControl(game)
     else { round.value = wedge.value; setPhase(game, 'consonant') }
@@ -249,13 +419,15 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     else setPhase(game, 'turn')
   }
   function startSolve(game) {
-    if (game.round.phase !== 'turn') return
-    event(game, 'solving', { contestant: game.round.control })
-    setPhase(game, 'solving')
+    const round = game.round
+    if (round.phase !== 'turn' && round.phase !== 'speedLetter') return
+    event(game, 'solving', { contestant: round.control })
+    setPhase(game, round.phase === 'speedLetter' ? 'speedSolve' : 'solving')
   }
+  const SOLVE_PHASES = ['solving', 'tossupSolve', 'speedSolve']
   function solve(game, playerId, rawGuess) {
     const round = game.round
-    if (round.phase !== 'solving') return
+    if (!SOLVE_PHASES.includes(round.phase)) return
     const guess = String(rawGuess ?? '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 60)
     const correct = guess === hiddenLetters(round).join('')
     round.lastSolve = { playerId, contestant: round.control, text: attempt(round, guess), correct }
@@ -263,8 +435,11 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   }
   function ruleSolve(game, correct) {
     const round = game.round
-    if (correct) win(game, round.control)
-    else { event(game, 'wrongSolve', { contestant: round.control, text: round.lastSolve?.text || null }); passControl(game) }
+    if (round.phase === 'tossupSolve') { if (correct) winTossup(game, round.control); else lockOut(game); return }
+    if (correct) { win(game, round.control); return }
+    event(game, 'wrongSolve', { contestant: round.control, text: round.lastSolve?.text || null })
+    // In the speed-up, wrong tries are allowed until the clock runs out.
+    if (round.phase !== 'speedSolve') passControl(game)
   }
   function win(game, contestant) {
     const round = game.round, winner = game.contestants[contestant]
@@ -278,28 +453,65 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     event(game, 'solve', { contestant, amount: round.awarded })
     setPhase(game, 'roundEnd')
   }
-  // The host gave up on the puzzle: show it, nobody banks anything.
-  function revealPuzzle(game) {
+  // Nobody solved it (the host gave up on it, or a toss-up ran out): show it, nobody banks anything.
+  function endRoundUnsolved(game) {
     const round = game.round
     round.shown = Object.keys(round.puzzle.counts)
-    round.winner = null; round.awarded = 0; round.actorId = null
+    round.winner = null; round.awarded = 0; round.actorId = null; round.control = null
     game.contestants.forEach((contestant) => { contestant.roundBank = 0 })
     event(game, 'roundSkipped')
     setPhase(game, 'roundEnd')
   }
 
+  // ---------- The speed-up ----------
+  const speedUpDue = (game) => {
+    const round = game.round
+    return round.type === 'final' && !round.speedUp && round.speedUpAt != null && Date.now() >= round.speedUpAt && !game.clocksPaused
+  }
+  function startSpeedUp(game) {
+    const round = game.round
+    round.speedUp = { value: null }
+    round.value = null
+    event(game, 'speedUp', { contestant: round.control })
+    setPhase(game, 'finalSpin')
+  }
+  // Any letter: a consonant pays the speed-up value for each time it appears, a vowel is free. A letter
+  // that's there gives the same contestant a few seconds to solve; one that isn't passes control.
+  function speedLetter(game, letter) {
+    const round = game.round
+    if (round.phase !== 'speedLetter' || !isLetter(letter) || letter.length !== 1 || round.called.includes(letter)) return
+    round.called.push(letter)
+    const count = round.puzzle.counts[letter] || 0
+    if (!count) { event(game, 'miss', { contestant: round.control, letter, vowel: isVowel(letter) }); passControl(game); return }
+    round.shown.push(letter)
+    const amount = isVowel(letter) ? 0 : round.speedUp.value * count
+    bankOf(game).roundBank += amount
+    event(game, 'hit', { contestant: round.control, letter, count, amount, vowel: isVowel(letter) })
+    if (allShown(round)) win(game, round.control)
+    else setPhase(game, 'speedSolve')
+  }
+
   // ---------- Pausing (host) ----------
   function pause(game) {
     const round = game.round
+    if (game.clocksPaused) return
     game.clocksPaused = true
-    if (round && ACTOR_PHASES.includes(round.phase) && round.deadline) {
+    if (!round) return
+    if (round.speedUpAt != null && !round.speedUp) round.speedUpLeft = Math.max(0, round.speedUpAt - Date.now())
+    if (ACTOR_PHASES.includes(round.phase) && round.deadline) {
       round.pausedMs = Math.max(0, round.deadline - Date.now()); round.deadline = null
       clearGameTimers(game)
     }
+    if (round.phase === 'tossupReveal') clearGameTimers(game)
   }
   function resume(game) {
+    const round = game.round
+    if (!game.clocksPaused) return
     game.clocksPaused = false
-    if (game.round?.pausedMs != null && game.status === 'playing') runClock(game, game.round.pausedMs)
+    if (!round || game.status !== 'playing') return
+    if (round.speedUpLeft != null) { round.speedUpAt = Date.now() + round.speedUpLeft; round.speedUpLeft = null }
+    if (round.pausedMs != null) runClock(game, round.pausedMs)
+    else if (round.phase === 'tossupReveal') scheduleReveal(game)
   }
 
   // ---------- Players coming and going ----------
@@ -307,7 +519,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function handOff(game, playerId) {
     const round = game.round
     if (game.status !== 'playing' || !round || round.actorId !== playerId) return
-    if (ACTOR_PHASES.includes(round.phase)) passControl(game)
+    if (round.phase === 'tossupSolve') lockOut(game, 'timeout')
+    else if (ACTOR_PHASES.includes(round.phase)) passControl(game)
     // Mid-spin, the wheel still lands; the next phase finds nobody to act and the clock moves things on.
     else round.actorId = null
   }
@@ -335,17 +548,25 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     const round = game.round, playing = game.status === 'playing' && round
     if (action === 'start' && game.status === 'lobby') {
       if (!game.contestants.some((_, i) => present(game, i))) return emitGame(game)
-      game.status = 'playing'; game.segmentIndex = 0; game.clocksPaused = false
+      Object.assign(game, freshPlay(game.config), { status: 'playing' })
       startSegment(game)
     }
-    if (action === 'judgeSolve' && playing && round.phase === 'solving') {
+    if (action === 'judgeSolve' && playing && SOLVE_PHASES.includes(round.phase)) {
       round.lastSolve = { playerId: round.actorId, contestant: round.control, text: null, correct: !!payload.correct, byHost: true }
       ruleSolve(game, !!payload.correct)
     }
     if (action === 'pause' && playing) pause(game)
     if (action === 'resume' && playing) resume(game)
-    if (action === 'skipTurn' && playing && ACTOR_PHASES.includes(round.phase)) { event(game, 'skipped', { contestant: round.control }); passControl(game) }
-    if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') revealPuzzle(game)
+    if (action === 'skipTurn' && playing && ACTOR_PHASES.includes(round.phase)) {
+      if (round.phase === 'tossupSolve') lockOut(game, 'skipped')
+      else { event(game, 'skipped', { contestant: round.control }); passControl(game) }
+    }
+    // Starts at the next turn (straight away if someone is deciding what to do now).
+    if (action === 'speedUp' && playing && round.type === 'final' && !round.speedUp) {
+      round.speedUpAt = Date.now(); round.speedUpLeft = null
+      if (round.phase === 'turn') startSpeedUp(game)
+    }
+    if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') endRoundUnsolved(game)
     if (action === 'nextSegment' && playing && round.phase === 'roundEnd') { nextSegment(game); return }
     if (action === 'endGame' && game.status === 'playing') { finish(game); return }
     if (action === 'adjustScore') {
@@ -358,18 +579,16 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'kickPlayer') kick(game, payload.playerId)
     if (action === 'replay') {
-      let puzzles = game.config.puzzles
-      try { if (payload.puzzles) puzzles = cleanConfig({ puzzles: payload.puzzles }).puzzles } catch {}
+      try { if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares })) } catch {}
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', segments: segmentsFor(puzzles), segmentIndex: 0, round: null, clocksPaused: false, lastEvent: null })
-      game.config.puzzles = puzzles
-      game.contestants.forEach((contestant) => Object.assign(contestant, { total: 0, roundBank: 0, solvedAny: false }))
+      Object.assign(game, freshPlay(game.config), { status: 'lobby', lastEvent: null })
+      game.contestants.forEach((contestant, i) => { game.contestants[i] = freshContestant(contestant.name) })
     }
     emitGame(game)
   }
 
   function register(socket) {
-    // Every phone action comes from the player whose turn it is, on their own connection.
+    // Every phone action but the toss-up buzzer comes from the player whose turn it is, on their own connection.
     const on = (name, handle) => socket.on(`wheel:${name}`, (payload = {}) => {
       const game = wheelGame(payload.code)
       if (!isLive(game, payload.playerId, socket) || game.status !== 'playing' || game.round?.actorId !== payload.playerId) return
@@ -380,8 +599,15 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     on('spin', (game, { power }) => spin(game, power))
     on('consonant', (game, { letter }) => callConsonant(game, letterIn(letter)))
     on('buyVowel', (game, { letter }) => buyVowel(game, letterIn(letter)))
+    on('letter', (game, { letter }) => speedLetter(game, letterIn(letter)))
     on('solveStart', (game) => startSolve(game))
     on('solve', (game, { playerId, guess }) => solve(game, playerId, guess))
+    socket.on('wheel:buzz', ({ code, playerId } = {}) => {
+      const game = wheelGame(code)
+      if (!isLive(game, playerId, socket) || game.status !== 'playing' || !game.round) return
+      buzz(game, playerId)
+      emitGame(game)
+    })
   }
 
   return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }

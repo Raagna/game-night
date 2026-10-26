@@ -83,7 +83,7 @@ The category shows and letters appear one at a time in random order (one every ~
 
 ### The final round's speed-up
 
-1. Round 4 plays normally until the speed-up starts: by default after **2 minutes** of play, or earlier if the host presses "Speed-up." With no host, it always starts on that clock. A setup option can make it start right away.
+1. Round 4 plays normally until the speed-up starts: by default after **2 minutes** of play, or earlier if the host presses "Speed-up." With no host, it always starts on that clock. A setup option can make it start right away. Like the show's bell, it starts at the next turn: a spin already under way is played out first, and paused clocks hold the two minutes back too.
 2. The contestant in control makes the **final spin**. Non-dollar results respin automatically. Consonants are worth that value + $1,000 for the rest of the round. **Vowels are free** and worth $0.
 3. Each turn: call any letter, or solve straight away. If the letter is in the puzzle, the letters light up and that contestant gets the speed-up solve clock (10 s on phones instead of the show's 3 s spoken, because typing is slower), with as many tries as fit in the time. A miss or a timeout passes control.
 4. After the round: anyone who solved no puzzles gets $1,000. If the top total is tied, the tied contestants play a tiebreaker toss-up for +$1,000.

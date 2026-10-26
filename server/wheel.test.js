@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE } from './wheel.js'
+import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE, CONSOLATION, SPEED_UP_BONUS, TIEBREAK_VALUE, WHEEL_TIMES } from './wheel.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire(), and spins
 // land where the test says.
@@ -225,7 +225,9 @@ test('without a host, rounds move on by themselves and the game ends after the l
   h.api.hostAction(game, 'revealPuzzle', {})
   h.fire()
   assert.equal(game.status, 'complete')
-  assert.deepEqual(game.contestants.map((c) => c.total), [SOLVE_MINIMUM, 0])
+  assert.equal(game.winner, 0)
+  // Bo solved nothing, so gets the $1,000 for playing, after the winner was decided.
+  assert.deepEqual(game.contestants.map((c) => c.total), [SOLVE_MINIMUM, CONSOLATION])
 })
 
 test('a player leaving on their turn passes control; kicking in the lobby removes their podium', () => {
@@ -265,4 +267,151 @@ test('bad puzzles are dropped, and a game needs at least one', () => {
   const game = h.api.makeGame('X', { puzzles: [{ category: 'Phrase', text: 'Route 66' }, { category: 'Thing', text: 'Paper clip' }] })
   assert.equal(game.segments.length, 1)
   assert.throws(() => h.api.makeGame('Y', { puzzles: [{ text: 'Route 66' }] }), /at least one puzzle/)
+})
+
+// ---------- Game lengths, toss-ups, the speed-up, tiebreakers ----------
+const tossup = (text, value = 1000) => ({ type: 'tossup', value, category: 'Phrase', text })
+const round = (text) => ({ type: 'round', category: 'Phrase', text })
+
+test('setup’s order of play is kept, the last main round is the final round, and main rounds are numbered', () => {
+  const h = harness()
+  const game = newGame(h, { start: false, segments: [tossup('Bob'), tossup('Tea set', 2000), round('Hello world'), round('Paper clip'), tossup('Big deal', 3000), round('Red rose')] })
+  assert.deepEqual(game.segments.map((s) => [s.type, s.n ?? s.value]), [['tossup', 1000], ['tossup', 2000], ['round', 1], ['round', 2], ['tossup', 3000], ['final', 3]])
+})
+
+test('a toss-up turns one tile at a time; the first to buzz gets one try', () => {
+  const h = harness(), game = newGame(h, { segments: [tossup('Hello world'), round('Paper clip')] })
+  assert.equal(game.round.phase, 'tossupReveal')
+  assert.equal(h.api.publicGame(game).round.blanks, 10)
+  h.fire(); h.fire()
+  // Tiles turn one at a time, not every copy of a letter.
+  assert.equal(h.api.publicGame(game).round.blanks, 8)
+  h.act(game, 'p2', 'solve', { guess: 'X' })
+  assert.equal(game.round.phase, 'tossupReveal', 'no solving without buzzing in')
+  h.act(game, 'p2', 'buzz')
+  assert.equal(game.round.phase, 'tossupSolve')
+  assert.equal(game.round.actorId, 'p2')
+  h.act(game, 'p2', 'solve', { guess: 'LLOWORLD' })
+  assert.equal(game.round.phase, 'roundEnd')
+  assert.equal(game.contestants[1].total, 1000)
+  h.api.hostAction(game, 'nextSegment', {})
+  assert.equal(game.round.control, 1, 'the toss-up winner starts the next round')
+})
+
+test('a wrong toss-up solve locks that contestant out and the tiles keep coming', () => {
+  const h = harness(), game = newGame(h, { segments: [tossup('Hello world'), round('Paper clip')] })
+  h.act(game, 'p1', 'buzz')
+  h.act(game, 'p1', 'solve', { guess: 'AAAAAAAAAA' })
+  assert.equal(game.round.phase, 'tossupReveal')
+  assert.deepEqual(game.round.lockedOut, [0])
+  h.act(game, 'p1', 'buzz')
+  assert.equal(game.round.phase, 'tossupReveal', 'a locked-out contestant can’t buzz again')
+  h.act(game, 'p2', 'buzz')
+  h.fire()
+  // Bo ran out of time too: with everyone locked out, nobody wins it.
+  assert.equal(game.round.phase, 'roundEnd')
+  assert.equal(game.round.winner, null)
+  assert.ok(game.contestants.every((c) => c.total === 0))
+})
+
+test('a toss-up nobody buzzes on ends with one letter left', () => {
+  const h = harness(), game = newGame(h, { segments: [tossup('Bob ate'), round('Paper clip')] })
+  for (let i = 0; i < 5; i++) h.fire()
+  assert.equal(h.api.publicGame(game).round.blanks, 1)
+  assert.equal(h.timers.wheel.ms, WHEEL_TIMES.tossupLastMs, 'a few last seconds to buzz in')
+  h.fire()
+  assert.equal(game.round.phase, 'roundEnd')
+  assert.equal(game.round.winner, null)
+})
+
+test('the speed-up: the final spin sets consonants at its value + $1,000, respinning anything else', () => {
+  const h = harness(), game = newGame(h, { speedUp: 'start', segments: [round('Hello world')] })
+  assert.equal(game.round.phase, 'finalSpin')
+  assert.equal(game.round.actorId, 'p1')
+  // Lands on Bankrupt first: that doesn't count, and the wheel goes again by itself.
+  h.spinTo(game, 'p1', BANKRUPT)
+  assert.equal(game.round.phase, 'spinning')
+  assert.equal(game.contestants[0].roundBank, 0)
+  h.fire()
+  // The second spin lands on the $800 wedge (where the harness's default number puts it).
+  assert.equal(game.round.phase, 'speedLetter')
+  assert.equal(game.round.speedUp.value, 800 + SPEED_UP_BONUS)
+})
+
+test('speed-up turns: a letter that’s there gives a few seconds to solve, vowels are free, misses pass', () => {
+  const h = harness(), game = newGame(h, { speedUp: 'start', segments: [round('Hello world')] })
+  h.spinTo(game, 'p1', CASH_600)
+  assert.equal(game.round.value, 600 + SPEED_UP_BONUS)
+  h.act(game, 'p1', 'letter', { letter: 'O' })
+  assert.equal(game.contestants[0].roundBank, 0, 'vowels are free and worth nothing')
+  assert.equal(game.round.phase, 'speedSolve')
+  assert.equal(h.timers.wheel.ms, WHEEL_TIMES.quickSolveMs)
+  h.act(game, 'p1', 'solve', { guess: 'XXXXXXXX' })
+  assert.equal(game.round.phase, 'speedSolve', 'wrong tries are allowed until time runs out')
+  assert.equal(game.round.control, 0)
+  h.fire()
+  assert.equal(game.round.phase, 'speedLetter')
+  assert.equal(game.round.control, 1)
+  h.act(game, 'p2', 'letter', { letter: 'Z' })
+  assert.equal(game.round.control, 0)
+  h.act(game, 'p1', 'letter', { letter: 'L' })
+  assert.equal(game.contestants[0].roundBank, 3 * (600 + SPEED_UP_BONUS))
+  h.act(game, 'p1', 'solve', { guess: 'HEWRD' })
+  assert.equal(game.round.winner, 0)
+  assert.equal(game.contestants[0].total, 3 * 1600)
+})
+
+test('the speed-up starts two minutes into the final round, at the next turn, or when the host says', () => {
+  const h = harness(), game = newGame(h, { segments: [round('Hello world')] })
+  assert.equal(game.round.phase, 'turn')
+  game.round.speedUpAt = Date.now() - 1
+  h.spinTo(game, 'p1', CASH_600)
+  assert.equal(game.round.phase, 'consonant', 'the spin already under way is played out')
+  h.act(game, 'p1', 'consonant', { letter: 'L' })
+  assert.equal(game.round.phase, 'finalSpin')
+  assert.equal(game.contestants[0].roundBank, 1800, 'money already won stays')
+
+  const h2 = harness(), hosted = newGame(h2, { segments: [round('Hello world')] })
+  h2.api.hostAction(hosted, 'speedUp', {})
+  assert.equal(hosted.round.phase, 'finalSpin')
+})
+
+test('pausing holds back the speed-up', () => {
+  const h = harness(), game = newGame(h, { segments: [round('Hello world')] })
+  h.api.hostAction(game, 'pause', {})
+  assert.ok(game.round.speedUpLeft > WHEEL_TIMES.speedUpAfterMs - 1000)
+  game.round.speedUpLeft = 0
+  h.api.hostAction(game, 'resume', {})
+  h.fire()
+  assert.equal(game.round.phase, 'finalSpin')
+})
+
+test('a tie for the lead is played off with a toss-up between the tied contestants only', () => {
+  const h = harness()
+  const game = newGame(h, { players: 3, hostless: true, segments: [round('Bob')], spares: [{ category: 'Thing', text: 'Paper clip' }] })
+  for (const i of [0, 1]) Object.assign(game.contestants[i], { total: 4000, solvedAny: true })
+  h.api.hostAction(game, 'revealPuzzle', {})
+  h.fire()
+  assert.equal(game.status, 'playing')
+  assert.equal(game.round.type, 'tiebreak')
+  assert.deepEqual(game.round.eligible, [0, 1])
+  h.act(game, 'p3', 'buzz')
+  assert.equal(game.round.phase, 'tossupReveal', 'Cy isn’t in the tie')
+  h.act(game, 'p2', 'buzz')
+  h.act(game, 'p2', 'solve', { guess: 'PAPERCLIP' })
+  h.fire()
+  assert.equal(game.status, 'complete')
+  assert.equal(game.winner, 1)
+  assert.equal(game.contestants[1].total, 4000 + TIEBREAK_VALUE)
+  assert.equal(game.contestants[0].consolation, 0, 'only contestants who solved nothing get the $1,000')
+  assert.equal(game.contestants[2].total, CONSOLATION)
+})
+
+test('with no spare puzzle left, a tie stands', () => {
+  const h = harness(), game = newGame(h, { hostless: true, segments: [round('Bob')] })
+  game.contestants.forEach((c) => { c.total = 2000; c.solvedAny = true })
+  h.api.hostAction(game, 'revealPuzzle', {})
+  h.fire()
+  assert.equal(game.status, 'complete')
+  assert.equal(game.winner, null)
 })

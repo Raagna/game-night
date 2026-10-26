@@ -9,6 +9,27 @@ import "./wheel.css";
 // ---------- Picking puzzles ----------
 const PLAYED_KEY = "gameNight.wheel.played.v1";
 const ROUND_CHOICES = [3, 4, 5];
+// The order of play. The show: two toss-ups, rounds 1 and 2, a $3,000 toss-up, round 3, then the final round.
+const TOSSUP = (value) => ({ type: "tossup", value }), ROUND = { type: "round" };
+const LENGTHS = [
+  { id: "short", label: "Short", plan: [TOSSUP(1000), ROUND, ROUND, ROUND] },
+  { id: "classic", label: "Classic", plan: [TOSSUP(1000), TOSSUP(2000), ROUND, ROUND, TOSSUP(3000), ROUND, ROUND] },
+  { id: "custom", label: "Custom" },
+];
+function planFor(length, rounds, tossups) {
+  const preset = LENGTHS.find((option) => option.id === length)?.plan;
+  if (preset) return preset;
+  const plan = tossups ? [TOSSUP(1000), TOSSUP(2000)] : [];
+  for (let i = 0; i < rounds; i++) { if (tossups && i === 2) plan.push(TOSSUP(3000)); plan.push(ROUND); }
+  return plan;
+}
+// "Toss-up · $2,000", "Round 2", "Final round" for each step of a plan.
+function planLabels(plan) {
+  const rounds = plan.filter((step) => step.type !== "tossup").length;
+  let n = 0;
+  return plan.map((step) => (step.type === "tossup" ? `Toss-up · ${money(step.value)}` : ++n === rounds ? "Final round" : `Round ${n}`));
+}
+const forServer = ({ category, text }) => ({ category, text });
 const puzzleId = (text) => text.trim().replace(/\s+/g, " ").toUpperCase();
 const MAIN = Object.entries(PUZZLES.main).flatMap(([category, list]) => list.map((text) => ({ id: puzzleId(text), category, text })));
 const readPlayed = () => { try { return JSON.parse(localStorage.getItem(PLAYED_KEY)) || []; } catch { return []; } };
@@ -35,7 +56,16 @@ const nameOf = (game, contestant) => game.contestants[contestant]?.name || "Nobo
 const colorOf = (contestant) => `c-${contestant % 6}`;
 const myContestant = (game, playerId) => game.players.find((player) => player.id === playerId)?.contestant;
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
-const segmentLabel = (game) => `Round ${game.segment.index + 1} of ${game.segment.count}`;
+function segmentLabel(game) {
+  const { type, n, value, rounds } = game.segment;
+  if (type === "tossup") return `Toss-up · ${money(value)}`;
+  if (type === "tiebreak") return "Tiebreaker";
+  if (type === "final") return "Final round";
+  return `Round ${n} of ${rounds}`;
+}
+const SOLVE_PHASES = ["solving", "tossupSolve", "speedSolve"];
+const CLOCK_PHASES = ["turn", "consonant", "solving", "tossupSolve", "finalSpin", "speedLetter", "speedSolve"];
+const namesList = (game, list) => list.map((i) => nameOf(game, i)).join(" and ");
 const plural = (count, letter) => (count === 1 ? `one ${letter}` : `${count} ${letter}’s`);
 
 // What the round is waiting for, as a headline and a line of detail.
@@ -51,8 +81,21 @@ function phaseText(game) {
       return { title: `${who} landed on ${money(round.value)}`, detail: "Call a consonant" };
     case "solving":
       return { title: `${who} is solving…`, detail: game.hostless ? "Filling in the blanks" : "Say it out loud, or fill in the blanks" };
+    case "tossupReveal": {
+      const eligible = round.tossup.eligible;
+      return { title: round.type === "tiebreak" ? `Tiebreaker for ${money(round.tossup.value)}` : `Toss-up for ${money(round.tossup.value)}`, detail: eligible ? `Only ${namesList(game, eligible)} can buzz in` : "Buzz in on your phone as soon as you know it" };
+    }
+    case "tossupSolve":
+      return { title: `${who} buzzed in!`, detail: game.hostless ? "One try to fill in the blanks" : "One try: say it, or fill in the blanks" };
+    case "finalSpin":
+      return { title: "Speed-up!", detail: `${who} spins one last time. Consonants will be worth the spin plus $1,000` };
+    case "speedLetter":
+      return { title: `${who}: call a letter`, detail: `Consonants ${money(round.value)} · vowels free` };
+    case "speedSolve":
+      return { title: `${who}, solve it now!`, detail: game.hostless ? "As many tries as the clock allows" : "Say it, or fill in the blanks" };
     case "roundEnd":
-      return round.winner == null ? { title: "Nobody solved it", detail: "No money banked this round" } : { title: `${nameOf(game, round.winner)} solved it!`, detail: `Banks ${money(round.awarded)}` };
+      if (round.winner == null) return { title: "Nobody solved it", detail: round.tossup ? "Nobody wins the toss-up" : "No money banked this round" };
+      return { title: `${nameOf(game, round.winner)} ${round.tossup ? "wins the toss-up" : "solved it"}!`, detail: round.tossup ? `+${money(round.awarded)}` : `Banks ${money(round.awarded)}` };
     default:
       return { title: "", detail: "" };
   }
@@ -68,7 +111,9 @@ function latestNews(game) {
   switch (e.type) {
     case "hit": return { tone: "good", text: e.vowel ? `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}` : `There ${e.count === 1 ? "is" : "are"} ${plural(e.count, e.letter)}! +${money(e.amount)}` };
     case "miss": return { tone: "bad", text: `No ${e.letter}` };
-    case "land": return e.kind === "bankrupt" ? { tone: "bad", text: `${who} went bankrupt` } : e.kind === "loseTurn" ? { tone: "bad", text: `${who} lost a turn` } : null;
+    case "land":
+      if (e.final) return e.kind === "cash" ? null : { tone: "bad", text: "That doesn’t count for the speed-up: spinning again" };
+      return e.kind === "bankrupt" ? { tone: "bad", text: `${who} went bankrupt` } : e.kind === "loseTurn" ? { tone: "bad", text: `${who} lost a turn` } : null;
     case "timeout": return { tone: "bad", text: `${who} ran out of time` };
     case "wrongSolve": return { tone: "bad", text: e.text ? `“${e.text}” isn’t it` : `${who} didn’t get it` };
     case "skipped": return { tone: "bad", text: `${who}’s turn was skipped` };
@@ -98,24 +143,39 @@ function useSolution(code) {
   return solution?.code === code ? solution : null;
 }
 
+// Puzzles for a plan, plus two spares kept back for tiebreakers.
+function dealPuzzles(plan) {
+  const picks = pickPuzzles(plan.length);
+  return { picks, spares: pickPuzzles(2, picks) };
+}
+// What setup sends the server for a plan and its puzzles.
+const gameSegments = (plan, picks) => plan.map((step, i) => ({ ...step, ...forServer(picks[i]) }));
+
 // ---------- Setup ----------
 export function WheelSetup({ onCreate }) {
-  const [rounds, setRounds] = useState(4),
-    [picks, setPicks] = useState(() => pickPuzzles(4)),
+  const [length, setLength] = useState("classic"),
+    [rounds, setRounds] = useState(4),
+    [tossups, setTossups] = useState(true),
+    [{ picks, spares }, setDeal] = useState(() => dealPuzzles(planFor("classic", 4, true))),
     [hostless, setHostless] = useState(false),
     [relaxed, setRelaxed] = useState(false),
+    [speedUpNow, setSpeedUpNow] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
-  const changeRounds = (count) => {
-    setRounds(count);
-    setPicks((list) => (count <= list.length ? list.slice(0, count) : [...list, ...pickPuzzles(count - list.length, list)]));
+  const plan = planFor(length, rounds, tossups), labels = planLabels(plan);
+  const roundCount = plan.filter((step) => step.type !== "tossup").length, tossupCount = plan.length - roundCount;
+  // A new plan keeps the puzzles already dealt, as far as they go.
+  const changePlan = (nextLength, nextRounds, nextTossups) => {
+    setLength(nextLength); setRounds(nextRounds); setTossups(nextTossups);
+    const count = planFor(nextLength, nextRounds, nextTossups).length;
+    setDeal((deal) => ({ ...deal, picks: count <= deal.picks.length ? deal.picks.slice(0, count) : [...deal.picks, ...pickPuzzles(count - deal.picks.length, [...deal.picks, ...deal.spares])] }));
   };
-  const swap = (index) => setPicks((list) => list.map((puzzle, i) => (i === index ? pickPuzzles(1, list)[0] || puzzle : puzzle)));
+  const swap = (index) => setDeal((deal) => ({ ...deal, picks: deal.picks.map((puzzle, i) => (i === index ? pickPuzzles(1, [...deal.picks, ...deal.spares])[0] || puzzle : puzzle)) }));
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed(picks.map((puzzle) => puzzle.id));
     onCreate(
-      { game: "wheel", puzzles: picks.map(({ category, text }) => ({ category, text })), hostless, pace: relaxed ? "relaxed" : "show" },
+      { game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after" },
       (error) => { setBusy(false); setNotice(error); },
     );
   };
@@ -127,27 +187,40 @@ export function WheelSetup({ onCreate }) {
         <div className="setup-top">
           <div>
             <h1>Set up Spin &amp; Solve</h1>
-            <p className="muted">Spin the wheel, call letters and solve the puzzle. 2 to 6 players, each on their own phone. Pick how many rounds and swap out any puzzle you don’t like.</p>
+            <p className="muted">Spin the wheel, call letters and solve the puzzle. 2 to 6 players, each on their own phone. Pick how long a game to play and swap out any puzzle you don’t like.</p>
           </div>
         </div>
         <fieldset className="ws-fieldset">
-          <legend>Rounds</legend>
-          <div className="ws-rounds" role="radiogroup" aria-label="Number of rounds">
-            {ROUND_CHOICES.map((count) => <button key={count} role="radio" aria-checked={rounds === count} onClick={() => changeRounds(count)}>{count}</button>)}
+          <legend>Game length</legend>
+          <div className="ws-rounds" role="radiogroup" aria-label="Game length">
+            {LENGTHS.map((option) => <button key={option.id} role="radio" aria-checked={length === option.id} onClick={() => changePlan(option.id, rounds, tossups)}>{option.label}</button>)}
           </div>
-          <p className="muted ws-hint">The top wedge is worth $2,500 in round 1, $3,500 in rounds 2 and 3, and $5,000 after that. Most money after the last round wins.</p>
+          {length === "custom" && (
+            <div className="ws-custom">
+              <div className="ws-rounds ws-rounds-small" role="radiogroup" aria-label="Number of rounds">
+                {ROUND_CHOICES.map((count) => <button key={count} role="radio" aria-checked={rounds === count} onClick={() => changePlan("custom", count, tossups)}>{count} rounds</button>)}
+              </div>
+              <label className="game-mode"><input type="checkbox" checked={tossups} onChange={(e) => changePlan("custom", rounds, e.target.checked)} /><span><b>Toss-ups</b></span></label>
+            </div>
+          )}
+          <p className="muted ws-hint">
+            {length === "short" ? "A $1,000 toss-up, two rounds and the final round. About 20 minutes."
+              : length === "classic" ? "Like the show: $1,000 and $2,000 toss-ups, rounds 1 and 2, a $3,000 toss-up, round 3 and the final round. About 35 minutes."
+              : `${roundCount} rounds${tossupCount ? ` and ${tossupCount} toss-ups` : ", no toss-ups"}.`}
+            {" "}The final round ends in a speed-up: one last spin sets every consonant’s value, vowels are free, and each letter found gives a few seconds to solve. A tie for the lead is settled with a toss-up.
+          </p>
         </fieldset>
         <div className="ws-puzzles-head">
           <h2>Puzzles</h2>
-          <button className="chip-btn" onClick={() => setPicks(pickPuzzles(rounds))}>New set</button>
+          <button className="chip-btn" onClick={() => setDeal(dealPuzzles(plan))}>New set</button>
         </div>
         <ol className="ws-puzzle-list">
           {picks.map((puzzle, i) => (
             <li key={puzzle.id}>
-              <span className="ws-p-round">Round {i + 1}</span>
+              <span className="ws-p-round">{labels[i]}</span>
               <span className="ws-p-category">{puzzle.category}</span>
               <span className="ws-p-size muted">{puzzle.text.split(" ").length} {puzzle.text.split(" ").length === 1 ? "word" : "words"}</span>
-              <button className="chip-btn" aria-label={`Swap the round ${i + 1} puzzle`} onClick={() => swap(i)}>Swap</button>
+              <button className="chip-btn" aria-label={`Swap the ${labels[i]} puzzle`} onClick={() => swap(i)}>Swap</button>
             </li>
           ))}
         </ol>
@@ -160,11 +233,15 @@ export function WheelSetup({ onCreate }) {
           </label>
           <label className="game-mode">
             <input type="checkbox" checked={relaxed} onChange={(e) => setRelaxed(e.target.checked)} />
-            <span><b>Relaxed pace</b><small>Twice as long to decide, call a letter and solve: 20 seconds, 20 seconds and 40 seconds instead of 10, 10 and 20.</small></span>
+            <span><b>Relaxed pace</b><small>Twice as long to decide, call a letter and solve: 20 seconds, 20 seconds and 40 seconds instead of 10, 10 and 20 (and 20 instead of 10 for a toss-up or speed-up solve).</small></span>
+          </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={speedUpNow} onChange={(e) => setSpeedUpNow(e.target.checked)} />
+            <span><b>Speed-up from the start of the final round</b><small>Otherwise the final round plays normally for two minutes first{hostless ? "" : ", or until the host starts the speed-up"}.</small></span>
           </label>
         </section>
         <div className="final-row">
-          <p className="muted start-summary">{rounds} rounds</p>
+          <p className="muted start-summary">{roundCount} rounds{tossupCount ? ` · ${tossupCount} toss-ups` : ""}</p>
           <button className="primary" disabled={busy} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
         </div>
         {notice && <p className="notice" role="alert">{notice}</p>}
@@ -298,8 +375,9 @@ function Podiums({ game }) {
     <ol className="ws-podiums">
       {game.contestants.map((contestant, i) => {
         const control = round && round.control === i && round.phase !== "roundEnd";
+        const sittingOut = round?.tossup && round.phase !== "roundEnd" && (round.tossup.lockedOut.includes(i) || (round.tossup.eligible && !round.tossup.eligible.includes(i)));
         return (
-          <li key={i} className={`ws-podium ${colorOf(i)}${control ? " is-control" : ""}${contestant.present ? "" : " is-away"}${round?.winner === i && round.phase === "roundEnd" ? " is-winner" : ""}`}>
+          <li key={i} className={`ws-podium ${colorOf(i)}${control ? " is-control" : ""}${contestant.present ? "" : " is-away"}${sittingOut ? " is-out" : ""}${round?.winner === i && round.phase === "roundEnd" ? " is-winner" : ""}`}>
             <span className="ws-podium-name">{contestant.name}{!contestant.present && <small> · away</small>}</span>
             <b className="ws-podium-bank money">{money(contestant.roundBank)}</b>
             <span className="ws-podium-total">Total <b className="money">{money(contestant.total)}</b></span>
@@ -310,16 +388,28 @@ function Podiums({ game }) {
   );
 }
 
+// How long until the final round's speed-up starts by itself ("in 1:24"), counting down.
+function SpeedUpIn({ game }) {
+  const at = game.round?.speedUpAt, [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  if (!at || game.clocksPaused) return null;
+  const left = Math.max(0, Math.ceil((at - game.serverNow - (now - receivedAt(game))) / 1000));
+  return <small className="ws-speedup-in">{left ? `(by itself in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")})` : "(at the next turn)"}</small>;
+}
+// When this browser got the current update, so server times can be turned into local ones.
+const received = new WeakMap();
+const receivedAt = (game) => { if (!received.has(game)) received.set(game, Date.now()); return received.get(game); };
+
 function Clock({ game }) {
   const round = game.round;
-  if (!round || !["turn", "consonant", "solving"].includes(round.phase)) return <span />;
+  if (!round || !CLOCK_PHASES.includes(round.phase)) return <span />;
   if (round.pausedMs != null) return <ClueTimer frozenMs={round.pausedMs} />;
   return <ClueTimer deadline={round.deadline} serverNow={game.serverNow} />;
 }
 
 // ---------- Host tools (TV without a host, and the host controller) ----------
 function RoundTools({ game, onAction }) {
-  const round = game.round, waiting = ["turn", "consonant", "solving"].includes(round.phase);
+  const round = game.round, waiting = CLOCK_PHASES.includes(round.phase);
   const last = game.segment.index >= game.segment.count - 1;
   return (
     <div className="ws-round-tools">
@@ -327,6 +417,9 @@ function RoundTools({ game, onAction }) {
         ? <button className="chip-btn" onClick={() => onAction("resume")}>Resume clocks</button>
         : <button className="chip-btn" onClick={() => onAction("pause")}>Pause clocks</button>}
       <button className="chip-btn" disabled={!waiting} onClick={() => onAction("skipTurn")}>Skip turn</button>
+      {round.type === "final" && !round.speedUp && round.phase !== "roundEnd" && (
+        <button className="chip-btn" onClick={() => onAction("speedUp")}>Start the speed-up <SpeedUpIn game={game} /></button>
+      )}
       {round.phase !== "roundEnd" && <button className="chip-btn" onClick={() => onAction("revealPuzzle")}>Reveal puzzle (nobody wins)</button>}
       <button className="chip-btn danger" onClick={() => onAction("endGame")}>{last ? "End game" : "End game early"}</button>
     </div>
@@ -388,16 +481,25 @@ export function WheelDisplay({ game, onAction }) {
         <Lobby game={game} onAction={onAction} />
       ) : (
         <div className="ws-stage">
-          <div className="ws-wheel-wrap">
-            <Wheel wheel={round.wheel} spin={round.spin} spinKey={round.spin ? `${game.segment.index}-${round.spin.id}` : null} />
-            <LandingFlash game={game} />
-          </div>
+          {round.tossup ? (
+            <div className="ws-wheel-wrap ws-tossup-panel">
+              <span>{round.type === "tiebreak" ? "Tiebreaker" : "Toss-up"}</span>
+              <b className="money">{money(round.tossup.value)}</b>
+              <p>{round.phase === "tossupReveal" ? "Buzz in on your phone!" : round.phase === "tossupSolve" ? `${nameOf(game, round.control)} buzzed in` : ""}</p>
+            </div>
+          ) : (
+            <div className="ws-wheel-wrap">
+              <Wheel wheel={round.wheel} spin={round.spin} spinKey={round.spin ? `${game.segment.index}-${round.spin.id}` : null} />
+              <LandingFlash game={game} />
+            </div>
+          )}
           <div className="ws-main">
             <div className="ws-board-wrap">
               <PuzzleBoard board={round.board} />
               <p className="ws-category"><span>{segmentLabel(game)}</span>{round.category}</p>
             </div>
             <div className="ws-status" role="status">
+              {round.speedUp?.value && round.phase !== "roundEnd" && <p className="ws-speedup">Speed-up · consonants {money(round.speedUp.value)} · vowels free</p>}
               <h2>{title}</h2>
               {detail && <p>{detail}</p>}
               {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.text}</p>}
@@ -459,6 +561,9 @@ function SolveBox({ game, playerId }) {
     return { letters: next, cursor: to };
   });
   const full = state.letters.every(Boolean);
+  // In the speed-up a wrong try isn't the end: the letters stay for another go.
+  const lastEvent = game.events?.at(-1);
+  useEffect(() => { if (lastEvent?.type === "wrongSolve") setSent(false); }, [lastEvent?.id]);
   const submit = () => {
     if (!full || sent) return;
     setSent(true);
@@ -490,7 +595,7 @@ function SolveBox({ game, playerId }) {
 }
 
 // Hold to spin harder: the longer the press (up to about a second), the more the wheel turns.
-function SpinButton({ game, playerId, disabled }) {
+function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder" }) {
   const pressed = useRef(null), [sent, setSent] = useState(false);
   const release = () => {
     if (pressed.current == null || sent) return;
@@ -502,7 +607,7 @@ function SpinButton({ game, playerId, disabled }) {
     <button className="ws-spin" disabled={disabled || sent} onPointerDown={() => { pressed.current = Date.now(); }} onPointerUp={release} onPointerLeave={release}
       onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && pressed.current == null) pressed.current = Date.now(); }} onKeyUp={(e) => { if (e.key === "Enter" || e.key === " ") release(); }}>
       SPIN
-      <small>{disabled ? "No consonants left" : "Hold to spin harder"}</small>
+      <small>{disabled ? "No consonants left" : hint}</small>
     </button>
   );
 }
@@ -540,9 +645,18 @@ function PlayerAction({ game, playerId }) {
   const status = (text, you = false) => <p className={"player-status" + (you ? " is-you" : "")}>{text}</p>;
   // Each turn's controls start fresh, so a button pressed last turn isn't still "sent".
   const turnKey = `${game.segment.index}-${game.events?.at(-1)?.id}`;
+  const solveKey = `${game.segment.index}-${round.phase}-${round.control}`;
   if (round.phase === "roundEnd") { const { title, detail } = phaseText(game); return <>{status(title, round.winner === myContestant(game, playerId))}<p className="muted">{detail}</p></>; }
+  if (round.phase === "tossupReveal") return <TossupBuzzer game={game} playerId={playerId} />;
   if (!mine) { const { title, detail } = phaseText(game); return <>{status(title)}{detail && <p className="muted">{detail}</p>}</>; }
   switch (round.phase) {
+    case "tossupSolve":
+    case "speedSolve":
+      return <>{round.phase === "speedSolve" && status("Solve it now!", true)}<SolveBox key={solveKey} game={game} playerId={playerId} /></>;
+    case "finalSpin":
+      return <>{status("Speed-up! Spin one last time", true)}<p className="muted">Consonants will be worth the spin plus $1,000 for the rest of the round.</p><Clock game={game} /><SpinButton key={turnKey} game={game} playerId={playerId} hint="For the speed-up" /></>;
+    case "speedLetter":
+      return <>{status(`Call a letter: consonants ${money(round.value)}, vowels free`, true)}<Clock game={game} /><SpeedLetterPicker key={turnKey} game={game} playerId={playerId} /></>;
     case "turn":
       return <>{status("Your turn!", true)}<Clock game={game} /><TurnActions key={turnKey} game={game} playerId={playerId} /></>;
     case "spinning":
@@ -556,10 +670,30 @@ function PlayerAction({ game, playerId }) {
         </>
       );
     case "solving":
-      return <SolveBox key={turnKey} game={game} playerId={playerId} />;
+      return <SolveBox key={solveKey} game={game} playerId={playerId} />;
     default:
       return null;
   }
+}
+function TossupBuzzer({ game, playerId }) {
+  const round = game.round, me = myContestant(game, playerId), { lockedOut, eligible } = round.tossup;
+  const out = lockedOut.includes(me), notInIt = eligible && !eligible.includes(me);
+  return (
+    <>
+      <p className={"player-status" + (out || notInIt ? "" : " is-you")}>{notInIt ? `Tiebreaker: ${namesList(game, eligible)} only` : out ? "You’re out of this toss-up" : "Know it? Buzz in!"}</p>
+      <button className={"buzzer" + (out || notInIt ? "" : " ready")} disabled={out || notInIt} onClick={() => socket.emit("wheel:buzz", { code: game.code, playerId })}>BUZZ!</button>
+    </>
+  );
+}
+function SpeedLetterPicker({ game, playerId }) {
+  const [sent, setSent] = useState(false);
+  const emit = (name, extra = {}) => { setSent(true); socket.emit(`wheel:${name}`, { code: game.code, playerId, ...extra }); };
+  return (
+    <>
+      <Keyboard allowed={sent ? "" : CONSONANTS + VOWELS} used={game.round.called.join("")} onKey={(letter) => emit("letter", { letter })} />
+      <button className="primary ws-solve-now" disabled={sent} onClick={() => emit("solveStart")}>Solve now</button>
+    </>
+  );
 }
 function ConsonantPicker({ game, playerId }) {
   const [sent, setSent] = useState(false);
@@ -591,10 +725,11 @@ export function WheelPlayer({ game, playerId }) {
       ) : (
         <>
           <p className="player-clue-meta">{segmentLabel(game)} · {round.category}</p>
-          {round.phase !== "solving" || round.actorId !== playerId ? <PuzzleBoard board={round.board} small /> : null}
+          {/* The solve screen has its own board, with the blanks to fill in. */}
+          {SOLVE_PHASES.includes(round.phase) && round.actorId === playerId ? null : <PuzzleBoard board={round.board} small />}
           {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.text}</p>}
           <PlayerAction game={game} playerId={playerId} />
-          {round.phase !== "solving" && <UsedLetters round={round} />}
+          {!SOLVE_PHASES.includes(round.phase) && !round.tossup && <UsedLetters round={round} />}
         </>
       )}
     </main>
@@ -633,10 +768,10 @@ export function WheelController({ game, onAction }) {
       <PuzzleBoard board={round.board} small />
       <div className="ws-ctrl-status" role="status"><b>{title}</b>{detail && <span>{detail}</span>}{news && round.phase !== "roundEnd" && <span className={`ws-news is-${news.tone}`}>{news.text}</span>}</div>
       <Clock game={game} />
-      {round.phase === "solving" && (
+      {SOLVE_PHASES.includes(round.phase) && (
         <div className="judgement">
           <h2>{nameOf(game, round.control)} is solving</h2>
-          <p className="muted">If they say it out loud, judge it here. It has to be said exactly as written.</p>
+          <p className="muted">If they say it out loud, judge it here. It has to be said exactly as written.{round.phase === "speedSolve" ? " In the speed-up, Wrong lets them keep trying until the clock runs out." : ""}</p>
           <div className="verdict">
             <button onClick={() => onAction("judgeSolve", { correct: true })}>Correct</button>
             <button onClick={() => onAction("judgeSolve", { correct: false })}>Wrong</button>
@@ -652,21 +787,22 @@ export function WheelController({ game, onAction }) {
 
 // ---------- End of game ----------
 export function WheelEnd({ game, host, onAction }) {
-  const ranked = game.contestants.map((contestant, i) => ({ ...contestant, i })).sort((a, b) => b.total - a.total);
-  const top = ranked[0]?.total ?? 0, winners = ranked.filter((c) => c.total === top);
+  // The winner was decided before anyone who solved nothing got their $1,000, so it comes from the server.
+  const ranked = game.contestants.map((contestant, i) => ({ ...contestant, i })).sort((a, b) => (b.i === game.winner) - (a.i === game.winner) || b.total - a.total);
+  const tied = game.winner == null && ranked.length > 1;
   const playAgain = () => {
-    const puzzles = pickPuzzles(game.segment.count);
-    rememberPlayed(puzzles.map((puzzle) => puzzle.id));
-    onAction("replay", { puzzles: puzzles.map(({ category, text }) => ({ category, text })) });
+    const { picks, spares } = dealPuzzles(game.plan);
+    rememberPlayed(picks.map((puzzle) => puzzle.id));
+    onAction("replay", { segments: gameSegments(game.plan, picks), spares: spares.map(forServer) });
   };
   return (
     <main className="end wheel-game">
       <div className="brand ws-brand">SPIN &amp; SOLVE</div>
-      <h1>{!ranked.length ? "Game over" : winners.length > 1 ? "It’s a tie!" : `${winners[0].name} wins!`}</h1>
+      <h1>{!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
       <ol className="ws-final">
         {ranked.map((contestant) => (
-          <li key={contestant.i} className={`${colorOf(contestant.i)}${contestant.total === top ? " is-winner" : ""}`}>
-            <span>{contestant.name}</span>
+          <li key={contestant.i} className={`${colorOf(contestant.i)}${contestant.i === game.winner ? " is-winner" : ""}`}>
+            <span>{contestant.name}{contestant.consolation > 0 && <small>includes {money(contestant.consolation)} for playing</small>}</span>
             <b className="money">{money(contestant.total)}</b>
           </li>
         ))}
