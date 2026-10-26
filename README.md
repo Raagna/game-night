@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve, Fib or Fact and Price Check. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeopardy!, Survey Says!, Spin & Solve, Fib or Fact, Price Check and Tip of the Tongue. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -73,11 +73,20 @@ Prices come from two packs:
 - **Open Prices**: real receipt prices from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py` into `public/data/prices-openprices.json` (fetched when Price Check opens). Product photos load from Open Food Facts.
 - **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project with estimated typical US prices.
 
-### With or without a host
-All five games can be played two ways:
+### Tip of the Tongue
+A team word game for teams of two (up to 12 players). Players pair up as they join; the host can move them between teams in the lobby, and an odd player makes one team of three.
 
-- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact and Price Check, the reveals and scores move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
+- **A turn**: the clue-giver picks a category, then has 45 seconds to clue their partner through its seven words. The word shows only on the clue-giver's phone (and the host controller), never on the TV.
+- **Scoring**: a point per word. Clearing all seven banks a bonus point for every second left on the clock. Passes are unlimited (a passed word comes round again); saying the word is a foul and throws it out.
+- **Rounds**: 3, 4 or 5. Every team takes a turn each round; partners swap who gives the clues, and in the last round each team decides. A category disappears once it's used.
+- **Guessing**: set up to be typed (the guesser types on their phone and the game checks it) or said out loud (the clue-giver, or the host, taps Got it).
+- **Words**: 32 categories in `src/tongue/words.json`, written for this project.
+
+### With or without a host
+All six games can be played two ways:
+
+- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along. In Tip of the Tongue, the controller shows the current word and can call Got it, Pass or Foul, which helps when guesses are shouted out loud.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeopardy, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, Price Check and Tip of the Tongue, the reveals and turns move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
 
 ## How to play
 
@@ -113,7 +122,7 @@ To make a production build in `dist/`:
 npm run build
 ```
 
-To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact and Price Check rules, with Node's built-in test runner):
+To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact, Price Check and Tip of the Tongue rules, with Node's built-in test runner):
 
 ```bash
 npm test
@@ -139,6 +148,7 @@ src/                  React client
   wheel/              Spin & Solve screens, styles, sounds and its puzzle pack (puzzles.json)
   fib/                Fib or Fact screens, styles and sounds
   price/              Price Check screens, styles and its showcase pack (showcase.json)
+  tongue/             Tip of the Tongue screens, styles and its word pack (words.json)
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -155,6 +165,7 @@ server/               game server (Express + Socket.IO)
   wheelBoard.js       Spin & Solve puzzle board layout (wheelBoard.test.js tests it)
   fib.js              Fib or Fact game logic (fib.test.js tests it)
   price.js            Price Check game logic (price.test.js tests it)
+  tongue.js           Tip of the Tongue game logic (tongue.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers, including Jeopardy responses
 public/
@@ -185,5 +196,6 @@ docs/
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Fib or Fact uses the same built-in Jeopardy clues. Its sounds are synthesized in `src/fib/sounds.js` and are original.
 - Price Check's prices come from [Open Prices](https://prices.openfoodfacts.org), an Open Food Facts project, under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/); the pack built from it is released under the same licence. Product photos are from Open Food Facts under CC BY-SA. The showcase prices in `src/price/showcase.json` are our own estimates. See [CREDITS.md](CREDITS.md).
+- The Tip of the Tongue word pack in `src/tongue/words.json` was written for this project.
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune*, *The Price Is Right* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.

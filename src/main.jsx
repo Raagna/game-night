@@ -26,6 +26,7 @@ import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd }
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
 import { PriceSetup, PriceDisplay, PricePlayer, PriceController, PriceEnd } from "./price/PriceCheck";
+import { TongueSetup, TongueDisplay, TonguePlayer, TongueController, TongueEnd } from "./tongue/TipOfTheTongue";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -942,7 +943,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeopardy! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, and Survey Says! 12. You can join after a game starts.</p>
+      <p className="muted">Jeopardy! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, and Survey Says! and Tip of the Tongue 12. You can join after a game starts.</p>
       <a href="./">← Game Night</a>
     </main>
   );
@@ -1059,6 +1060,7 @@ function App() {
       if (pick === "wheel") return <WheelSetup onCreate={create} />;
       if (pick === "fib") return <FibSetup onCreate={create} />;
       if (pick === "price") return <PriceSetup onCreate={create} />;
+      if (pick === "tongue") return <TongueSetup onCreate={create} />;
       if (pick === "jeopardy") return <Setup onCreate={create} />;
       return <Hub />;
     }
@@ -1101,6 +1103,12 @@ function App() {
     if (controller) return <>{banner}<PriceController game={game} onAction={action} /></>;
     if (host) return <>{banner}<PriceDisplay game={game} onAction={action} /></>;
     return <>{banner}<PricePlayer game={game} playerId={playerId} /></>;
+  }
+  if (game.kind === "tongue") {
+    if (game.status === "complete") return <>{banner}<TongueEnd game={game} host={host || controller} display={host} onAction={action} /></>;
+    if (controller) return <>{banner}<TongueController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<TongueDisplay game={game} onAction={action} /></>;
+    return <>{banner}<TonguePlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} /></>;

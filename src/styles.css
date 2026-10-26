@@ -894,6 +894,7 @@ html { scrollbar-color: var(--chrome-lo) var(--bg-deep); }
 .wheel-game, .ws-setup, .table-insert--wheel { --table: #ff4fa3; --on-table: #2a0718; --table-art: #b0177a; }
 .fib, .fib-setup, .table-insert--fib { --table: #3ddc97; --on-table: #04261a; --table-art: #0e7a55; }
 .pc, .pc-setup, .table-insert--price { --table: #46b6ff; --on-table: #031a2e; --table-art: #0b4f9e; }
+.tt, .tt-setup, .table-insert--tongue { --table: #b8f04a; --on-table: #1a2600; --table-art: #4d7a00; }
 
 /* ---------- Game Night hub ---------- */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -923,7 +924,7 @@ html { scrollbar-color: var(--chrome-lo) var(--bg-deep); }
 /* The tables are playfield lamps: a round translucent lens, lit from below with a hot centre and a dark bevelled
    edge, holding the table's glyph; its name is printed over the lens and the player count on the glass beneath.
    At rest the lamps glow low; the one under your finger or cursor lights up full. */
-.hub-tables { list-style: none; margin: clamp(12px, 3vh, 28px) 0 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(12px, 1.8vw, 28px); }
+.hub-tables { list-style: none; margin: clamp(12px, 3vh, 28px) 0 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(10px, 1.4vw, 22px); }
 .table-lamp {
   --lens: var(--table);
   display: grid; grid-template-areas: "lens" "count"; justify-items: center; align-items: start; gap: 12px;
@@ -933,7 +934,7 @@ html { scrollbar-color: var(--chrome-lo) var(--bg-deep); }
 .table-insert--jeopardy { --lens: var(--table-art); }
 .lens {
   grid-area: lens; position: relative;
-  width: min(100%, 200px); aspect-ratio: 1; border-radius: 50%;
+  width: min(100%, 180px); aspect-ratio: 1; border-radius: 50%;
   display: grid; justify-items: center; align-content: start; padding-top: 19%;
   color: var(--on-table);
   background: radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--lens) 30%, #fff) 0%, color-mix(in srgb, var(--lens) 62%, #fff) 17%, var(--lens) 45%, color-mix(in srgb, var(--lens) 64%, #000) 76%, color-mix(in srgb, var(--lens) 34%, #000) 100%);

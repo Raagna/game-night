@@ -40,6 +40,9 @@ colors:
   price-lamp: "#46b6ff"
   on-price-lamp: "#031a2e"
   price-art: "#0b4f9e"
+  tongue-lamp: "#b8f04a"
+  on-tongue-lamp: "#1a2600"
+  tongue-art: "#4d7a00"
   green: "#17a35f"
   green-text: "#6ff0b0"
   red: "#e0303e"
@@ -187,7 +190,7 @@ A dark cabinet of violet-black glass, lit by one orange plasma display and one l
 
 ### Tertiary
 - **House Art** (art-magenta, art-violet, art-night): Game Night's own backglass, a magenta burst over violet night. art-magenta is also the text selection colour; art-night is the outline of the chrome lettering.
-- **Table colours**: each game pairs a lamp, the ink on that lamp and an art field. Jeopardy! is gold on Show Blue (jeopardy-art), Survey Says! is survey-lamp on survey-art, Spin & Solve is wheel-lamp on wheel-art, Fib or Fact is fib-lamp on fib-art, and Price Check is price-lamp (sky blue) on price-art. Survey teams (#ff6b6b, #4cc9f0) and Spin & Solve contestant colours are game-local and stay in their game stylesheets.
+- **Table colours**: each game pairs a lamp, the ink on that lamp and an art field. Jeopardy! is gold on Show Blue (jeopardy-art), Survey Says! is survey-lamp on survey-art, Spin & Solve is wheel-lamp on wheel-art, Fib or Fact is fib-lamp on fib-art, Price Check is price-lamp (sky blue) on price-art, and Tip of the Tongue is tongue-lamp (lime) on tongue-art. Survey teams (#ff6b6b, #4cc9f0) and Spin & Solve contestant colours are game-local and stay in their game stylesheets.
 - **Show Blue Board** (jeopardy-cell, jeopardy-cell-hover, jeopardy-board): Jeopardy!'s board, kept from the show. Survey Says! slots and Fib or Fact options use the same blue family.
 
 ### Neutral
