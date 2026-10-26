@@ -288,7 +288,7 @@ export function WheelSetup({ onCreate }) {
   return (
     <main className="setup ws-setup">
       <BackToHub />
-      <div className="brand ws-brand">SPIN &amp; SOLVE <span>game night</span></div>
+      <div className="brand ws-brand">SPIN &amp; SOLVE</div>
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -757,7 +757,6 @@ export function WheelDisplay({ game, onAction }) {
         <div className="ws-stage">
           {round.tossup ? (
             <div className="ws-wheel-wrap ws-tossup-panel">
-              <span>{round.type === "tiebreak" ? "Tiebreaker" : "Toss-up"}</span>
               <b className="money">{money(round.tossup.value)}</b>
               <p>{round.phase === "tossupReveal" ? "Buzz in on your phone!" : round.phase === "tossupSolve" ? `${nameOf(game, round.control)} buzzed in` : ""}</p>
             </div>

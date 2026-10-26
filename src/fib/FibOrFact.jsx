@@ -157,7 +157,7 @@ export function FibSetup({ onCreate }) {
   return (
     <main className="setup fib-setup">
       <BackToHub />
-      <div className="brand fib-brand">FIB OR FACT <span>game night</span></div>
+      <div className="brand fib-brand">FIB OR FACT</div>
       <section className="setup-card">
         <div className="setup-top">
           <div>

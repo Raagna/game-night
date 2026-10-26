@@ -141,7 +141,7 @@ export function SurveySetup({ onCreate }) {
   return (
     <main className="setup survey-setup">
       <BackToHub />
-      <div className="brand survey-brand">SURVEY SAYS! <span>game night</span></div>
+      <div className="brand survey-brand">SURVEY SAYS!</div>
       <section className="setup-card">
         <div className="setup-top">
           <div>
