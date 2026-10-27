@@ -698,10 +698,12 @@ function FinalControls({ game, onAction }) {
                   {r.revealed ? "Hide response" : "Reveal response on screen"}
                 </button>
                 {r.revealed && <p className="final-response">{r.response}</p>}
-                <div className="verdict">
-                  <button onClick={() => onAction("score", { playerId: p.id, amount: r.wager })}>Correct +${r.wager}</button>
-                  <button onClick={() => onAction("score", { playerId: p.id, amount: -r.wager })}>Incorrect −${r.wager}</button>
-                </div>
+                {game.activeQuestion?.judged?.includes(p.id) ? <p className="muted">Judged · use the player tools below to fix a score</p> : (
+                  <div className="verdict">
+                    <button disabled={!timeUp} onClick={() => onAction("score", { playerId: p.id, amount: r.wager })}>Correct +${r.wager}</button>
+                    <button disabled={!timeUp} onClick={() => onAction("score", { playerId: p.id, amount: -r.wager })}>Incorrect −${r.wager}</button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -772,6 +774,7 @@ function FinalPlayer({ game, playerId, p }) {
 }
 function DailyWager({ game, playerId, player }) {
   const [wager,setWager]=useState("5"); const max=Math.max(player.score,...(game.board||[]).flatMap((c)=>c.questions.map((q)=>q.value||0)),5)
+  if(game.activeQuestion.judged?.includes(playerId) || game.reveal) return <><p className="status-card">Answer locked in</p><p className="player-status">{game.reveal ? "Answer revealed" : "Waiting for the ruling"}</p></>
   if(game.activeQuestion.dailyReady) return <><p className="status-card">Wager locked: ${game.activeQuestion.dailyWager.toLocaleString()}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : game.hostless ? "Your buzzer opens in 10 seconds." : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
   return <div className="final-form"><p className="daily-title">Daily Double!</p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
 }
@@ -780,11 +783,13 @@ function HostlessBoard({ game, playerId }) {
   return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
 }
 function HostlessAnswer({ game, playerId }) {
-  const [response,setResponse]=useState(""), [confirming,setConfirming]=useState(false);
+  const [response,setResponse]=useState(""), [confirming,setConfirming]=useState(false), [sent,setSent]=useState(false);
   const hold=(on)=>socket.emit("player:holdClock",{code:game.code,playerId,hold:on});
-  const ask=()=>{ if(confirming) return; setConfirming(true); hold(true); };
+  const ask=()=>{ if(confirming || sent) return; setConfirming(true); hold(true); };
   const cancel=()=>{ setConfirming(false); hold(false); };
-  const send=()=>socket.emit("player:answer",{code:game.code,playerId,response});
+  // One answer per clue: the server ignores any more, and the button stops offering them.
+  const send=()=>{ if(sent) return; setSent(true); setConfirming(false); socket.emit("player:answer",{code:game.code,playerId,response}); };
+  if(sent) return <><p className="status-card">Answer locked in</p><p className="player-status">Checking your response…</p></>;
   return <div className="final-form">
     <label className="field"><span>You buzzed in — type your response</span><input autoFocus={!confirming} autoComplete="off" autoCapitalize="off" enterKeyHint="send" value={response} onChange={(event)=>setResponse(event.target.value)} placeholder="Your response" onKeyDown={(event)=>{ if(event.key==='Enter'){ event.preventDefault(); ask(); } }}/></label>
     <button className="primary" onClick={ask}>Submit response</button>
@@ -796,7 +801,8 @@ function Player({ game, playerId }) {
   const buzzed = game.players.find((p) => p.id === game.buzzedPlayer),
     hasTurn = game.answeringPlayerId === playerId,
     chooser = game.players.find((p) => p.id === game.turnPlayerId),
-    lockedOut = game.incorrectPlayerIds?.includes(playerId);
+    judged = !!game.activeQuestion?.judged?.includes(playerId),
+    lockedOut = game.incorrectPlayerIds?.includes(playerId) || (judged && !game.reveal);
   const signal = game.lastEvent?.playerId === playerId ? game.lastEvent.type : "";
   const personalBuzzTime = game.buzzTimes?.[playerId];
   const canRecordBuzz = !game.activeQuestion?.dailyDouble && game.buzzInputDeadline > game.serverNow && personalBuzzTime == null && !lockedOut;
@@ -839,7 +845,7 @@ function Player({ game, playerId }) {
               : showPersonalBuzzTime
               ? `You buzzed in at ${formatBuzzTime(personalBuzzTime)}`
               : lockedOut
-              ? "Incorrect — wait for the next clue"
+              ? "Locked out — wait for the next clue"
               : buzzed
                   ? buzzed.id === playerId
                     ? "Waiting for the host to judge"
@@ -852,7 +858,7 @@ function Player({ game, playerId }) {
           </p>
           <button
             className={"buzzer " + (game.buzzerOpen ? "ready" : "")}
-            disabled={lockedOut || (!game.buzzerOpen && !canRecordBuzz)}
+            disabled={lockedOut || judged || game.reveal || (!game.buzzerOpen && !canRecordBuzz)}
             onClick={() => { tone(420,.1,"square"); socket.emit("player:buzz", { code: game.code, playerId }); }}
           >
             BUZZ!
