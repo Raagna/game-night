@@ -1,31 +1,48 @@
-/* Price Check — the pinball cabinet's sky-blue table. Products sit on a shelf of white photo cards; every price
-   (tags, bids, budgets, totals) is on the dot-matrix display. The table colour comes from --table (styles.css). */
+/* Price Check — the board with a sky lamp (--table, from styles.css). Products sit on the shelf in a plain light
+   frame with their names in set type; every price (tags, bids, budgets, cart totals, the showcase) is on flaps,
+   blank until the reveal and then clacking in. A winning row gets a lit check cell; anyone over gets a red X. */
 
 /* ---------- Products ---------- */
 .pc-product { margin: 0; display: grid; grid-template-rows: auto 1fr; gap: 10px; min-width: 0; text-align: center; }
 .pc-photo {
-  display: grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 260px; justify-self: center;
-  padding: 10px; border-radius: 14px; background: var(--chrome-hi);
-  box-shadow: inset 0 0 0 1px var(--chrome), 0 0 0 3px #15101e, 0 0 0 5px var(--chrome-lo), 0 10px 20px rgb(0 0 0 / 0.45);
+  display: grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 250px; min-width: 0; justify-self: center; overflow: hidden;
+  padding: 8px; border-radius: 2px; background: var(--paint);
+  box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--steel-lo);
+  transition: box-shadow 200ms ease-out;
 }
-.pc-photo { min-width: 0; overflow: hidden; }
 .pc-photo img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
-.pc-photo span { font: 2.4rem var(--display); color: #9aa1ad; }
-.pc-product figcaption { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.pc-name { order: -1; font: 1.5rem/1.1 var(--display); letter-spacing: -0.01em; text-wrap: balance; overflow-wrap: anywhere; }
-.pc-brandname, .pc-size { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
-.pc-tag { margin-top: 4px; font-size: 1.5rem; }
-.pc-product.is-small .pc-photo { max-width: 170px; padding: 8px; }
-.pc-product.is-small .pc-name { font: 700 1rem/1.25 "DM Sans", system-ui, sans-serif; }
-.pc-product.is-small .pc-tag { font-size: 1.5rem; }
+.pc-photo span { font: 600 2.4rem var(--flap-font); color: var(--steel); }
+.pc-product figcaption { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.pc-brandname { font: 600 0.82rem/1.2 var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); overflow-wrap: anywhere; }
+.pc-name { font: 600 1.35rem/1.2 var(--set); text-wrap: balance; overflow-wrap: anywhere; }
+.pc-size { font: 500 0.95rem/1.2 var(--set); color: var(--steel-hi); }
+.pc-tag { margin-top: 6px; font-size: 1.6rem; }
+.pc-tag .flap-c { color: var(--table); }
+.pc-hl-shelf .pc-tag .flap-c { color: var(--paint); }
+.pc-tag.is-blank .flap-c { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
+.pc-product.is-small .pc-photo { max-width: 170px; padding: 6px; }
+.pc-product.is-small .pc-name { font-size: 1.05rem; }
+.pc-product.is-small .pc-tag { font-size: 1.4rem; }
+
+/* A result cell: hollow while waiting, a lit check for a winner, red with an X for anyone over. */
+.pc-mark {
+  flex-shrink: 0; display: inline-grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 2px; border: 2px solid var(--steel-mid);
+}
+.pc-mark svg { width: 18px; height: 18px; }
+.pc-mark.is-won { background: var(--table); border-color: var(--table); color: var(--on-table); }
+.pc-mark.is-over { background: var(--red); border-color: var(--red); color: #fff; }
 
 /* ---------- TV ---------- */
-.display.pc { padding-bottom: 60px; }
-.pc-center { gap: 14px; }
-.pc-rule { font: clamp(1.25rem, 2.2vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.01em; text-wrap: balance; max-width: 34ch; }
-.pc-callout { font-size: 1.5rem; }
-.pc-bid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 32px; align-items: center; width: 100%; max-width: 980px; }
-.pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
+.pc-round-label { font-size: 1.4rem; }
+.pc-rule { font: 500 clamp(1.15rem, 1.9vw, 1.6rem)/1.3 var(--set); color: var(--steel-hi); text-wrap: balance; max-width: 56ch; }
+.pc-callout { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; font-size: 1.6rem; }
+.pc-callout .label { font-size: 0.95rem; color: var(--steel-hi); }
+.pc-callout.is-over .label { color: var(--red-text); }
+.pc-callout.is-over .flap-c { color: var(--red-text); }
+
+.pc-bid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 36px; align-items: center; width: 100%; max-width: 1000px; }
+.pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 270px) minmax(0, 1fr); }
 .pc-bid:not(:has(.pc-bids)) { grid-template-columns: minmax(0, 340px); justify-content: center; }
 .pc-bid .pc-callout { grid-column: 1 / -1; justify-self: center; }
 
@@ -34,91 +51,174 @@
 .pc-shelf.count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .pc-shelf.count-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .pc-shelf.count-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.pc-shelf > li { transition: opacity 240ms ease-out, transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
-.pc-shelf > li.is-lit { transform: translateY(-6px); }
-.pc-shelf > li.is-lit .pc-photo { box-shadow: inset 0 0 0 1px var(--chrome), 0 0 0 4px var(--table), 0 0 0 7px #15101e, 0 0 0 9px var(--chrome), 0 12px 24px rgb(0 0 0 / 0.5); }
-.pc-shelf > li.is-dim { opacity: 0.55; }
-.pc-pickers { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
-.pc-pickers b { color: var(--table); }
-.pc-verdict { margin-top: 4px; padding: 4px 10px; border-radius: 999px; font-size: 0.9rem; font-weight: 800; background: var(--panel-raised); }
-.pc-verdict.is-higher { color: var(--green-text); }
-.pc-verdict.is-lower { color: var(--red-text); }
-.pc-placed { font-weight: 700; color: var(--text-muted); }
+.pc-shelf > li { position: relative; transition: opacity 240ms ease-out; }
+/* The priciest of the set: a lamp-coloured frame and its name tag; the other two step back. */
+.pc-shelf > li.is-lit .pc-photo { box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--table); }
+.pc-shelf > li.is-dim { opacity: 0.5; }
+.pc-pickers { display: grid; justify-items: center; gap: 3px; margin-top: 4px; font: 500 0.95rem/1.3 var(--set); color: var(--steel-hi); }
+.pc-pickers b { display: inline-flex; align-items: center; gap: 8px; font: 700 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--table); }
+.pc-pickers b::before { content: ""; width: 9px; height: 9px; background: currentColor; }
+/* Higher or lower: which way the real price went, with an arrow, then the real price on flaps. */
+.pc-verdict { display: grid; justify-items: center; gap: 4px; margin-top: 6px; font-size: 1.4rem; }
+.pc-verdict-call { display: inline-flex; align-items: center; gap: 6px; font: 600 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-verdict .pc-arrow { width: 18px; height: 18px; color: var(--paint); }
+.pc-verdict .flap-c { color: var(--table); }
+/* Price order: each spot's number on a lit cell over the photo. */
+.pc-rank { position: absolute; z-index: 1; top: -10px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; }
+.pc-rank .flap-c { background: var(--table); color: var(--on-table); }
+.pc-rank .flap-c::after { background: rgb(0 0 0 / 0.25); }
+.pc-placed { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; }
+.pc-placed li { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 8px 4px 14px; border-radius: 2px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); font-size: 1.35rem; }
+.pc-placed li.is-won { box-shadow: inset 0 0 0 2px var(--table); }
+.pc-placed li.is-won .flap-c { color: var(--table); }
+.pc-placed li.muted { font: 500 1rem var(--set); background: none; }
+.pc-row-name { min-width: 0; font: 600 1.35rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.pc-placed .pc-row-name { font-size: 1.1rem; }
 
-/* Bids and cart totals, highest first; the winner's row is lit, anyone over is struck through and dimmed. */
-.pc-bids { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: 100%; max-width: 560px; text-align: left; }
-.pc-bids li { display: grid; grid-template-columns: minmax(0, 1fr) auto 5.5em; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); }
-.pc-bids span { font: 1.5rem/1.1 var(--display); overflow-wrap: anywhere; }
-.pc-bids b { font-size: 1.5rem; }
-.pc-bids em { font-style: normal; font-weight: 800; text-align: right; color: var(--text-muted); }
-.pc-bids .is-won { background: color-mix(in srgb, var(--table) 20%, var(--panel)); border-color: var(--table); }
-.pc-bids .is-won em { color: var(--table); }
-.pc-bids .is-over { opacity: 0.6; }
-.pc-bids .is-over span { text-decoration: line-through; text-decoration-thickness: 2px; }
-
-.pc-showcases { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 1100px; }
-.pc-showcase {
-  display: grid; gap: 12px; align-content: start; padding: 20px 22px; text-align: left;
-  border: 6px solid transparent; border-radius: 18px;
-  background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--chrome-ramp) border-box;
-  box-shadow: var(--bezel);
+/* Bids and cart totals, highest first, as departure rows: result cell, name, the amount on flaps, and the call. */
+.pc-bids { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; width: 100%; max-width: 600px; text-align: left; }
+.pc-bids li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto 5.6em; align-items: center; gap: 14px;
+  min-height: 58px; padding: 6px 12px; border-radius: 2px;
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: 1.6rem;
 }
-.pc-showcase.is-won { background: linear-gradient(color-mix(in srgb, var(--table) 18%, var(--panel)), color-mix(in srgb, var(--table) 18%, var(--panel))) padding-box, var(--chrome-ramp) border-box; }
-.pc-showcase h2 { font: 1.4rem var(--display); letter-spacing: -0.01em; }
-.pc-showcase ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pc-showcase li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 1rem; }
-.pc-showcase li b { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.pc-showcase dl { margin: 4px 0 0; display: grid; gap: 8px; }
+.pc-bids em { font: 600 0.95rem var(--flap-font); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; text-align: right; color: var(--steel-hi); }
+.pc-bids .is-won { box-shadow: inset 0 0 0 2px var(--table); }
+.pc-bids .is-won em, .pc-bids .is-won .flap-c { color: var(--table); }
+.pc-bids .is-over .pc-row-name, .pc-bids .is-over .flap-c { color: var(--paint-dim); }
+.pc-bids .is-over em { color: var(--red-text); }
+/* Grocery Run's carts sit under a full shelf, so they take two columns. */
+.pc-bids.is-carts { max-width: 1040px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); column-gap: 10px; }
+/* Five or more carts: three across, the result cell alone saying who won and who went over. */
+@media (min-width: 1000px) {
+  .pc-bids.is-carts.is-many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-bids.is-carts.is-many li { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; font-size: 1.3rem; }
+  .pc-bids.is-carts.is-many em { display: none; }
+  .pc-bids.is-carts.is-many .pc-row-name { font-size: 1.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.pc-bids li.muted { display: block; font: 500 1rem var(--set); background: none; }
+
+/* The showcase: each contestant's bundle on its own board, numbered, with the bids and the real totals on flaps. */
+.pc-showcases { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; width: 100%; max-width: 1100px; }
+.pc-showcase {
+  display: grid; gap: 12px; align-content: start; padding: 18px 20px; text-align: left;
+  border-radius: 3px; background: var(--well);
+  box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+  transition: box-shadow 200ms ease-out;
+}
+.pc-showcase.is-won { box-shadow: inset 0 0 0 2px var(--table), 0 0 0 1px #000, 0 0 0 5px var(--steel-lo); }
+.pc-showcase h2 { display: flex; align-items: center; gap: 10px; font: 600 1.35rem/1.15 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.pc-showcase-num { flex-shrink: 0; display: inline-grid; place-items: center; width: 1.3em; height: 1.4em; border-radius: 2px; background: var(--paint); color: #121316; font: 700 0.9em/1 var(--flap-font); }
+.pc-showcase ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.pc-showcase li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--rule); font: 500 1.08rem/1.3 var(--set); }
+.pc-showcase li .money { flex-shrink: 0; font-size: 1.2rem; }
+.pc-showcase li .flap-c.is-blank { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
+.pc-showcase dl { margin: 4px 0 0; display: grid; gap: 6px; }
 .pc-showcase dl div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.pc-showcase dt { font-weight: 700; color: var(--text-muted); }
-.pc-showcase dd { margin: 0; font-size: 1.5rem; }
-.pc-status-line { font-weight: 700; color: var(--text-muted); }
-.pc-win { font: 1.4rem var(--display); color: var(--table); }
-.pc-gain { font-weight: 800; color: var(--table); font-size: 0.9rem; }
+.pc-showcase dt { display: inline-flex; align-items: center; gap: 10px; font: 600 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-showcase dd { margin: 0; font-size: 1.75rem; }
+.pc-showcase.is-over .pc-diff .flap-c { color: var(--red-text); }
+.pc-showcase.is-won .pc-diff .flap-c { color: var(--table); }
+.pc-no-bid { font: 600 1rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paint-dim); }
+.pc-status-line { display: inline-flex; align-items: center; gap: 10px; font: 600 1.05rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paint-dim); }
+.pc-status-line .pc-mark { width: 24px; height: 24px; }
+.pc-status-line.is-in { color: var(--paint); }
+.pc-win { font-size: 1.5rem; }
+.pc-win .flap-c { color: var(--table); }
+.pc-win.is-none { font: 600 1.2rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-gain { font-size: 0.95rem; }
+.pc-gain .flap-c { color: var(--table); }
+
+/* In a hosted game, Next round is the one lit cell in the middle of the rail. */
+@media (min-width: 721px) {
+  .pc .fib-center > .sv-next { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 8px); transform: translateX(-50%); margin: 0; min-height: 52px; }
+  .pc .fib-center > .sv-next:active:not(:disabled) { transform: translate(-50%, 1px); }
+}
 
 /* ---------- Phone ---------- */
 .player.pc { text-align: center; }
 .player.pc > .pc-product { margin-top: 14px; }
-.player.pc .pc-photo { max-width: 200px; }
-.pc-form { display: grid; gap: 14px; margin-top: 16px; text-align: left; }
+.player.pc > .pc-product .pc-photo { max-width: 190px; }
+.pc-form, .pc-bid-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 16px; text-align: left; }
 .pc-bid-form { margin-top: 16px; }
-.pc-money-input { display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; border-radius: 10px; background: var(--dmd-bg); box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.8), 0 0 0 2px #2a2a2e, 0 0 0 3px var(--chrome-lo); }
-.pc-money-input span { font: 800 1.5rem/1.2 var(--dot); color: var(--dmd); }
-.pc-money-input input { flex: 1; min-width: 0; padding: 0.3em 0.2em 0.3em 0; border: 0; border-radius: 0 10px 10px 0; font-size: 1.5rem; caret-color: var(--dmd); outline: none; }
-.pc-money-input input::placeholder { color: rgb(255 138 36 / 0.3); }
-.pc-money-input:focus-within { box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.8), 0 0 0 2px var(--gold), 0 0 0 4px var(--chrome-lo); }
-.pc-hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.pc-hl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
-.pc-hl .pc-product { grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: none; align-items: center; text-align: left; gap: 10px; }
-.pc-hl .pc-photo { width: 64px; padding: 4px; border-radius: 10px; box-shadow: 0 0 0 2px var(--chrome-lo); }
+.sv-guess-label.is-over { color: var(--red-text); }
+/* Keying in a bid: a dollar sign and the amount in board letters, in a dark well. */
+.pc-money-input {
+  display: flex; align-items: center; gap: 4px; padding: 0 0 0 14px;
+  border-radius: 3px; background: var(--well); border: 1px solid var(--rule-strong);
+  transition: border-color 160ms ease-out;
+}
+.pc-dollar { font: 600 2rem/1 var(--flap-font); color: var(--steel-hi); }
+.pc-money-input input {
+  flex: 1; width: 0; min-width: 0; min-height: 64px; padding: 0 12px 0 2px; border: 0; background: transparent;
+  font: 600 2rem/1 var(--flap-font); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; outline: none;
+}
+.pc-money-input input::placeholder { color: var(--paint-dim); }
+.pc-money-input:focus-within { border-color: var(--table); box-shadow: 0 0 0 1px var(--table); }
+.pc-budget-label { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.pc-budget-label .money { font-size: 1.35rem; }
+.pc-budget-label .flap-c { color: var(--table); }
+
+.pc-hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pc-hl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border-radius: 3px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); }
+.pc-hl .pc-product { grid-template-columns: 60px minmax(0, 1fr); grid-template-rows: none; align-items: center; text-align: left; gap: 12px; }
+.pc-hl .pc-photo { width: 60px; padding: 3px; box-shadow: 0 0 0 1px #000; }
 .pc-hl figcaption { align-items: flex-start; }
 .pc-hl .pc-name { font-size: 1rem; }
-.pc-hl .pc-tag { font-size: 1.5rem; }
-/* Higher / Lower and the showcase prediction are paired lamps: dark with a hollow ring off, lit with it filled on. */
+.pc-hl .pc-brandname { font-size: 0.72rem; }
+.pc-hl .pc-tag { font-size: 1.25rem; margin-top: 4px; }
+/* Higher or lower, and the showcase prediction: choice cells, a hollow marker off and a filled one on. */
 .pc-calls { display: grid; gap: 6px; }
-.pc-calls.is-big { grid-template-columns: 1fr 1fr; gap: 10px; }
-.pc-calls button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: #160d24; color: var(--text-muted); font-weight: 800; }
-.pc-calls.is-big button { min-height: 64px; font: 1.5rem var(--display); color: var(--text); }
-.pc-calls button::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; }
-.pc-calls button[aria-checked="true"] { background: radial-gradient(90% 130% at 50% 25%, color-mix(in srgb, var(--table) 55%, var(--chrome-hi)) 0%, var(--table) 55%, color-mix(in srgb, var(--table) 72%, var(--bg-deep)) 100%); border-color: var(--table); color: var(--on-table); }
+.pc-calls.is-big { grid-template-columns: 1fr 1fr; gap: 8px; }
+.pc-calls button {
+  display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px;
+  min-height: 46px; padding: 0 12px; border-radius: var(--radius-sm);
+  background: var(--flap-face); border: 1px solid transparent; color: var(--steel-hi);
+  font: 600 0.98rem/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase;
+  transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+}
+.pc-calls button::before { content: ""; flex-shrink: 0; width: 9px; height: 9px; border: 2px solid currentColor; }
+.pc-calls button .pc-arrow { width: 16px; height: 16px; margin-left: auto; }
+.pc-calls button:hover:not(:disabled):not([aria-checked="true"]) { color: var(--paint); border-color: var(--rule-strong); }
+.pc-calls button[aria-checked="true"] { color: var(--table); border-color: var(--table); background: color-mix(in srgb, var(--table) 9%, var(--flap-face)); }
 .pc-calls button[aria-checked="true"]::before { background: currentColor; }
-.pc-picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pc-calls.is-big button { justify-content: center; min-height: 72px; font-size: 1.3rem; color: var(--paint); border-color: var(--steel-mid); background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); overflow-wrap: anywhere; }
+.pc-calls.is-big button:active:not(:disabled) { background: var(--table); color: var(--on-table); border-color: var(--table); }
+
+/* Tapping products: a key each, framed in the lamp colour once it's in your order or cart. */
+.pc-picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .pc-picks > li, .pc-shelf > li { min-width: 0; }
-.pc-picks button { position: relative; width: 100%; padding: 10px; border-radius: 18px; border: 2px solid var(--line-strong); background: var(--panel); text-align: center; transition: border-color 160ms ease-out, background-color 160ms ease-out; }
-.pc-picks button:hover:not(:disabled) { border-color: var(--chrome); }
-.pc-picks button[aria-pressed="true"] { border-color: var(--table); background: color-mix(in srgb, var(--table) 16%, var(--panel)); }
-.pc-picks .pc-photo { max-width: 140px; }
-.pc-place { position: absolute; z-index: 1; top: 6px; left: 6px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--table); color: var(--on-table); font: 1.1rem var(--display); box-shadow: 0 0 0 3px #15101e, 0 0 0 5px var(--chrome); }
+.pc-picks button {
+  position: relative; width: 100%; padding: 12px 8px 10px; border-radius: 3px;
+  border: 1px solid var(--steel-mid);
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  text-align: center;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+.pc-picks button:hover:not(:disabled) { border-color: var(--steel); }
+.pc-picks button[aria-pressed="true"] { border-color: var(--table); box-shadow: inset 0 0 0 1px var(--table); background: color-mix(in srgb, var(--table) 10%, var(--flap-face)); }
+.pc-picks .pc-photo { max-width: 130px; }
+.pc-place {
+  position: absolute; z-index: 1; top: 6px; left: 6px;
+  display: grid; place-items: center; width: 32px; height: 34px; border-radius: 2px;
+  background: var(--table); color: var(--on-table); font: 700 1.25rem/1 var(--flap-font);
+  box-shadow: 0 0 0 2px var(--flap-gap);
+}
+.pc-place svg { width: 18px; height: 18px; }
 .pc-form-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
-.pc-form-row > * { min-height: 52px; }
-.pc-form .primary { min-height: 54px; font-size: 1rem; }
-.pc-showcase-list { list-style: none; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); display: grid; gap: 6px; font-weight: 700; }
+.pc-form-row > * { min-height: 54px; }
+.pc-form .primary { min-height: 56px; font-size: 1.05rem; }
+.pc-showcase-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pc-showcase-list li { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 2px; background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); font: 500 1.05rem/1.3 var(--set); }
+.pc-showcase-list li::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; background: var(--table); }
 
 /* ---------- Host controller ---------- */
 .pc-ctrl-prices { margin: 14px 0; }
-.pc-ctrl-prices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-.pc-ctrl-prices li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); font-weight: 700; }
-.pc-ctrl-prices li b { flex-shrink: 0; font-size: 1rem; }
+.pc-ctrl-prices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.pc-ctrl-prices li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 50px; padding: 6px 8px 6px 12px; border-radius: 2px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); font: 500 1rem/1.3 var(--set); }
+.pc-ctrl-prices li .money { flex-shrink: 0; font-size: 1.35rem; }
+.pc-ctrl-prices li .flap-c { color: var(--table); }
 
 @media (max-width: 1100px) {
   .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -127,13 +227,27 @@
 @media (max-width: 760px) {
   .pc-bid, .pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 1fr); }
   .pc-showcases { grid-template-columns: 1fr; }
+  .pc-bids li { grid-template-columns: auto minmax(0, 1fr) auto; font-size: 1.3rem; }
+  .pc-bids em { grid-column: 2 / -1; text-align: left; }
+  .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pc-shelf.count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .pc-product .pc-name { font-size: 1rem; }
+  .pc-tag { font-size: 1.25rem; }
+  .pc-shelf.count-3 .pc-tag { font-size: 1rem; }
 }
 /* A 720p TV: smaller photos so a shelf and its prices fit. */
 @media (max-height: 800px) and (min-width: 761px) {
-  .display.pc .pc-photo { max-width: min(260px, 34vh); }
-  .display.pc .pc-bid:has(.pc-bids) .pc-photo { max-width: min(220px, 26vh); }
-  .display.pc .pc-rule { font-size: 1.5rem; }
+  .display.pc .pc-photo { max-width: min(250px, 33vh); }
+  .display.pc .pc-bid:has(.pc-bids) .pc-photo { max-width: min(220px, 28vh); }
   .display.pc .pc-center { gap: 10px; }
-  .display.pc .pc-product.is-small .pc-photo { max-width: min(170px, 22vh); }
-  .display.pc .pc-shelf.count-6 .pc-photo { max-width: min(150px, 19vh); }
+  .display.pc .pc-rule { font-size: 1.2rem; }
+  .display.pc .pc-product.is-small .pc-photo { max-width: min(160px, 21vh); }
+  .display.pc .pc-shelf.count-6 .pc-photo { max-width: min(140px, 16vh); }
+  .display.pc .pc-shelf.count-6 .pc-brandname { display: none; }
+  .display.pc .pc-bids.is-carts li { min-height: 46px; font-size: 1.4rem; }
+  .display.pc .pc-shelf.count-3 .pc-photo { max-width: min(200px, 26vh); }
+  .display.pc .pc-bids li { min-height: 44px; padding-block: 3px; font-size: 1.45rem; }
+  .display.pc .pc-bids { gap: 4px; }
+  .display.pc .pc-showcase li { min-height: 38px; padding: 4px 0; }
+  .display.pc .pc-showcase { gap: 8px; padding: 14px 18px; }
 }

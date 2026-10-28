@@ -1,7 +1,7 @@
 // Price Check screens: host setup, the shared TV display, players' phones, the host controller and the final scores.
 import React, { useEffect, useState } from "react";
 import { socket, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner } from "../JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import { useSound, useEventSounds, playWinnersTune, playBuzz, playDing } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
@@ -9,6 +9,7 @@ import { playClue, playPop, playFact } from "../fib/sounds";
 import SHOWCASE from "./showcase.json";
 import "./price.css";
 import Flap, { Brand, Money } from "../Flap";
+import { CheckIcon } from "../survey/SurveySays";
 
 // ---------- The packs ----------
 // Real prices: public/data/prices-openprices.json, built from Open Prices by scripts/build-openprices-pack.py
@@ -225,8 +226,13 @@ function SoundToggle() {
   );
 }
 const Check = () => <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const XIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+const Arrow = ({ up }) => <svg className="pc-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d={up ? "M12 19V5M6 11l6-6 6 6" : "M12 5v14M6 13l6 6 6-6"} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+// A row's result cell: a lit check for the winner, red with an X for anyone over, a hollow cell otherwise.
+const Mark = ({ won, over }) => <span className={`pc-mark${won ? " is-won" : over ? " is-over" : ""}`} aria-hidden="true">{won ? <Check /> : over ? <XIcon /> : null}</span>;
 
-// A product as it sits on the shelf: photo, brand, name and size, with an optional price tag.
+// A product as it sits on the shelf: photo, brand, name and size, with an optional price tag on flaps. A tag of ""
+// is a row of blank cells (the price is still hidden), so the real price clacks into them at the reveal.
 function Product({ item, tag, small = false, children }) {
   return (
     <figure className={`pc-product${small ? " is-small" : ""}`}>
@@ -235,7 +241,7 @@ function Product({ item, tag, small = false, children }) {
         {item.brand && <span className="pc-brandname">{item.brand}</span>}
         <span className="pc-name">{item.name}</span>
         {item.size && <span className="pc-size">{item.size}</span>}
-        {tag != null && <span className="pc-tag dmd-line">{tag}</span>}
+        {tag != null && <span className={`pc-tag${tag ? "" : " is-blank"}`}><Money value={tag} cells={5} /></span>}
         {children}
       </figcaption>
     </figure>
@@ -251,9 +257,9 @@ function Scoreboard({ game }) {
         {ranked(game).map((player) => (
           <li key={player.id} className={`${player.connected ? "" : "is-away"}${waiting?.includes(player.id) ? " is-done" : ""}`}>
             <span className="fib-sb-name">{player.name}{!player.connected && <small> · reconnecting</small>}</span>
-            {waiting && <span className="fib-sb-check" aria-label={waiting.includes(player.id) ? "locked in" : "still going"}>{waiting.includes(player.id) ? <Check /> : "…"}</span>}
-            {awards[player.id] && <span className="pc-gain">+{points(awards[player.id].points)}</span>}
-            <b className="money">{points(player.score)}</b>
+            {waiting && <span className="fib-sb-check" aria-label={waiting.includes(player.id) ? "locked in" : "still going"}>{waiting.includes(player.id) && <CheckIcon />}</span>}
+            {awards[player.id] && <Flap className="pc-gain" text={`+${points(awards[player.id].points)}`} intro />}
+            <Money value={points(player.score)} />
           </li>
         ))}
       </ol>
@@ -267,13 +273,13 @@ function BidStage({ game }) {
   const bids = reveal ? Object.entries(round.bids || {}).sort((a, b) => b[1] - a[1]) : [];
   return (
     <div className="pc-bid">
-      <Product item={round.item} tag={reveal ? money(round.item.cents) : null} />
-      {round.below != null && !reveal && <p className="dmd-line pc-callout">Everyone went over · bid under {money(round.below)}</p>}
+      <Product item={round.item} tag={reveal ? money(round.item.cents) : ""} />
+      {round.below != null && !reveal && <p className="pc-callout is-over"><Mark over /><span className="label">Everyone went over · bid under</span><Money value={money(round.below)} /></p>}
       {reveal && (
         <ol className="pc-bids">
           {bids.map(([id, bid]) => {
             const over = bid > round.item.cents, won = round.results.winners.includes(id);
-            return <li key={id} className={won ? "is-won" : over ? "is-over" : ""}><span>{nameOf(game, id)}</span><b className="dmd-line">{money(bid)}</b><em>{won ? (bid === round.item.cents ? "Exact!" : "Closest") : over ? "Over" : ""}</em></li>;
+            return <li key={id} className={won ? "is-won" : over ? "is-over" : ""}><Mark won={won} over={over} /><span className="pc-row-name">{nameOf(game, id)}</span><Money value={money(bid)} cells={6} /><em>{won ? (bid === round.item.cents ? "Exact!" : "Closest") : over ? "Over" : ""}</em></li>;
           })}
           {!bids.length && <li className="muted">Nobody bid</li>}
         </ol>
@@ -284,11 +290,11 @@ function BidStage({ game }) {
 function HigherLowerStage({ game }) {
   const round = game.round, reveal = round.phase === "reveal";
   return (
-    <ul className="pc-shelf count-5">
+    <ul className="pc-shelf count-5 pc-hl-shelf">
       {round.items.map((item, i) => (
         <li key={item.id}>
           <Product item={item} small tag={money(item.shownCents)}>
-            {reveal && <span className={`pc-verdict is-${round.results.truth[i]}`}>{round.results.truth[i] === "higher" ? "Higher" : "Lower"} · {money(item.cents)}</span>}
+            {reveal && <span className={`pc-verdict is-${round.results.truth[i]}`}><span className="pc-verdict-call"><Arrow up={round.results.truth[i] === "higher"} />{round.results.truth[i] === "higher" ? "Higher" : "Lower"}</span><Money value={money(item.cents)} /></span>}
           </Product>
         </li>
       ))}
@@ -299,15 +305,15 @@ function PriciestStage({ game }) {
   const round = game.round, reveal = round.phase === "reveal";
   return (
     <>
-      <p className="dmd-line pc-callout">Set {round.set + 1} of {round.setCount}</p>
+      <p className="pc-callout"><Flap text={`Set ${round.set + 1} of ${round.setCount}`} /></p>
       <ul className="pc-shelf count-3">
         {round.items.map((item) => {
           const top = reveal && round.results.priciest === item.id;
           const pickers = reveal ? Object.entries(round.picks || {}).filter(([, pick]) => pick === item.id).map(([id]) => nameOf(game, id)) : [];
           return (
             <li key={item.id} className={top ? "is-lit" : reveal ? "is-dim" : ""}>
-              <Product item={item} tag={reveal ? money(item.cents) : null}>
-                {reveal && <span className="pc-pickers">{top && <b>Priciest · </b>}{pickers.join(", ") || "Nobody picked it"}</span>}
+              <Product item={item} tag={reveal ? money(item.cents) : ""}>
+                {reveal && <span className="pc-pickers">{top && <b>Priciest</b>}<span>{pickers.join(", ") || "Nobody picked it"}</span></span>}
               </Product>
             </li>
           );
@@ -322,9 +328,14 @@ function OrderStage({ game }) {
   return (
     <>
       <ol className={`pc-shelf count-4${reveal ? " is-ordered" : ""}`}>
-        {shelf.map((item) => <li key={item.id}><Product item={item} small tag={reveal ? money(item.cents) : null} /></li>)}
+        {shelf.map((item, i) => <li key={item.id}>{reveal && <span className="pc-rank" aria-label={`number ${i + 1}`}><Flap text={String(i + 1)} /></span>}<Product item={item} small tag={reveal ? money(item.cents) : ""} /></li>)}
       </ol>
-      {reveal && <p className="pc-placed">{Object.entries(round.results.placed).map(([id, n]) => `${nameOf(game, id)}: ${n} of 4`).join(" · ") || "Nobody answered"}</p>}
+      {reveal && (
+        <ul className="pc-placed">
+          {Object.entries(round.results.placed).map(([id, n]) => <li key={id} className={n === 4 ? "is-won" : ""}><span className="pc-row-name">{nameOf(game, id)}</span><Flap text={`${n}/4`} label={`${n} of 4 in place`} /></li>)}
+          {!Object.keys(round.results.placed).length && <li className="muted">Nobody answered</li>}
+        </ul>
+      )}
     </>
   );
 }
@@ -333,15 +344,15 @@ function GroceryStage({ game }) {
   const totals = reveal ? Object.entries(round.results.totals).sort((a, b) => b[1] - a[1]) : [];
   return (
     <>
-      <p className="dmd-line pc-callout">Budget {money(round.budget)}</p>
+      <p className="pc-callout"><span className="label">Budget</span><Money value={money(round.budget)} /></p>
       <ul className="pc-shelf count-6">
-        {round.items.map((item) => <li key={item.id}><Product item={item} small tag={reveal ? money(item.cents) : null} /></li>)}
+        {round.items.map((item) => <li key={item.id}><Product item={item} small tag={reveal ? money(item.cents) : ""} /></li>)}
       </ul>
       {reveal && (
-        <ol className="pc-bids">
+        <ol className={`pc-bids is-carts${totals.length > 4 ? " is-many" : ""}`}>
           {totals.map(([id, sum]) => {
             const won = round.results.winners.includes(id), over = sum > round.budget;
-            return <li key={id} className={won ? "is-won" : over ? "is-over" : ""}><span>{nameOf(game, id)}</span><b className="dmd-line">{money(sum)}</b><em>{won ? "Closest" : over ? "Over" : ""}</em></li>;
+            return <li key={id} className={won ? "is-won" : over ? "is-over" : ""}><Mark won={won} over={over} /><span className="pc-row-name">{nameOf(game, id)}</span><Money value={money(sum)} cells={6} /><em>{won ? "Closest" : over ? "Over" : ""}</em></li>;
           })}
         </ol>
       )}
@@ -355,23 +366,24 @@ function ShowcaseStage({ game }) {
     <div className="pc-showcases">
       {round.contestants.map((id, i) => {
         const won = reveal && round.results.winners.includes(id), bid = reveal ? round.bids[id] : null;
+        const over = reveal && bid != null && bid > round.totals[i], locked = round.bidIn.includes(id);
         return (
-          <section key={id} className={`pc-showcase${won ? " is-won" : ""}`}>
-            <h2>{nameOf(game, id)}’s showcase</h2>
-            <ul>{round.bundles[i].map((item) => <li key={item.id}><span>{item.name}</span>{reveal && <b>{money(item.cents)}</b>}</li>)}</ul>
+          <section key={id} className={`pc-showcase${won ? " is-won" : ""}${over ? " is-over" : ""}`}>
+            <h2><span className="pc-showcase-num" aria-hidden="true">{i + 1}</span>{nameOf(game, id)}’s showcase</h2>
+            <ul>{round.bundles[i].map((item) => <li key={item.id}><span>{item.name}</span><Money value={reveal ? money(item.cents) : ""} cells={4} /></li>)}</ul>
             {reveal ? (
               <dl>
-                <div><dt>Bid</dt><dd className="dmd-line">{bid == null ? "No bid" : money(bid)}</dd></div>
-                <div><dt>Actual</dt><dd className="dmd-line">{money(round.totals[i])}</dd></div>
-                <div><dt>{bid != null && bid > round.totals[i] ? "Over by" : "Under by"}</dt><dd className="dmd-line">{bid == null ? "–" : money(Math.abs(round.totals[i] - bid))}</dd></div>
+                <div><dt>Bid</dt><dd>{bid == null ? <span className="pc-no-bid">No bid</span> : <Money value={money(bid)} />}</dd></div>
+                <div><dt>Actual</dt><dd><Money value={money(round.totals[i])} /></dd></div>
+                <div className="pc-diff"><dt>{over && <Mark over />}{over ? "Over by" : "Under by"}</dt><dd>{bid == null ? <span className="pc-no-bid">–</span> : <Money value={money(Math.abs(round.totals[i] - bid))} />}</dd></div>
               </dl>
-            ) : <p className="pc-status-line">{round.bidIn.includes(id) ? "Bid locked in" : "Bidding…"}</p>}
-            {won && <p className="pc-win">{round.results.both ? "Wins both showcases!" : "Wins the showcase!"}</p>}
+            ) : <p className={`pc-status-line${locked ? " is-in" : ""}`}>{locked ? <><Mark won />Bid locked in</> : <><Mark />Bidding…</>}</p>}
+            {won && <p className="pc-win"><Flap text={round.results.both ? "Wins both showcases!" : "Wins the showcase!"} wrap intro /></p>}
           </section>
         );
       })}
     </div>
-    {reveal && !round.results.winners.length && <p className="pc-win">{Object.keys(round.bids).length ? "Both went over. Nobody wins the showcase." : "No bids. Nobody wins the showcase."}</p>}
+    {reveal && !round.results.winners.length && <p className="pc-win is-none">{Object.keys(round.bids).length ? "Both went over. Nobody wins the showcase." : "No bids. Nobody wins the showcase."}</p>}
     </>
   );
 }
@@ -380,15 +392,22 @@ const STAGES = { bid: BidStage, higherLower: HigherLowerStage, priciest: Pricies
 function Lobby({ game, onAction }) {
   const ready = game.players.filter((player) => player.connected).length >= 2;
   return (
-    <div className="lobby fib-lobby">
+    <div className="lobby fib-lobby pc-lobby">
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
-      <ul className="fib-lobby-players">
-        {game.players.map((player) => <li key={player.id}>{player.name}</li>)}
-        {!game.players.length && <li className="muted">Nobody yet</li>}
-      </ul>
+      <Departures
+        head={["Player", "Status"]}
+        cols="1fr 0.42fr"
+        rows={game.players.map((player) => ({
+          key: player.id,
+          state: player.connected ? "ready" : "away",
+          label: `${player.name}, ${player.connected ? "ready" : "reconnecting"}`,
+          cells: [player.name, player.connected ? "Ready" : "Away"],
+        }))}
+        openCells={game.players.length < 8 ? ["— — —", "Waiting"] : null}
+      />
+      <p className="muted">{ready ? "Everyone bids on their phone. The top two bid on the showcase at the end." : "Price Check needs at least 2 players."}</p>
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
-      {!ready && <p className="muted">Price Check needs at least 2 players.</p>}
     </div>
   );
 }
@@ -403,7 +422,7 @@ function PlayerTools({ game, onAction }) {
         {game.players.map((player) => (
           <li key={player.id}>
             <input aria-label={`${player.name}’s name`} defaultValue={player.name} key={player.name} maxLength="20" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name: e.target.value })} />
-            <span className="money">{points(player.score)}</span>
+            <Money value={points(player.score)} />
             <button className="chip-btn add" onClick={() => onAction("adjustScore", { playerId: player.id, amount: step })}>+{step}</button>
             <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { playerId: player.id, amount: -step })}>−{step}</button>
             <button className="chip-btn danger" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Kick</button>
@@ -440,7 +459,7 @@ export function PriceDisplay({ game, onAction }) {
       {game.status === "lobby" || !round ? <Lobby game={game} onAction={onAction} /> : (
         <div className="fib-stage">
           <div className="fib-center pc-center">
-            <p className="sv-round-label">{roundLabel(game)}<em>{ROUND_NAMES[round.type]}</em></p>
+            <p className="sv-round-label pc-round-label"><Flap text={roundLabel(game)} /><Flap className="sv-multiplier" text={ROUND_NAMES[round.type]} /></p>
             <h1 className="pc-rule">{ROUND_RULES[round.type]}</h1>
             <Stage game={game} />
             {next && <button className="primary sv-next" onClick={() => onAction("next")}>{round.type === "showcase" ? "See final scores" : "Next round"}</button>}
@@ -484,8 +503,8 @@ function BidForm({ game, playerId, label = "Your bid" }) {
   const below = game.round.below;
   return (
     <form className="final-form pc-bid-form" onSubmit={(e) => { e.preventDefault(); if (amount) send({ cents: amount }); }}>
-      <div className="sv-guess-top"><span className="sv-guess-label">{below != null ? `Everyone went over! Bid under ${money(below)}` : label}</span><Timer game={game} /></div>
-      <label className="pc-money-input"><span aria-hidden="true">$</span><input autoFocus aria-label={label} inputMode="decimal" autoComplete="off" placeholder="0.00" value={value} onChange={(e) => setValue(e.target.value)} disabled={busy} /></label>
+      <div className="sv-guess-top"><span className={`sv-guess-label${below != null ? " is-over" : ""}`}>{below != null ? `Everyone went over! Bid under ${money(below)}` : label}</span><Timer game={game} /></div>
+      <label className="pc-money-input"><span className="pc-dollar" aria-hidden="true">$</span><input autoFocus aria-label={label} inputMode="decimal" autoComplete="off" placeholder="0.00" value={value} onChange={(e) => setValue(e.target.value)} disabled={busy} /></label>
       {error && <p className="notice" role="alert">{error}</p>}
       <button className="primary" disabled={!amount || busy}>{busy ? "Sending…" : amount ? `Lock in ${money(amount)}` : "Lock in my bid"}</button>
     </form>
@@ -502,7 +521,7 @@ function HigherLowerForm({ game, playerId }) {
           <li key={item.id}>
             <Product item={item} small tag={money(item.shownCents)} />
             <div className="pc-calls" role="radiogroup" aria-label={`${item.name}: higher or lower than ${money(item.shownCents)}`}>
-              {["higher", "lower"].map((value) => <button key={value} role="radio" aria-checked={calls[i] === value} onClick={() => call(i, value)}>{value === "higher" ? "Higher" : "Lower"}</button>)}
+              {["higher", "lower"].map((value) => <button key={value} role="radio" aria-checked={calls[i] === value} onClick={() => call(i, value)}>{value === "higher" ? "Higher" : "Lower"}<Arrow up={value === "higher"} /></button>)}
             </div>
           </li>
         ))}
@@ -549,7 +568,7 @@ function GroceryForm({ game, playerId }) {
   const tap = (id) => setCart((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
   return (
     <div className="pc-form">
-      <div className="sv-guess-top"><span className="sv-guess-label">Fill your cart: budget <b className="dmd-line">{money(game.round.budget)}</b></span><Timer game={game} /></div>
+      <div className="sv-guess-top"><span className="sv-guess-label pc-budget-label">Fill your cart · budget <Money value={money(game.round.budget)} /></span><Timer game={game} /></div>
       <ul className="pc-picks">
         {game.round.items.map((item) => <li key={item.id}><button aria-pressed={cart.includes(item.id)} onClick={() => tap(item.id)}>{cart.includes(item.id) && <span className="pc-place"><Check /></span>}<Product item={item} small /></button></li>)}
       </ul>
@@ -605,7 +624,7 @@ export function PricePlayer({ game, playerId }) {
         <Brand text="PRICE CHECK" className="pc-brand" />
         <span className="player-name">{player.name}</span>
       </header>
-      <b className="player-score money">{points(player.score)}</b>
+      <div className="player-score"><Money value={points(player.score)} /></div>
       {game.status === "lobby" || !round ? <p className="player-status">You’re in! The game starts when everyone’s here.</p> : (
         <>
           <p className="player-clue-meta">{roundLabel(game)} · {ROUND_NAMES[round.type]}</p>
@@ -640,8 +659,8 @@ export function PriceController({ game, onAction }) {
       <section className="pc-ctrl-prices">
         <h2>Real prices</h2>
         <ul>
-          {items.map((item) => <li key={item.id}><span>{item.name}</span><b className="dmd-line">{money(secret?.prices?.[item.id])}</b></li>)}
-          {round.type === "showcase" && secret?.totals && round.contestants.map((id, i) => <li key={id}><span>{nameOf(game, id)}’s showcase</span><b className="dmd-line">{money(secret.totals[i])}</b></li>)}
+          {items.map((item) => <li key={item.id}><span>{item.name}</span><Money value={money(secret?.prices?.[item.id])} /></li>)}
+          {round.type === "showcase" && secret?.totals && round.contestants.map((id, i) => <li key={id}><span>{nameOf(game, id)}’s showcase</span><Money value={money(secret.totals[i])} /></li>)}
         </ul>
       </section>
       <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>
@@ -672,9 +691,9 @@ export function PriceEnd({ game, host, display, onAction }) {
     <main className="end pc">
       {display && <SoundToggle />}
       <Brand text="PRICE CHECK" className="pc-brand" />
-      <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
-      <div className="podium">{top.map((p, i) => <div className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><strong className="money">{points(p.score)}</strong></div>)}</div>
-      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><b className="money">{points(p.score)}</b></li>)}</ol>}
+      <h1><Flap text={!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`} wrap intro /></h1>
+      <ol className="podium">{top.map((p, i) => <li className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><Flap className="money" text={points(p.score)} intro /></li>)}</ol>
+      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><Money value={points(p.score)} /></li>)}</ol>}
       {host ? (
         <div className="sv-end-buttons">
           <button className="primary" disabled={busy} onClick={playAgain}>{busy ? "Dealing products…" : "Play again with new products"}</button>
