@@ -1,12 +1,30 @@
 // Spin & Solve screens: host setup, the shared TV display, players' phones, the host controller and the final scores.
 import React, { useEffect, useRef, useState } from "react";
 import { socket, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner } from "../JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import PUZZLES from "./puzzles.json";
 import { useWheelSounds, useClockTicks, playPegs } from "./sounds";
 import { useSound, playWinnersTune } from "../survey/sounds";
+import { SwapIcon } from "../survey/SurveySays";
 import "./wheel.css";
+import Flap, { Brand, Money } from "../Flap";
+
+// Drawn icons (no glyphs): a struck X, the delete key, and the wheel on the phone's Spin key.
+const XIcon = ({ className = "" }) => <svg className={className} viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+const BackspaceIcon = () => (
+  <svg className="ws-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M9 5h11v14H9l-6-7z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+    <path d="M12.5 9.5l5 5M17.5 9.5l-5 5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+  </svg>
+);
+const WheelIcon = () => (
+  <svg className="ws-spin-icon" viewBox="0 0 48 48" aria-hidden="true">
+    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="3" />
+    <path d="M24 4v40M4 24h40M9.9 9.9l28.2 28.2M38.1 9.9L9.9 38.1" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    <circle cx="24" cy="24" r="5" fill="currentColor" />
+  </svg>
+);
 
 // ---------- Picking puzzles ----------
 const PLAYED_KEY = "gameNight.wheel.played.v1";
@@ -288,7 +306,7 @@ export function WheelSetup({ onCreate }) {
   return (
     <main className="setup ws-setup">
       <BackToHub />
-      <div className="brand ws-brand">SPIN &amp; SOLVE</div>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -406,7 +424,7 @@ export function WheelSetup({ onCreate }) {
 // ---------- The puzzle board ----------
 const exists = (row, column) => !((row === 0 || row === 3) && (column === 0 || column === 13));
 // fill: letters typed into the blanks on the solve screen, in reading order. Letters that have just been
-// turned show a lit-up tile first, one after another, like the show's letter turner.
+// turned light up first, one after another, like the show's letter turner, then flip over on their flaps.
 function PuzzleBoard({ board, small = false, fill = null, cursor = -1, onPick }) {
   const turned = useRef({ key: null, cells: new Map() });
   const flat = board.flat(), now = Date.now();
@@ -421,21 +439,35 @@ function PuzzleBoard({ board, small = false, fill = null, cursor = -1, onPick })
   return (
     <div className={`wb-board${small ? " is-small" : ""}`} role="img" aria-label={boardLabel(board)}>
       {board.map((row, r) => row.map((cell, c) => {
-        const index = r * 14 + c;
-        if (!exists(r, c)) return <span key={index} className="wb-cell is-void" />;
-        if (!cell) return <span key={index} className="wb-cell is-empty" />;
+        const index = r * 14 + c, id = `${key}-${index}`;
+        if (!exists(r, c)) return <span key={id} className="wb-cell is-void" />;
+        if (!cell) return <span key={id} className="wb-cell is-empty" />;
         if (cell.letter && !cell.ch) {
           blank++;
           const mine = blank, typed = fill?.[mine];
           const className = `wb-cell is-blank${typed ? " is-typed" : ""}${mine === cursor ? " is-cursor" : ""}`;
-          return onPick ? <button key={index} className={className} onClick={() => onPick(mine)} aria-label={`Blank ${mine + 1}${typed ? `: ${typed}` : ""}`}>{typed}</button>
-            : <span key={index} className={className}>{typed}</span>;
+          const face = <Flap text={typed || ""} cells={1} label={typed || ""} />;
+          return onPick ? <button key={id} className={className} onClick={() => onPick(mine)} aria-label={`Blank ${mine + 1}${typed ? `: ${typed}` : ""}`}>{face}</button>
+            : <span key={id} className={className}>{face}</span>;
         }
-        const turn = cells.get(index), turning = turn && now - turn.at < turn.delay + 1600;
-        return <span key={index} className={`wb-cell is-shown${turning ? " is-turning" : ""}`} style={turning ? { animationDelay: `${turn.delay}ms` } : undefined}>{cell.ch}</span>;
+        return <LetterCell key={id} ch={cell.ch} turn={cells.get(index)} />;
       }))}
     </div>
   );
+}
+// A letter on the board. While it waits its turn it's a blank lit tile; then it lights in the lamp colour,
+// then the letter flips in, with the clack on the TV.
+const LIT_MS = 600;
+function LetterCell({ ch, turn }) {
+  const [, tick] = useState(0);
+  const elapsed = turn ? Date.now() - turn.at : Infinity;
+  const stage = !turn || elapsed >= turn.delay + LIT_MS ? 2 : elapsed >= turn.delay ? 1 : 0;
+  useEffect(() => {
+    if (stage === 2) return;
+    const timer = setTimeout(() => tick((n) => n + 1), Math.max(0, (stage === 0 ? turn.delay : turn.delay + LIT_MS) - elapsed));
+    return () => clearTimeout(timer);
+  }, [stage, turn?.at]);
+  return <span className={`wb-cell ${stage === 2 ? "is-shown" : "is-blank"}${stage === 1 ? " is-lit" : ""}`}><Flap text={stage === 2 ? ch : ""} cells={1} /></span>;
 }
 // Read out word by word, with a dash for each letter still hidden: "Puzzle: F I S H, T – – –".
 function boardLabel(board) {
@@ -443,26 +475,33 @@ function boardLabel(board) {
   return `Puzzle: ${words.map((word) => [...word].join(" ")).join(", ")}`;
 }
 
-// The letters called so far: dim if they were in the puzzle, struck through if not.
+// The letters called so far, as a strip of flaps: dim if they were in the puzzle, red and struck if not.
+// Vowels carry a lamp bar along the foot of the cell.
 function UsedLetters({ round }) {
   return (
     <div className="ws-used" aria-label="Letters called">
       {[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].map((letter) => {
         const called = round.called.includes(letter), miss = round.misses.includes(letter);
-        return <span key={letter} className={`${VOWELS.includes(letter) ? "is-vowel" : ""}${called ? (miss ? " is-miss" : " is-hit") : ""}`}>{letter}</span>;
+        return (
+          <span key={letter} className={`ws-used-cell${VOWELS.includes(letter) ? " is-vowel" : ""}${called ? (miss ? " is-miss" : " is-hit") : ""}`}>
+            <Flap text={letter} label={called ? `${letter}, ${miss ? "not in the puzzle" : "called"}` : letter} />
+          </span>
+        );
       })}
     </div>
   );
 }
 
 // ---------- The wheel ----------
-const WEDGE_COLORS = ["#e8434f", "#ffb627", "#3d7bff", "#2fbf71", "#a970ff", "#ff7a2f", "#ff5fa8", "#20c3d0"];
-const LIGHT_WEDGES = new Set(["#ffb627", "#20c3d0", "#2fbf71"]);
+// Matte wedge paints that sit with the board: light and dark alternate, so neighbours always differ.
+const WEDGE_COLORS = ["#5d7ea3", "#c4a457", "#86709f", "#8fa77a", "#a35f80", "#bd8a66", "#4d8a86", "#a4a8ae"];
+const LIGHT_WEDGES = new Set(["#c4a457", "#8fa77a", "#bd8a66", "#a4a8ae"]);
 // The bonus wheel's envelopes are sealed: they all look the same.
 const WEDGE_LABELS = { envelope: "?", bankrupt: "BANKRUPT", loseTurn: "LOSE A TURN", gift: "GIFT", million: "$1M", mystery: "MYSTERY", express: "EXPRESS" };
 const wedgeLabel = (wedge) => WEDGE_LABELS[wedge.kind] || money(wedge.value).replace(",", "");
 // [fill, dark text] for wedges that aren't plain cash.
-const WEDGE_STYLES = { bankrupt: ["#101014", false], loseTurn: ["#f4f4f4", true], gift: ["#7b2ff7", false], million: ["#101014", false], mystery: ["#b5179e", false], express: ["#ffd23f", true] };
+const WEDGE_STYLES = { bankrupt: ["#0b0b0d", false], loseTurn: ["#e9e8e2", true], gift: ["#39465a", false], million: ["#0b0b0d", false], mystery: ["#6b3954", false], express: ["#d9c48a", true] };
+const WEDGE_INK = "#141518", WEDGE_EDGE = "#0b0b0d";
 const ENVELOPE_WHEEL = Array.from({ length: 24 }, () => ({ kind: "envelope" }));
 const point = (angle, radius) => [radius * Math.sin((angle * Math.PI) / 180), -radius * Math.cos((angle * Math.PI) / 180)];
 // Wedge i is centred i × (360 / wedges) degrees clockwise from the pointer at the top, and each wedge is
@@ -503,36 +542,39 @@ function Wheel({ wheel, spin, spinKey }) {
   return (
     <div className="ws-wheel">
       <svg viewBox="-110 -116 220 228" aria-hidden="true">
+        {/* The steel frame the wheel turns inside. */}
+        <circle r="108.5" fill="#5b5e63" stroke="#a7aaaf" strokeWidth="0.8" />
+        <circle r="104.6" fill={WEDGE_EDGE} />
         <g style={{ transform: `rotate(${view.angle}deg)`, transition: view.ms ? `transform ${view.ms}ms cubic-bezier(${SPIN_EASE.join(", ")})` : "none" }}>
-          <circle r="104" fill="#11183f" />
           {wheel.map((wedge, i) => {
-            const center = i * size, [x1, y1] = point(center - size / 2, 100), [x2, y2] = point(center + size / 2, 100);
+            const center = i * size, [x1, y1] = point(center - size / 2, 103), [x2, y2] = point(center + size / 2, 103);
             const [styleFill, styleDark] = WEDGE_STYLES[wedge.kind] || [];
-            const fill = wedge.kind === "envelope" ? (i % 2 ? "#e9e2cc" : "#f2c14e") : styleFill || (wedge.top ? "#dfe3ee" : WEDGE_COLORS[i % WEDGE_COLORS.length]);
+            const fill = wedge.kind === "envelope" ? (i % 2 ? "#d9d3c0" : "#c4a457") : styleFill || (wedge.top ? "#cfd2d6" : WEDGE_COLORS[i % WEDGE_COLORS.length]);
             const dark = wedge.kind === "envelope" || styleDark || wedge.top || (!styleFill && LIGHT_WEDGES.has(fill));
             const label = wedgeLabel(wedge);
             // The Million Dollar wedge's middle third is the million; the slivers either side are Bankrupt.
-            const [m1x, m1y] = point(center - size / 6, 100), [m2x, m2y] = point(center + size / 6, 100);
+            const [m1x, m1y] = point(center - size / 6, 103), [m2x, m2y] = point(center + size / 6, 103);
             return (
               <g key={i}>
-                <path d={`M0 0 L${x1} ${y1} A100 100 0 0 1 ${x2} ${y2} Z`} fill={fill} stroke="#0b1030" strokeWidth="0.8" />
-                {wedge.kind === "million" && <path d={`M0 0 L${m1x} ${m1y} A100 100 0 0 1 ${m2x} ${m2y} Z`} fill="#1db954" />}
+                <path d={`M0 0 L${x1} ${y1} A103 103 0 0 1 ${x2} ${y2} Z`} fill={fill} stroke={WEDGE_EDGE} strokeWidth="0.9" />
+                {wedge.kind === "million" && <path d={`M0 0 L${m1x} ${m1y} A103 103 0 0 1 ${m2x} ${m2y} Z`} fill="#4f8a5f" />}
                 <g transform={`rotate(${center - 90})`}>
-                  <text x="62" y="0" className="ws-wedge-text" fill={dark ? "#141833" : "#fff"} fontSize={label.length > 5 ? 6.2 : 9} dominantBaseline="middle" textAnchor="middle">{label}</text>
+                  <text x="63" y="0.4" className="ws-wedge-text" fill={dark ? WEDGE_INK : "#f2f2ee"} fontSize={label.length > 5 ? 7.4 : 10.5} dominantBaseline="middle" textAnchor="middle">{label}</text>
                   {wedge.wild && (
                     <g>
-                      <rect x="79" y="-4.6" width="17" height="9.2" rx="1.6" fill="#fff" stroke="#141833" strokeWidth="0.6" />
-                      <text x="87.5" y="0.2" className="ws-wedge-text" fill="#b5179e" fontSize="3.8" dominantBaseline="middle" textAnchor="middle">WILD</text>
+                      <rect x="82" y="-4.4" width="15" height="8.8" rx="0.8" fill="#f2f2ee" stroke={WEDGE_INK} strokeWidth="0.5" />
+                      <text x="89.5" y="0.3" className="ws-wedge-text" fill={WEDGE_INK} fontSize="4.4" dominantBaseline="middle" textAnchor="middle">WILD</text>
                     </g>
                   )}
                 </g>
-                <circle cx={point(center - size / 2, 96)[0]} cy={point(center - size / 2, 96)[1]} r="1.6" fill="#f6f2e3" />
+                <circle cx={point(center - size / 2, 99)[0]} cy={point(center - size / 2, 99)[1]} r="1.3" fill="#c9ccd1" />
               </g>
             );
           })}
-          <circle r="16" fill="#0b1030" stroke="#f6f2e3" strokeWidth="1.5" />
+          <circle r="17" fill="#2a2d31" stroke="#8b8f96" strokeWidth="1.4" />
+          <circle r="4.5" className="ws-hub-lamp" />
         </g>
-        <path d="M0 -98 L-7 -114 L7 -114 Z" fill="#f6f2e3" stroke="#0b1030" strokeWidth="1.2" />
+        <path d="M0 -97 L-7 -115 L7 -115 Z" fill="#f2f2ee" stroke={WEDGE_EDGE} strokeWidth="1.2" strokeLinejoin="round" />
       </svg>
     </div>
   );
@@ -554,7 +596,7 @@ function LandingFlash({ game }) {
   if (!flash) return null;
   const FLASH = { bankrupt: "BANKRUPT", loseTurn: "LOSE A TURN", gift: "GIFT", million: "$1,000,000", mystery: "MYSTERY", express: "EXPRESS" };
   const text = flash.kind === "mysteryWin" ? `${money(flash.value)}!` : FLASH[flash.kind] || money(flash.value);
-  return <div className={`ws-flash is-${flash.kind}`} key={flash.id} aria-hidden="true">{text}</div>;
+  return <div className={`ws-flash is-${flash.kind}`} key={flash.id} aria-hidden="true"><Flap text={text} wrap intro /></div>;
 }
 
 // ---------- Podiums ----------
@@ -564,12 +606,19 @@ function Podiums({ game }) {
     <ol className="ws-podiums">
       {game.contestants.map((contestant, i) => {
         const control = round && round.control === i && round.phase !== "roundEnd";
-        const sittingOut = round?.tossup && round.phase !== "roundEnd" && (round.tossup.lockedOut.includes(i) || (round.tossup.eligible && !round.tossup.eligible.includes(i)));
+        const live = round?.tossup && round.phase !== "roundEnd";
+        // Locked out of a toss-up (struck: red, with an X), or not in a tiebreaker (just dimmed).
+        const struck = live && round.tossup.lockedOut.includes(i), sittingOut = live && !struck && round.tossup.eligible && !round.tossup.eligible.includes(i);
         return (
-          <li key={i} className={`ws-podium ${colorOf(i)}${control ? " is-control" : ""}${contestant.present ? "" : " is-away"}${sittingOut ? " is-out" : ""}${round?.winner === i && round.phase === "roundEnd" ? " is-winner" : ""}`}>
-            <span className="ws-podium-name">{contestant.name}{!contestant.present && <small> · away</small>}</span>
-            <b className="ws-podium-bank money">{money(contestant.roundBank)}</b>
-            <span className="ws-podium-total">Total <b className="money">{money(contestant.total)}</b></span>
+          <li key={i} className={`ws-podium ${colorOf(i)}${control ? " is-control" : ""}${contestant.present ? "" : " is-away"}${struck ? " is-struck" : ""}${sittingOut ? " is-out" : ""}${round?.winner === i && round.phase === "roundEnd" ? " is-winner" : ""}`}>
+            <span className="ws-podium-name">
+              {struck ? <XIcon className="ws-podium-x" /> : <i className="ws-marker" aria-hidden="true" />}
+              <span className="ws-num" aria-hidden="true">{i + 1}</span>
+              <span className="ws-podium-who">{contestant.name}</span>
+              {!contestant.present && <small>Away</small>}
+            </span>
+            <span className="ws-podium-total"><span className="label">Total</span><Money value={contestant.total || 0} prefix="$" /></span>
+            <Money className="ws-podium-bank" value={contestant.roundBank || 0} prefix="$" cells={6} />
             <Extras contestant={contestant} />
             {isTeams(game) && (
               <span className="ws-podium-members">
@@ -684,28 +733,36 @@ function Lobby({ game, onAction }) {
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
       {isTeams(game) ? (
-        <div className="ws-lobby-teams">
-          {game.contestants.map((team, i) => (
-            <section key={i} className={colorOf(i)}>
-              <h2>{team.name}</h2>
-              <ul>
-                {membersOf(game, i).map((player) => (
-                  <li key={player.id}>
-                    <button onClick={() => onAction("movePlayer", { playerId: player.id, contestant: (i + 1) % game.contestants.length })} aria-label={`Move ${player.name} to ${game.contestants[(i + 1) % game.contestants.length].name}`}>
-                      {player.name} <span aria-hidden="true">⇄</span>
-                    </button>
-                  </li>
-                ))}
-                {!membersOf(game, i).length && <li className="muted">Nobody yet</li>}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <Departures
+          head={["Player", "Team", "Status"]}
+          cols="1fr 0.8fr 0.45fr"
+          rows={game.players.map((player) => {
+            const i = player.contestant, next = (i + 1) % game.contestants.length;
+            return {
+              key: player.id,
+              state: player.connected ? "ready" : "away",
+              label: `${player.name}, ${game.contestants[i]?.name}, ${player.connected ? "ready" : "reconnecting"}`,
+              cells: [
+                <button type="button" onClick={() => onAction("movePlayer", { playerId: player.id, contestant: next })} aria-label={`Move ${player.name} to ${game.contestants[next].name}`}>{player.name}<SwapIcon /></button>,
+                <><span className={`ws-num ${colorOf(i)}`} aria-hidden="true">{i + 1}</span>{game.contestants[i]?.name}</>,
+                player.connected ? "Ready" : "Away",
+              ],
+            };
+          })}
+          openCells={game.players.length < (game.maxPlayers || 12) ? ["— — —", game.contestants.find((team, i) => !membersOf(game, i).length)?.name || "Any team", "Waiting"] : null}
+        />
       ) : (
-        <ol className="ws-lobby-players">
-          {game.contestants.map((contestant, i) => <li key={i} className={colorOf(i)}>{contestant.name}</li>)}
-          {!game.contestants.length && <li className="muted">Nobody yet</li>}
-        </ol>
+        <Departures
+          head={["Player", "Status"]}
+          cols="1fr 0.42fr"
+          rows={game.contestants.map((contestant, i) => ({
+            key: i,
+            state: contestant.present ? "ready" : "away",
+            label: `Player ${i + 1}, ${contestant.name}, ${contestant.present ? "ready" : "reconnecting"}`,
+            cells: [<><span className={`ws-num ${colorOf(i)}`} aria-hidden="true">{i + 1}</span>{contestant.name}</>, contestant.present ? "Ready" : "Away"],
+          }))}
+          openCells={game.contestants.length < (game.maxPlayers || 6) ? ["— — —", "Waiting"] : null}
+        />
       )}
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
       <p className="muted">
@@ -745,7 +802,7 @@ export function WheelDisplay({ game, onAction }) {
     <main className="display wheel-game">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand ws-brand">SPIN &amp; SOLVE</div>
+        <Brand text="SPIN & SOLVE" className="ws-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         {game.status === "bonus" ? <BonusClock game={game} /> : <Clock game={game} />}
       </header>
@@ -757,8 +814,11 @@ export function WheelDisplay({ game, onAction }) {
         <div className="ws-stage">
           {round.tossup ? (
             <div className="ws-wheel-wrap ws-tossup-panel">
-              <b className="money">{money(round.tossup.value)}</b>
-              <p>{round.phase === "tossupReveal" ? "Buzz in on your phone!" : round.phase === "tossupSolve" ? `${nameOf(game, round.control)} buzzed in` : ""}</p>
+              <div className="ws-tossup-plate">
+                <span className="label">{round.type === "tiebreak" ? "Tiebreaker" : "Toss-up"}</span>
+                <Money className="ws-tossup-value" value={round.tossup.value} prefix="$" />
+                <p>{round.phase === "tossupReveal" ? "Buzz in on your phone!" : round.phase === "tossupSolve" ? `${nameOf(game, round.control)} buzzed in` : ""}</p>
+              </div>
             </div>
           ) : (
             <div className="ws-wheel-wrap">
@@ -769,7 +829,7 @@ export function WheelDisplay({ game, onAction }) {
           <div className="ws-main">
             <div className="ws-board-wrap">
               <PuzzleBoard board={round.board} />
-              <p className="ws-category"><span>{segmentLabel(game)}</span>{round.category}</p>
+              <p className="ws-category"><Flap className="ws-round-flap" text={segmentLabel(game)} /><Flap text={round.category} /></p>
             </div>
             <div className="ws-status" role="status">
               {round.speedUp?.value && round.phase !== "roundEnd" && <p className="ws-speedup">Speed-up · consonants {money(round.speedUp.value)} · vowels free</p>}
@@ -777,12 +837,12 @@ export function WheelDisplay({ game, onAction }) {
               {round.express && round.phase !== "roundEnd" && <p className="ws-speedup">Express · no spinning · any mistake is Bankrupt</p>}
               <h2>{title}</h2>
               {detail && <p>{detail}</p>}
-              {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.text}</p>}
+              {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.tone === "bad" ? <XIcon className="ws-news-x" /> : <i className="ws-marker" aria-hidden="true" />}{news.text}</p>}
               {game.clocksPaused && round.phase !== "roundEnd" && <p className="ws-paused">Clocks paused</p>}
-              <UsedLetters round={round} />
               {round.phase === "roundEnd" && <button className="primary ws-next" onClick={() => onAction("nextSegment")}>{last ? "See final scores" : "Next puzzle"}</button>}
               {round.phase === "roundEnd" && game.hostless && <p className="muted">{last ? "Final scores" : "The next puzzle"} will appear in a few seconds.</p>}
             </div>
+            <UsedLetters round={round} />
           </div>
           <Podiums game={game} />
         </div>
@@ -863,7 +923,7 @@ function SolveBox({ game, playerId, board = game.round?.board, blanks = game.rou
       <PuzzleBoard board={board} small fill={state.letters} cursor={state.cursor} onPick={(i) => setState((s) => ({ ...s, cursor: i }))} />
       <Keyboard allowed={CONSONANTS + VOWELS} onKey={type} extra={
         <div className="ws-key-row ws-key-actions">
-          <button onClick={back} aria-label="Delete">⌫</button>
+          <button className="ws-key-back" onClick={back} aria-label="Delete"><BackspaceIcon /></button>
           <button className="primary" disabled={!full || sent} onClick={submit}>{sent ? "Checking…" : full ? "Solve!" : `${state.letters.filter((l) => !l).length} blanks left`}</button>
         </div>
       } />
@@ -883,7 +943,8 @@ function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder", ev
   return (
     <button className="ws-spin" disabled={disabled || sent} onPointerDown={() => { pressed.current = Date.now(); }} onPointerUp={release} onPointerLeave={release}
       onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && pressed.current == null) pressed.current = Date.now(); }} onKeyUp={(e) => { if (e.key === "Enter" || e.key === " ") release(); }}>
-      SPIN
+      <WheelIcon />
+      <span className="ws-spin-word">Spin</span>
       <small>{disabled ? "No consonants left" : hint}</small>
     </button>
   );
@@ -1051,13 +1112,13 @@ export function WheelPlayer({ game, playerId }) {
   return (
     <main className="player wheel-game">
       <header className="player-bar">
-        <span className="brand ws-brand">SPIN &amp; SOLVE</span>
+        <Brand text="SPIN & SOLVE" className="ws-brand" />
         <span className="player-name">{player.name}</span>
       </header>
-      {isTeams(game) && <p className={`ws-my-team ${colorOf(player.contestant)}`}>{me?.name}</p>}
       <div className={`ws-my-podium ${colorOf(player.contestant)}`}>
-        <span>This round <b className="money">{money(me?.roundBank)}</b></span>
-        <span>Total <b className="money">{money(me?.total)}</b></span>
+        <span className="ws-my-name"><span className="ws-num" aria-hidden="true">{player.contestant + 1}</span>{me?.name}</span>
+        <span className="ws-my-bank"><span className="label">This round</span><Money value={me?.roundBank || 0} prefix="$" /></span>
+        <span className="ws-my-total"><span className="label">Total</span><Money value={me?.total || 0} prefix="$" /></span>
       </div>
       <Extras contestant={me} />
       {game.status === "bonus" ? (
@@ -1069,7 +1130,7 @@ export function WheelPlayer({ game, playerId }) {
             <div className="ws-team-pick-buttons" role="radiogroup" aria-label="Your team">
               {game.contestants.map((team, i) => (
                 <button key={i} role="radio" aria-checked={player.contestant === i} className={colorOf(i)} onClick={() => socket.emit("wheel:team", { code: game.code, playerId, contestant: i })}>
-                  {team.name}
+                  <span className="ws-pick-name"><span className="ws-num" aria-hidden="true">{i + 1}</span>{team.name}</span>
                   <small>{membersOf(game, i).length} {membersOf(game, i).length === 1 ? "player" : "players"}</small>
                 </button>
               ))}
@@ -1078,10 +1139,10 @@ export function WheelPlayer({ game, playerId }) {
         ) : <p className="player-status">You’re in! Wait for the game to start.</p>
       ) : (
         <>
-          <p className="player-clue-meta">{segmentLabel(game)} · {round.category}</p>
+          <p className="player-clue-meta ws-meta"><span>{segmentLabel(game)}</span><Flap text={round.category} /></p>
           {/* The solve screen has its own board, with the blanks to fill in. */}
           {SOLVE_PHASES.includes(round.phase) && round.actorId === playerId ? null : <PuzzleBoard board={round.board} small />}
-          {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.text}</p>}
+          {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.tone === "bad" ? <XIcon className="ws-news-x" /> : <i className="ws-marker" aria-hidden="true" />}{news.text}</p>}
           <PlayerAction game={game} playerId={playerId} />
           {!SOLVE_PHASES.includes(round.phase) && !round.tossup && <UsedLetters round={round} />}
         </>
@@ -1095,8 +1156,8 @@ export function WheelController({ game, onAction }) {
   const round = game.round, solution = useSolution(game.code);
   const header = (
     <header className="controller-bar">
-      <span className="brand ws-brand">SPIN &amp; SOLVE</span>
-      <span className="code-chip">{game.code}</span>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
+      <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "bonus")
@@ -1122,7 +1183,7 @@ export function WheelController({ game, onAction }) {
   return (
     <main className="controller wheel-game">
       {header}
-      <p className="player-clue-meta">{segmentLabel(game)} · {round.category}</p>
+      <p className="player-clue-meta ws-meta"><span>{segmentLabel(game)}</span><Flap text={round.category} /></p>
       <div className="ws-answer">
         <span>The answer</span>
         <b>{answer || "Waiting for the answer…"}</b>
@@ -1175,8 +1236,8 @@ function BonusLetterTiles({ bonus }) {
   if (!bonus.board) return null;
   return (
     <div className="ws-bonus-letters" aria-label={`Letters: ${[...bonus.given, ...bonus.picked].join(" ")}`}>
-      {[...bonus.given].map((letter) => <span key={letter}>{letter}</span>)}
-      {bonus.picked.map((letter) => <span key={letter} className="is-picked">{letter}</span>)}
+      {[...bonus.given].map((letter) => <Flap key={letter} text={letter} />)}
+      {bonus.picked.map((letter) => <Flap key={letter} className="is-picked" text={letter} intro />)}
     </div>
   );
 }
@@ -1194,7 +1255,7 @@ function BonusStage({ game, onAction }) {
       <p className="ws-bonus-label">Bonus round · {winner?.name} · total {money(winner?.total)}</p>
       {bonus.phase === "pick" ? (
         <ol className="ws-bonus-choices">
-          {bonus.categories.map((category, i) => <li key={i}>{category}</li>)}
+          {bonus.categories.map((category, i) => <li key={i}><Flap text={category} wrap intro /></li>)}
         </ol>
       ) : spinning ? (
         <div className="ws-wheel-wrap ws-bonus-wheel">
@@ -1203,12 +1264,12 @@ function BonusStage({ game, onAction }) {
       ) : (
         <div className="ws-board-wrap">
           <PuzzleBoard board={bonus.board} />
-          <p className="ws-category"><span>Bonus round</span>{bonus.category}</p>
+          <p className="ws-category"><Flap className="ws-round-flap" text="Bonus round" /><Flap text={bonus.category} /></p>
           <BonusLetterTiles bonus={bonus} />
         </div>
       )}
       <div className="ws-status" role="status">
-        {bonus.phase === "envelope" && <div className={`ws-envelope${bonus.solved ? " is-won" : ""}`}><span>The envelope</span><b className="money">{money(bonus.prize)}</b></div>}
+        {bonus.phase === "envelope" && <div className={`ws-envelope${bonus.solved ? " is-won" : ""}`}><span className="label">The envelope</span><Flap className="money" text={money(bonus.prize)} intro /></div>}
         <h2>{title}</h2>
         {detail && <p>{detail}</p>}
         <BonusNews game={game} />
@@ -1343,8 +1404,8 @@ export function WheelEnd({ game, host, display, onAction }) {
   return (
     <main className="end wheel-game">
       {display && <SoundToggle />}
-      <div className="brand ws-brand">SPIN &amp; SOLVE</div>
-      <h1>{!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
+      <h1><Flap text={!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`} wrap intro /></h1>
       {game.bonus?.prize != null && (
         <p className="ws-bonus-result">
           {game.bonus.solved
@@ -1353,15 +1414,16 @@ export function WheelEnd({ game, host, display, onAction }) {
         </p>
       )}
       <ol className="ws-final">
-        {ranked.map((contestant) => (
+        {ranked.map((contestant, place) => (
           <li key={contestant.i} className={`${colorOf(contestant.i)}${contestant.i === game.winner ? " is-winner" : ""}`}>
-            <span>
-              {contestant.name}
+            <span className="ws-final-rank" aria-hidden="true">{place + 1}</span>
+            <span className="ws-final-who">
+              <span className="ws-final-name">{contestant.name}{contestant.i === game.winner && <em className="ws-winner-tag">Winner</em>}</span>
               {contestant.prizes?.length > 0 && <small>won {contestant.prizes.map((prize) => prize.name).join(", ")}</small>}
               {contestant.consolation > 0 && <small>includes {money(contestant.consolation)} for playing</small>}
               {isTeams(game) && <small>{membersOf(game, contestant.i).map((player) => player.name).join(", ") || "No players"}</small>}
             </span>
-            <b className="money">{money(contestant.total)}</b>
+            <Flap className="money" text={money(contestant.total)} intro />
           </li>
         ))}
       </ol>

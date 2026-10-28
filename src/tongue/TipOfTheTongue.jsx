@@ -1,13 +1,15 @@
 // Tip of the Tongue screens: host setup, the shared TV display, players' phones, the host controller and the end.
 import React, { useEffect, useState } from "react";
 import { socket, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner } from "../JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import { useSound, useEventSounds, playWinnersTune, playBuzz, playDing, playRoundWon } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
 import { playClue, playPop } from "../fib/sounds";
+import { SwapIcon } from "../survey/SurveySays";
 import WORDS from "./words.json";
 import "./tongue.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Dealing the words ----------
 const WORDS_PER_TURN = 7;
@@ -41,7 +43,9 @@ const ranked = (game) => [...game.teams].sort((a, b) => b.score - a.score);
 const isLast = (game) => game.roundIndex === game.rounds - 1;
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
 const STATUS = { got: "Got it", passed: "Passed", foul: "Foul", missed: "Missed", waiting: "" };
-const Check = () => <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const Check = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const XIcon = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+const teamNumber = (game, team) => game.teams.indexOf(team) + 1;
 
 // The word for whoever is allowed to see it (the clue-giver, or a host controller), fetched each time it changes.
 function useWord(game, playerId, allowed) {
@@ -55,14 +59,22 @@ function useWord(game, playerId, allowed) {
   return word;
 }
 
+// The TV's sounds, and a red X cell across the board for a moment when the clue-giver fouls.
 function useTvSounds(game) {
+  const [foul, setFoul] = useState(null);
   useEventSounds(game, (e) => {
     if (e.type === "turn") playClue();
     else if (e.type === "got") playDing(10);
     else if (e.type === "pass") playPop();
-    else if (e.type === "foul") playBuzz();
+    else if (e.type === "foul") { playBuzz(); setFoul(e.at); }
     else if (e.type === "turnEnd") playRoundWon();
   });
+  useEffect(() => {
+    if (!foul) return;
+    const timer = setTimeout(() => setFoul(null), 1300);
+    return () => clearTimeout(timer);
+  }, [foul]);
+  return foul;
 }
 
 // ---------- Setup ----------
@@ -83,7 +95,7 @@ export function TongueSetup({ onCreate }) {
   return (
     <main className="setup tt-setup">
       <BackToHub />
-      <div className="brand tt-brand">TIP OF THE TONGUE</div>
+      <Brand text="TIP OF THE TONGUE" className="tt-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -91,21 +103,21 @@ export function TongueSetup({ onCreate }) {
             <p className="muted">Teams of two. One partner sees a word and clues it; the other guesses as many as they can in 45 seconds. Players pair up as they join, and you can swap them in the lobby.</p>
           </div>
         </div>
-        <fieldset className="ws-fieldset">
+        <fieldset className="sv-fieldset tt-fieldset">
           <legend>Rounds</legend>
           <div className="pc-choices" role="radiogroup" aria-label="Rounds">
             {[3, 4, 5].map((n) => <button key={n} role="radio" aria-checked={rounds === n} onClick={() => { setRounds(n); remember(ROUNDS_KEY, String(n)); }}>{n} rounds</button>)}
           </div>
           <p className="muted sv-hint">Each round, every team takes one turn. Partners swap who gives the clues each round; in the last round, each team decides.</p>
         </fieldset>
-        <fieldset className="ws-fieldset">
+        <fieldset className="sv-fieldset tt-fieldset">
           <legend>Guessing</legend>
           <div className="pc-choices" role="radiogroup" aria-label="Guessing">
             {Object.entries(GUESSING).map(([id, { label }]) => <button key={id} role="radio" aria-checked={guessing === id} onClick={() => { setGuessing(id); remember(GUESSING_KEY, id); }}>{label}</button>)}
           </div>
           <p className="muted sv-hint">{GUESSING[guessing].note}</p>
         </fieldset>
-        <fieldset className="ws-fieldset tt-cats-field">
+        <fieldset className="sv-fieldset tt-fieldset tt-cats-field">
           <legend>Word categories</legend>
           <p className="muted sv-hint">Words come up at random from every category you leave on. Players never see the category.</p>
           <div className="tt-cats-tools">
@@ -148,26 +160,66 @@ function SoundToggle() {
   const [muted, toggle, waiting] = useSound();
   return <button className="sv-sound" aria-pressed={!muted} onClick={toggle}><SpeakerIcon off={muted} />{muted ? "Sound off" : waiting ? "Click for sound" : "Sound on"}</button>;
 }
+// The teams down the side of the board: number and name, the score on flaps, and who's in it. The team that's
+// playing gets the lamp edge and a "Playing" cell.
 function Scoreboard({ game }) {
   return (
-    <section className="fib-scoreboard" aria-label="Scores">
-      <h2>Teams</h2>
+    <section className="tt-scores" aria-label="Scores">
+      <h2 className="label">Teams</h2>
       <ol>
-        {ranked(game).map((team) => (
-          <li key={team.id} className={game.turn?.teamId === team.id ? "is-turn" : ""}>
-            <span className="fib-sb-name">{team.name}<small> · {names(game, team.members)}</small>{game.turn?.teamId === team.id && <em className="tt-playing">Playing</em>}</span>
-            <b className="money">{team.score}</b>
-          </li>
-        ))}
+        {ranked(game).map((team) => {
+          const playing = game.turn?.teamId === team.id;
+          return (
+            <li key={team.id} className={playing ? "is-turn" : ""}>
+              <span className="tt-team-head"><span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span><b>{team.name}</b></span>
+              <Money className="tt-team-score" value={team.score} cells={2} />
+              <small>{names(game, team.members)}</small>
+              {playing && <em className="tt-playing">Playing</em>}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
 }
-function Results({ turn }) {
+// A turn's words, one flap row each: got (a lamp check), foul (red, with an X), passed or missed (dim).
+function Results({ turn, compact = false }) {
   return (
-    <ol className="tt-results">
-      {turn.results.map((word, i) => <li key={i} className={`is-${word.status}`}><span>{word.text}</span><em>{word.status === "got" && <Check />}{STATUS[word.status]}</em></li>)}
+    <ol className={"tt-board tt-results" + (compact ? " is-compact" : "")} style={{ "--rows": Math.ceil(turn.results.length / 2) }}>
+      {turn.results.map((word, i) => (
+        <li key={i} className={`tt-row is-${word.status}`}>
+          <span className="tt-mark">{word.status === "got" ? <Check /> : word.status === "foul" ? <XIcon /> : null}</span>
+          <span className="tt-row-word"><Flap text={word.text} wrap intro /></span>
+          <em>{STATUS[word.status]}</em>
+        </li>
+      ))}
     </ol>
+  );
+}
+// The words cleared so far (public as they land), on rows that start blank: no lengths, nothing to give away.
+function Cleared({ turn, compact = false }) {
+  return (
+    <ol className={"tt-board tt-slots" + (compact ? " is-compact" : "")} style={{ "--rows": Math.ceil(turn.total / 2) }} aria-label={`${turn.points} of ${turn.total} words cleared`}>
+      {Array.from({ length: turn.total }, (_, i) => {
+        const word = turn.got[i];
+        return (
+          <li key={i} className={"tt-row" + (word ? " is-got" : "")}>
+            <span className="tt-mark">{word && <Check />}</span>
+            <span className="tt-row-word"><Flap text={word || ""} cells={word ? 0 : 9} wrap={!!word} label={word || "Not yet"} /></span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+// Got, of, and (for the clue-giver) how many are left in the pile, each on flaps.
+function Tally({ turn, showLeft = false }) {
+  return (
+    <p className="tt-tally" aria-label={`${turn.points} of ${turn.total}${showLeft ? `, ${turn.left} left` : ""}`}>
+      <span className="label">Got</span><Flap text={String(turn.points)} />
+      <span className="label">of</span><Flap text={String(turn.total)} />
+      {showLeft && <><span className="label">Left</span><Flap text={String(turn.left)} /></>}
+    </p>
   );
 }
 const turnLabel = (game) => `Round ${game.roundIndex + 1} of ${game.rounds}`;
@@ -176,45 +228,84 @@ const turnLabel = (game) => `Round ${game.roundIndex + 1} of ${game.rounds}`;
 function Lobby({ game, onAction }) {
   const ready = game.teams.some((team) => team.members.filter((id) => game.players.find((p) => p.id === id)?.connected).length >= 2);
   const nextTeam = (team) => { const i = game.teams.indexOf(team); return game.teams[i + 1]?.id || "new"; };
+  const solo = game.teams.find((team) => team.members.length < 2);
   return (
-    <div className="lobby fib-lobby">
+    <div className="lobby tt-lobby">
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
-      <ul className="tt-lobby-teams">
-        {game.teams.map((team) => (
-          <li key={team.id}>
-            <h2>{team.name}</h2>
-            {team.members.map((id) => <button key={id} onClick={() => onAction("movePlayer", { playerId: id, teamId: nextTeam(team) })} aria-label={`Move ${nameOf(game, id)} to the next team`}>{nameOf(game, id)}</button>)}
-            {team.members.length < 2 && <span className="muted">Waiting for a partner</span>}
-          </li>
-        ))}
-        {!game.teams.length && <li className="muted">Nobody yet</li>}
-      </ul>
+      <Departures
+        head={["Player", "Team", "Status"]}
+        cols="1fr 0.8fr 0.5fr"
+        rows={game.teams.flatMap((team) => team.members.map((id) => {
+          const connected = game.players.find((p) => p.id === id)?.connected;
+          return {
+            key: id,
+            state: connected ? "ready" : "away",
+            label: `${nameOf(game, id)}, ${team.name}, ${connected ? "ready" : "reconnecting"}`,
+            cells: [
+              <button type="button" onClick={() => onAction("movePlayer", { playerId: id, teamId: nextTeam(team) })} aria-label={`Move ${nameOf(game, id)} to the next team`}>{nameOf(game, id)}<SwapIcon /></button>,
+              <><span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>{team.name}</>,
+              connected ? "Ready" : "Away",
+            ],
+          };
+        }))}
+        openCells={game.players.length < 12 ? ["— — —", solo ? solo.name : "New team", "Waiting"] : null}
+      />
       <p className="muted">Players pair up as they join. Tap a name to move them to the next team.</p>
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
       {!ready && <p className="muted">You need at least one team of two to start.</p>}
     </div>
   );
 }
-function Stage({ game, onAction }) {
+// The turn's board: the 45-second clock and the words cleared, then a row for each word. Before the clock starts
+// it waits with dim letters.
+function TurnBoard({ game, foul }) {
+  const turn = game.turn, live = turn.phase === "play";
+  return (
+    <div className={"tt-play" + (live ? " is-live" : " is-waiting")}>
+      <div className="tt-meters">
+        <div className="tt-meter tt-meter-clock">
+          <span className="label">Clock</span>
+          {live ? <ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /> : <div className="clue-timer is-paused"><Flap text="45" still label="45 seconds" /></div>}
+        </div>
+        <div className="tt-meter">
+          <span className="label">Cleared</span>
+          <span className="tt-of"><Flap className="tt-of-n" text={String(turn.points)} cells={1} align="right" /><small>of</small><Flap text={String(turn.total || WORDS_PER_TURN)} /></span>
+        </div>
+      </div>
+      <div className="tt-board-wrap">
+        <Cleared turn={turn.total ? turn : { ...turn, total: WORDS_PER_TURN, got: [] }} />
+        {foul && <div className="tt-foul-flash" key={foul} aria-hidden="true"><span className="tt-foul-x"><XIcon /></span><Flap text="Foul" /></div>}
+      </div>
+    </div>
+  );
+}
+function Stage({ game, onAction, foul }) {
   const turn = game.turn, team = teamById(game, turn.teamId), giver = turn.clueGiverId;
   const next = !game.hostless && turn.phase === "done";
   return (
-    <div className="fib-center tt-center">
-      <p className="sv-round-label">{turnLabel(game)}<em>{team?.name}</em></p>
-      {turn.phase === "choose" && <h1 className="tt-headline">{team?.name}: who’s giving the clues?<small>Last round — decide on your phones.</small></h1>}
-      {turn.phase === "ready" && <h1 className="tt-headline">{nameOf(game, giver)} gives the clues to {names(game, guessersOf(game))}<small>Get ready — the clock starts when {nameOf(game, giver)} taps Start.</small></h1>}
+    <div className="tt-center">
+      <p className="tt-round-label"><Flap text={turnLabel(game)} />{team && <span className="tt-round-team"><span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>{team.name}</span>}</p>
+      {turn.phase === "choose" && <h1 className="tt-headline">{team?.name}: who’s giving the clues?<small>Last round. Decide on your phones.</small></h1>}
+      {turn.phase === "ready" && (
+        <>
+          <h1 className="tt-headline"><em>{nameOf(game, giver)}</em> gives the clues to <em>{names(game, guessersOf(game))}</em><small>Get ready. The clock starts when {nameOf(game, giver)} taps Start.</small></h1>
+          <TurnBoard game={game} />
+        </>
+      )}
       {turn.phase === "play" && (
         <>
-          <h1 className="tt-headline">{nameOf(game, giver)} is giving clues to {names(game, guessersOf(game))}</h1>
-          <p className="tt-count"><b className="dmd-line">{turn.points}</b> of {turn.total}</p>
-          <ul className="tt-got">{turn.got.map((word) => <li key={word}><Check />{word}</li>)}</ul>
-          {turn.lastGuess && !turn.lastGuess.correct && game.guessing === "typed" && <p className="tt-miss" key={turn.lastGuess.at}>“{turn.lastGuess.text}”? Nope.</p>}
+          <h1 className="tt-headline"><em>{nameOf(game, giver)}</em> is giving clues to <em>{names(game, guessersOf(game))}</em></h1>
+          <TurnBoard game={game} foul={foul} />
+          {turn.lastGuess && !turn.lastGuess.correct && game.guessing === "typed" ? <p className="tt-miss" key={turn.lastGuess.at}><XIcon /><q>{turn.lastGuess.text}</q> Not it.</p> : <p className="tt-miss is-empty" aria-hidden="true" />}
         </>
       )}
       {turn.phase === "done" && (
         <>
-          <h1 className="tt-headline">{team?.name} scored {turn.points + turn.bonus}{turn.bonus ? <small>{turn.points} words + {turn.bonus} bonus for the seconds left</small> : null}</h1>
+          <h1 className="tt-headline tt-scored">
+            <span className="tt-scored-line"><em>{team?.name}</em> scored <Flap className="tt-scored-n" text={String(turn.points + turn.bonus)} intro /></span>
+            {turn.bonus ? <small>{turn.points} words + {turn.bonus} bonus for the seconds left</small> : null}
+          </h1>
           {turn.results?.length ? <Results turn={turn} /> : null}
         </>
       )}
@@ -224,18 +315,18 @@ function Stage({ game, onAction }) {
 }
 export function TongueDisplay({ game, onAction }) {
   const turn = game.turn;
-  useTvSounds(game);
+  const foul = useTvSounds(game);
   useClockTicks(turn?.phase === "play" ? turn.deadline : null, game.serverNow, 5);
   return (
     <main className="display tt">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand tt-brand">TIP OF THE TONGUE</div>
+        <Brand text="TIP OF THE TONGUE" className="tt-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
-        <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />
+        {turn?.phase !== "play" && <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />}
       </header>
       {game.status === "lobby" || !turn ? <Lobby game={game} onAction={onAction} /> : (
-        <div className="fib-stage"><Stage game={game} onAction={onAction} /><Scoreboard game={game} /></div>
+        <div className="tt-stage"><Stage game={game} onAction={onAction} foul={foul} /><Scoreboard game={game} /></div>
       )}
       {game.hostless && game.players.length > 0 && game.status === "playing" && (
         <details className="host-tools sv-host-tools">
@@ -254,18 +345,28 @@ export function TongueDisplay({ game, onAction }) {
 }
 
 // ---------- Player phone ----------
+// The word on the clue-giver's phone: as big as the phone allows, on flaps that turn over to the next word.
+function WordCard({ word, small = false }) {
+  return (
+    <div className={"tt-word" + (small ? " is-small" : "")} aria-live="polite">
+      <span className="label">The word</span>
+      <div className="tt-word-flaps">{word ? <Flap text={word} wrap intro /> : <Flap text="" cells={5} label="Loading the word" />}</div>
+    </div>
+  );
+}
 function ClueCard({ game, playerId }) {
   const word = useWord(game, playerId, true), act = (action) => socket.emit("tongue:word", { code: game.code, playerId, action });
   return (
     <div className="tt-card-wrap">
       <div className="sv-guess-top"><span className="sv-guess-label">Clue it to {names(game, guessersOf(game))}. Don’t say it!</span><ClueTimer deadline={game.turn.deadline} serverNow={game.serverNow} /></div>
-      <p className="tt-word" aria-live="polite">{word || "…"}</p>
-      <p className="tt-progress"><b className="dmd-line">{game.turn.points}</b> of {game.turn.total} · {game.turn.left} left</p>
+      <WordCard word={word} />
+      <Tally turn={game.turn} showLeft />
       <div className="tt-actions">
-        {game.guessing === "aloud" && <button className="tt-got-btn" onClick={() => act("got")}>Got it!</button>}
+        {game.guessing === "aloud" && <button className="tt-got-btn" onClick={() => act("got")}><Check />Got it!</button>}
         <button className="tt-pass-btn" onClick={() => act("pass")}>Pass</button>
       </div>
-      <button className="tt-foul-btn" onClick={() => act("foul")}>Oops — I said it</button>
+      <button className="tt-foul-btn" onClick={() => act("foul")}><XIcon />Oops, I said it</button>
+      {game.turn.got.length > 0 && <Cleared turn={{ ...game.turn, total: game.turn.got.length }} compact />}
     </div>
   );
 }
@@ -279,9 +380,9 @@ function GuessBox({ game, playerId }) {
   return (
     <form className="final-form sv-guess tt-guess" onSubmit={send}>
       <div className="sv-guess-top"><span className="sv-guess-label">{nameOf(game, game.turn.clueGiverId)} is cluing</span><ClueTimer deadline={game.turn.deadline} serverNow={game.serverNow} /></div>
-      <p className="tt-progress"><b className="dmd-line">{game.turn.points}</b> of {game.turn.total}</p>
+      <Tally turn={game.turn} />
       <input autoFocus aria-label="Your guess" autoComplete="off" enterKeyHint="send" maxLength="60" value={guess} onChange={(e) => { setGuess(e.target.value); setResult(null); }} placeholder="Type your guess" />
-      {result && !result.correct && <p className="notice" role="status">Not it — keep going!</p>}
+      {result && !result.correct && <p className="notice tt-not-it" role="status"><XIcon />Not it. Keep going!</p>}
       <button className="primary" disabled={!guess.trim()}>Guess</button>
     </form>
   );
@@ -301,17 +402,17 @@ function PlayerAction({ game, playerId }) {
           <button className="primary tt-big" onClick={() => socket.emit("tongue:start", { code: game.code, playerId })}>Start</button>
         </div>
       );
-    return <p className="player-status">{onTurn ? `Get ready to guess — ${nameOf(game, turn.clueGiverId)} is giving the clues!` : `${teamById(game, turn.teamId)?.name} is up next`}</p>;
+    return <p className={"player-status" + (onTurn ? " is-you" : "")}>{onTurn ? `Get ready to guess. ${nameOf(game, turn.clueGiverId)} is giving the clues!` : `${teamById(game, turn.teamId)?.name} is up next`}</p>;
   }
   if (turn.phase === "play") {
     if (giver) return <ClueCard game={game} playerId={playerId} />;
-    if (onTurn) return game.guessing === "typed" ? <GuessBox game={game} playerId={playerId} /> : <div className="tt-card-wrap"><p className="player-status is-you">Guess out loud!</p><p className="tt-progress"><b className="dmd-line">{turn.points}</b> of {turn.total}</p></div>;
-    return <p className="player-status">{teamById(game, turn.teamId)?.name} is playing<br /><small className="muted">No shouting answers!</small></p>;
+    if (onTurn) return game.guessing === "typed" ? <GuessBox game={game} playerId={playerId} /> : <div className="tt-card-wrap"><p className="player-status is-you">Guess out loud!</p><Tally turn={turn} /></div>;
+    return <div className="tt-card-wrap"><p className="player-status">{teamById(game, turn.teamId)?.name} is playing<br /><small className="muted">No shouting answers!</small></p><Tally turn={turn} /></div>;
   }
   return (
-    <div className="fib-my-result">
-      <p className="player-status">{teamById(game, turn.teamId)?.name} scored {turn.points + turn.bonus}</p>
-      {turn.results?.length ? <Results turn={turn} /> : null}
+    <div className="tt-my-result">
+      <p className="player-status">{teamById(game, turn.teamId)?.name} scored <Flap className="tt-status-n" text={String(turn.points + turn.bonus)} /></p>
+      {turn.results?.length ? <Results turn={turn} compact /> : null}
     </div>
   );
 }
@@ -322,9 +423,11 @@ export function TonguePlayer({ game, playerId }) {
   if (!player) return <main className="player tt"><p className="status-card">You’re no longer in this game.</p></main>;
   return (
     <main className="player tt">
-      <header className="player-bar"><span className="brand tt-brand">TIP OF THE TONGUE</span><span className="player-name">{player.name}</span></header>
-      <b className="player-score money">{team?.score ?? 0}</b>
-      <p className="tt-team">{team ? `${team.name} · ${names(game, team.members)}` : "No team yet"}</p>
+      <header className="player-bar"><Brand text="TIP OF THE TONGUE" className="tt-brand" /><span className="player-name">{player.name}</span></header>
+      <div className="tt-my-team">
+        <span className="tt-my-name">{team && <span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>}<span className="tt-my-text"><b>{team ? team.name : "No team yet"}</b>{team && <small>{names(game, team.members)}</small>}</span></span>
+        <Money value={team?.score ?? 0} />
+      </div>
       {game.status === "lobby" || !turn ? <p className="player-status">You’re in! {team?.members.length < 2 ? "Waiting for a partner…" : "The game starts when everyone’s here."}</p> : (
         <>
           <p className="player-clue-meta">{turnLabel(game)}{isLast(game) ? " · last round" : ""}</p>
@@ -338,43 +441,45 @@ export function TonguePlayer({ game, playerId }) {
 // ---------- Host controller ----------
 function TeamTools({ game, onAction }) {
   return (
-    <div className="sv-team-tools fib-player-tools">
-      <ul>
-        {game.teams.map((team) => (
-          <li key={team.id}>
-            <input aria-label={`${team.name}’s name`} defaultValue={team.name} key={team.name} maxLength="24" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== team.name && onAction("renameTeam", { teamId: team.id, name: e.target.value })} />
-            <span className="money">{team.score}</span>
-            <button className="chip-btn add" onClick={() => onAction("adjustScore", { teamId: team.id, amount: 1 })}>+1</button>
-            <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { teamId: team.id, amount: -1 })}>−1</button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="tt-team-tools">
+      {game.teams.map((team) => (
+        <li key={team.id}>
+          <span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>
+          <input aria-label={`${team.name}’s name`} defaultValue={team.name} key={team.name} maxLength="24" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== team.name && onAction("renameTeam", { teamId: team.id, name: e.target.value })} />
+          <Money value={team.score} />
+          <button className="chip-btn add" onClick={() => onAction("adjustScore", { teamId: team.id, amount: 1 })}>+1</button>
+          <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { teamId: team.id, amount: -1 })}>−1</button>
+        </li>
+      ))}
+    </ul>
   );
 }
 export function TongueController({ game, onAction }) {
   const turn = game.turn, word = useWord(game, undefined, !game.hostless && turn?.phase === "play");
-  const header = <header className="controller-bar"><span className="brand tt-brand">TIP OF THE TONGUE</span><span className="code-chip">{game.code}</span></header>;
+  const header = <header className="controller-bar"><Brand text="TIP OF THE TONGUE" className="tt-brand" /><Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} /></header>;
   if (game.status === "lobby" || !turn)
     return <main className="controller tt">{header}<h1>Lobby</h1><p className="muted">Start the game from the main screen. Move players between teams by tapping their names there.</p><section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section></main>;
   const team = teamById(game, turn.teamId);
   return (
     <main className="controller tt">
       {header}
-      <p className="player-clue-meta">{turnLabel(game)} · {team?.name}</p>
+      <div className="sv-guess-top tt-ctrl-top">
+        <p className="player-clue-meta">{turnLabel(game)} · {team?.name}</p>
+        {turn.phase === "play" && <ClueTimer deadline={turn.deadline} serverNow={game.serverNow} />}
+      </div>
       {turn.phase === "ready" && <p className="status-note">{nameOf(game, turn.clueGiverId)} gives the clues to {names(game, guessersOf(game))}. Their clock starts when they tap Start.</p>}
       {turn.phase === "play" && (
         <>
-          <div className="controller-answer"><span>The word</span>{word || "…"}</div>
-          <p className="tt-progress"><b className="dmd-line">{turn.points}</b> of {turn.total} · {turn.left} left</p>
+          <WordCard word={word} small />
+          <Tally turn={turn} showLeft />
           <div className="tt-actions">
-            <button className="tt-got-btn" onClick={() => onAction("got")}>Got it!</button>
+            <button className="tt-got-btn" onClick={() => onAction("got")}><Check />Got it!</button>
             <button className="tt-pass-btn" onClick={() => onAction("pass")}>Pass</button>
           </div>
-          <button className="tt-foul-btn" onClick={() => onAction("foul")}>Foul — they said it</button>
+          <button className="tt-foul-btn" onClick={() => onAction("foul")}><XIcon />Foul: they said it</button>
         </>
       )}
-      {turn.phase === "done" && turn.results?.length > 0 && <Results turn={turn} />}
+      {turn.phase === "done" && turn.results?.length > 0 && <Results turn={turn} compact />}
       <button className="wide on" onClick={() => onAction("next")}>{turn.phase === "play" ? "Stop the clock" : turn.phase === "done" ? "Next turn" : turn.phase === "ready" ? "Start their clock" : "Skip ahead"}</button>
       <div className="sv-round-controls"><button className="chip-btn" onClick={() => onAction("skipTurn")}>Skip this turn</button><button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button></div>
       <section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section>
@@ -393,10 +498,18 @@ export function TongueEnd({ game, host, display, onAction }) {
   return (
     <main className="end tt">
       {display && <SoundToggle />}
-      <div className="brand tt-brand">TIP OF THE TONGUE</div>
-      <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
-      <div className="podium">{top.map((t, i) => <div className={`place place-${i + 1}`} key={t.id}><span className="rank">{i + 1}</span><b>{t.name}</b><small>{names(game, t.members)}</small><strong className="money">{t.score}</strong></div>)}</div>
-      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((t) => <li key={t.id}><span>{t.name}</span><b className="money">{t.score}</b></li>)}</ol>}
+      <Brand text="TIP OF THE TONGUE" className="tt-brand" />
+      <h1><Flap text={!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`} wrap intro /></h1>
+      <ol className="podium">
+        {top.map((t, i) => (
+          <li className={`place place-${i + 1}`} key={t.id}>
+            <span className="rank">{i + 1}</span>
+            <span className="tt-place-name"><b>{t.name}</b><small>{names(game, t.members)}</small></span>
+            <Flap className="money" text={String(t.score)} intro />
+          </li>
+        ))}
+      </ol>
+      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((t) => <li key={t.id}><span>{t.name}</span><Money value={t.score} /></li>)}</ol>}
       {host ? (
         <div className="sv-end-buttons">
           <button className="primary" onClick={() => onAction("replay", { words: dealWords(readCategories()) })}>Play again with new words</button>

@@ -113,6 +113,22 @@ export function playRoundWon() {
   noise(ctx, out, { at: 0.33, dur: 0.5, gain: 0.04, highpass: 6000 });
 }
 
+// The split-flap board: one flap falling onto the next. A dry plastic click (a burst of filtered noise over a
+// short, slightly detuned knock), quieter per flap when a whole row turns at once, and never more than one
+// every 16 ms so a big board rattles instead of roaring.
+let lastClack = 0;
+export function playClack(flaps = 1) {
+  const sound = output();
+  if (!sound || muted) return;
+  const { ctx, out } = sound, now = ctx.currentTime;
+  if (now - lastClack < 0.016) return;
+  lastClack = now;
+  const level = 0.07 / Math.sqrt(Math.min(flaps, 12));
+  noise(ctx, out, { dur: 0.018, gain: level, highpass: 2400 + Math.random() * 900 });
+  note(ctx, out, { freq: 1700 + Math.random() * 500, dur: 0.022, type: "triangle", gain: level * 0.5, attack: 0.001, filter: 5000 });
+  note(ctx, out, { freq: 210 + Math.random() * 40, dur: 0.03, type: "sine", gain: level * 0.6, attack: 0.001 });
+}
+
 // ---------- Winners tune ----------
 // An original, upbeat 8-bar tune (C major, 150 bpm): brassy lead, oom-pah bass, off-beat chords and drums.
 // Plays once (about 13 seconds) and rings out on the last chord.

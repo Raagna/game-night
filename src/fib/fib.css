@@ -1,136 +1,264 @@
-/* Fib or Fact — the same night-blue stage as the rest of Game Night, with a mint accent for the fact and coral
-   for the fibs. It reuses Survey Says!' layout classes (sv-*), which read their accent from these variables. */
-
-.fib, .fib-setup {
-  --sv-accent: #3ddc97;
-  --sv-accent-text: #7ff0bd;
-  --sv-on-accent: #04261a;
-  --fact: #3ddc97;
-  --fact-soft: rgb(61 220 151 / 0.16);
-  --fib: #ff7a6b;
-  --fib-soft: rgb(255 122 107 / 0.16);
-}
+/* Fib or Fact — the board with a mint lamp (--table, from styles.css). The clue is set type, like a notice posted
+   on the board; the choices are rows on the board itself, each with a status cell that stays blank until the reveal
+   reaches it. A fib's letters dim and its cell names who wrote it; the fact clacks in again in the lamp colour.
+   Price Check, Tip of the Tongue and Word Budget reuse the stage, scoreboard and tools classes here (fib-*), so
+   those stay generic. */
 
 /* ---------- Setup ---------- */
 .fib-length { margin-top: 24px; max-width: 520px; }
-.fib-lengths { grid-template-columns: repeat(3, 1fr); }
-.fib-setup .sv-q-round em { color: var(--sv-accent-text); }
 .fib-setup .sv-questions-head .chip-btn { margin-left: auto; }
 .fib-q-categories { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
-.fib-q-categories span { padding: 4px 10px; border-radius: 999px; background: var(--field); border: 1px solid var(--line); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; }
+.fib-q-categories span {
+  padding: 6px 10px 5px; border-radius: 2px;
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule-strong);
+  font: 600 0.88rem/1.1 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--steel-hi);
+}
 
-/* ---------- Display ---------- */
-.display.fib { padding-bottom: 60px; }
-.fib-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); gap: 28px; align-items: start; max-width: 1400px; margin: 4px auto 0; }
-.fib-stage:has(> :only-child) { grid-template-columns: minmax(0, 1fr); max-width: 960px; }
-.fib-center { display: grid; justify-items: center; gap: 18px; min-width: 0; }
-.fib-headline { font: clamp(1.6rem, 3.2vw, 2.8rem)/1.1 var(--display); letter-spacing: -0.015em; text-wrap: balance; }
+/* ---------- The stage (shared with Price Check, Tip of the Tongue and Word Budget) ---------- */
+.fib-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); gap: 28px; align-items: start; max-width: 1400px; margin: 4px auto 0; }
+.fib-stage:has(> :only-child) { grid-template-columns: minmax(0, 1fr); max-width: 1000px; }
+.fib-center { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 14px; min-width: 0; }
+@keyframes fib-in { from { transform: translateY(8px); opacity: 0; } }
 
-.fib-categories { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; width: 100%; max-width: 980px; }
-.fib-categories li { display: grid; place-items: center; min-height: 130px; padding: 18px; border-radius: 16px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.18); font: clamp(1.1rem, 2vw, 1.6rem)/1.15 var(--display); text-transform: uppercase; text-wrap: balance; box-shadow: var(--shadow); }
+/* In a hosted game, Next is the one lit cell in the middle of the rail, like Start game in the lobby. */
+@media (min-width: 721px) {
+  .fib .fib-center > .sv-next { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 8px); transform: translateX(-50%); margin: 0; min-height: 52px; }
+  .fib .fib-center > .sv-next:active:not(:disabled) { transform: translate(-50%, 1px); }
+}
 
-.fib-clue { width: 100%; max-width: 1040px; display: grid; gap: 12px; padding: clamp(18px, 3vw, 34px); border-radius: 18px; background: #050c33; border: 3px solid var(--sv-accent); box-shadow: inset 0 0 0 2px #050c33, inset 0 0 0 4px rgb(61 220 151 / 0.3), var(--shadow); }
-.fib-clue-category { justify-self: center; padding: 4px 14px; border-radius: 999px; background: var(--sv-accent); color: var(--sv-on-accent); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; }
-.fib-clue p { font: clamp(1.4rem, 3vw, 2.5rem)/1.25 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
-.fib-clue.is-small { padding: 14px 22px; gap: 8px; }
-.fib-clue.is-small p { font-size: clamp(1rem, 1.8vw, 1.45rem); }
+/* The scores down the side: one row each, a marker, the name, a cell that fills with a check once they're in, and
+   the score on flaps. Whose turn it is fills the marker; someone reconnecting goes to dim letters. */
+.fib-scoreboard { text-align: left; }
+.fib-scoreboard h2 { margin: 0 0 8px; font: 600 0.82rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel); }
+.fib-scoreboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.fib-scoreboard li {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 46px; padding: 5px 10px;
+  border-radius: 2px;
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule);
+}
+.fib-scoreboard li.is-turn::before { content: ""; flex-shrink: 0; width: 10px; height: 10px; background: var(--table); }
+.fib-scoreboard li.is-turn .fib-sb-name { color: var(--table); }
+.fib-sb-name { flex: 1; min-width: 4.5em; font: 600 1.08rem/1.15 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fib-sb-name small { font: 500 0.78rem var(--flap-font); letter-spacing: 0.1em; color: var(--steel); }
+.fib-sb-check { flex-shrink: 0; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 2px; border: 2px solid var(--steel-mid); }
+.fib-sb-check svg { width: 16px; height: 16px; }
+.is-done .fib-sb-check { background: var(--table); border-color: var(--table); color: var(--on-table); }
+.fib-scoreboard li > .money { flex-shrink: 0; font: 600 1.3rem/1 var(--flap-font); color: var(--paint); }
+.fib-scoreboard li.is-away .fib-sb-name, .fib-scoreboard li.is-away .flap-c { color: var(--paint-dim); }
 
-.fib-options { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1040px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.fib-options.count-3, .fib-options.count-5, .fib-options.count-6, .fib-options.count-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.fib-option { position: relative; display: grid; align-content: center; gap: 4px; min-height: clamp(62px, 9vh, 92px); padding: 10px 16px; border-radius: 12px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.2); transition: opacity 240ms ease-out, background-color 240ms ease-out; }
-.fib-option-text { font: clamp(1rem, 1.9vw, 1.5rem)/1.15 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
-.fib-option-tag { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.02em; }
-.fib-option.is-fib { background: #2a1240; border-color: var(--fib); opacity: 0.8; }
-.fib-option.is-fib .fib-option-tag { color: var(--fib); }
-.fib-option.is-fact { background: #0b3d2a; border-color: var(--fact); }
-.fib-option.is-fact .fib-option-tag { color: var(--fact); }
-.fib-option.is-current { opacity: 1; transform: scale(1.03); box-shadow: 0 0 0 4px rgb(255 255 255 / 0.18), var(--shadow); }
+/* ---------- TV ---------- */
+.fib-round-label { font-size: 1.4rem; }
+.fib-headline { font: 600 clamp(1.6rem, 3.2vw, 2.8rem)/1.12 var(--flap-font); letter-spacing: 0.03em; text-transform: uppercase; text-wrap: balance; max-width: 30ch; }
 
-.fib-spotlight { width: 100%; max-width: 760px; display: grid; gap: 8px; padding: 20px 24px; border-radius: 18px; background: var(--panel-raised); border: 2px solid var(--line-strong); animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1); }
-.fib-spotlight-text { font: clamp(1.6rem, 3.4vw, 2.8rem)/1.1 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
-.fib-spotlight-voters { font-size: 1.15rem; font-weight: 700; color: var(--text-muted); min-height: 1.4em; }
-.fib-spotlight-verdict { font: clamp(1.3rem, 2.6vw, 2.1rem) var(--display); letter-spacing: -0.01em; }
-.fib-spotlight.is-fib { border-color: var(--fib); background: #2a1240; }
-.fib-spotlight.is-fib .fib-spotlight-verdict { color: var(--fib); animation: fib-stamp 320ms cubic-bezier(0.16, 1, 0.3, 1); }
-.fib-spotlight.is-fact { border-color: var(--fact); background: #0b3d2a; }
-.fib-spotlight.is-fact .fib-spotlight-verdict { color: var(--fact); animation: fib-stamp 320ms cubic-bezier(0.16, 1, 0.3, 1); }
-@keyframes fib-in { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes fib-stamp { from { transform: scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Picking: the three categories as departures, one cell each. */
+.fib-categories {
+  list-style: none; margin: 8px 0 0; padding: 8px; width: 100%; max-width: 1040px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px;
+  border-radius: 3px; background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+}
+.fib-categories li { display: grid; place-items: center; min-height: clamp(120px, 20vh, 180px); padding: 16px 12px; border-radius: 2px; background: var(--board); font-size: clamp(1.3rem, 2.3vw, 2.1rem); }
+.fib-categories .flap-cells { justify-content: center; }
 
-.fib-scoreboard { padding: 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); text-align: left; }
-.fib-scoreboard h2 { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
-.fib-scoreboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.fib-scoreboard li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); }
-.fib-scoreboard li.is-away { opacity: 0.55; }
-.fib-scoreboard li.is-done { background: var(--fact-soft); }
-.fib-sb-name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
-.fib-sb-name small { color: var(--text-muted); font-weight: 500; }
-.fib-sb-check { color: var(--text-muted); font-weight: 800; }
-.is-done .fib-sb-check { color: var(--sv-accent); }
-.fib-scoreboard .money { font: 1.05rem var(--display); color: var(--gold); }
+/* The clue: a notice posted on the board, its category on lamp-coloured flaps above the clue in set type. */
+.fib-clue {
+  width: 100%; max-width: 1040px; display: grid; justify-items: center; gap: 12px;
+  padding: clamp(16px, 2.6vw, 30px) clamp(18px, 3vw, 36px);
+  border-radius: 3px; background: var(--well); box-shadow: inset 0 3px 0 var(--table), inset 0 0 0 1px var(--rule);
+}
+.fib-clue-category { font-size: clamp(1.25rem, 1.8vw, 1.6rem); }
+.fib-clue-category .flap-cells { justify-content: center; }
+.fib-clue-category .flap-c { color: var(--table); }
+.fib-clue p { font: 500 clamp(1.4rem, 2.8vw, 2.4rem)/1.3 var(--set); text-wrap: balance; max-width: 46ch; }
+.fib-clue.is-small { padding: 12px 22px 14px; gap: 8px; }
+.fib-clue.is-small .fib-clue-category { font-size: 1.2rem; }
+.fib-clue.is-small p { font-size: clamp(1.05rem, 1.7vw, 1.4rem); line-height: 1.35; max-width: 70ch; }
 
-.fib-clue-scores { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 760px; display: grid; gap: 8px; text-align: left; }
-.fib-clue-scores li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--panel-raised); animation: fib-in 380ms both; }
+/* The choices: a flap module. Each row is a letter, the choice on flaps, and its status cell. */
+.fib-options {
+  list-style: none; margin: 0; padding: 8px; width: 100%; max-width: 1040px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 10px;
+  border-radius: 3px; background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+}
+.fib-options.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(var(--rows), auto); }
+.fib-option {
+  --side: 11.5rem;
+  position: relative; container-type: inline-size;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.45rem;
+  min-height: clamp(50px, 6.8vh, 72px); padding: 4px 8px; border-radius: 2px;
+  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+  transition: box-shadow 200ms ease-out;
+}
+.fib-option-text { min-width: 0; display: flex; justify-content: flex-start; text-align: left; }
+.fib-option-text .flap { font-size: clamp(0.95rem, calc((100cqi - var(--side)) / (var(--n) * 0.7)), 1.7rem); }
+.fib-option-text .flap-c { width: 0.64em; }
+.fib-option-text .flap-cells, .fib-option-text .flap-w { gap: 0.06em; }
+.fib-option-text .flap-wrap .flap-cells { gap: 0.1em 0.32em; }
+.fib-option-key .flap-c { background: var(--paint); color: #121316; }
+.fib-option-key .flap-c::after { background: rgb(0 0 0 / 0.35); }
+.fib-option-tag { font-size: 0.82em; }
+.fib-option-tag .flap-c { min-width: 6.2em; max-width: 11em; justify-content: center; letter-spacing: 0.08em; background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
+/* The one in the spotlight: a white edge while the room waits for the verdict. */
+.fib-option.is-current { box-shadow: inset 0 0 0 2px var(--paint); }
+/* A fib: dim letters, a steel letter cell, and its writer in the status cell. */
+.fib-option.is-fib .fib-option-text .flap-c { color: var(--paint-dim); }
+.fib-option.is-fib .fib-option-key .flap-c { background: var(--steel-mid); }
+.fib-option.is-fib .fib-option-tag .flap-c { background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); color: var(--paint); }
+/* The fact: letters in the lamp colour, a lit letter cell, and FACT on a lit cell. */
+.fib-option.is-fact .fib-option-text .flap-c { color: var(--table); }
+.fib-option.is-fact .fib-option-key .flap-c, .fib-option.is-fact .fib-option-tag .flap-c { background: var(--table); color: var(--on-table); }
+.fib-option.is-fact.is-current { box-shadow: inset 0 0 0 2px var(--table); }
+
+/* The spotlight: the choice in the reveal, who picked it, then what it really was and what it was worth. */
+.fib-spotlight {
+  width: 100%; max-width: 1040px; display: grid; justify-items: center; gap: 10px;
+  padding: 16px 20px; border-radius: 3px;
+  background: var(--well); box-shadow: inset 0 3px 0 var(--steel-mid), inset 0 0 0 1px var(--rule);
+  transition: box-shadow 200ms ease-out;
+}
+.fib-spotlight.is-fact { box-shadow: inset 0 3px 0 var(--table), inset 0 0 0 2px var(--table); }
+.fib-spotlight-text { font-size: clamp(1.7rem, 3.3vw, 2.9rem); }
+.fib-spotlight-text .flap-cells { justify-content: center; }
+.fib-spotlight-voters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; min-height: 1.6rem; font-size: 1.25rem; }
+.fib-spotlight-voters .label { font-size: 0.95rem; color: var(--steel-hi); }
+.fib-spotlight-verdict { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 22px; min-height: clamp(2rem, 3.4vw, 2.8rem); }
+.fib-verdict { font-size: clamp(1.3rem, 2.3vw, 2rem); }
+.fib-verdict .flap-cells { justify-content: center; }
+.fib-spotlight.is-fact .fib-verdict .flap-c { color: var(--table); }
+.fib-spotlight-points { display: inline-flex; align-items: center; gap: 10px; font-size: clamp(1.3rem, 2.3vw, 2rem); }
+.fib-spotlight-points .flap-c { color: var(--table); }
+.fib-spotlight-points small { font: 600 0.5em var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
+
+/* The points from the clue: an arrivals board, best first. */
+.fib-clue-scores { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 860px; display: grid; gap: 5px; text-align: left; }
+.fib-clue-scores li {
+  display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr) auto auto; align-items: center; gap: 8px 18px;
+  min-height: 58px; padding: 6px 12px 6px 16px; border-radius: 2px;
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: 1.5rem;
+  animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 .fib-clue-scores li:nth-child(2) { animation-delay: 60ms; }
 .fib-clue-scores li:nth-child(3) { animation-delay: 120ms; }
 .fib-clue-scores li:nth-child(n+4) { animation-delay: 180ms; }
-.fib-cs-name { font-weight: 800; font-size: 1.15rem; overflow-wrap: anywhere; }
-.fib-cs-why { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
-.fib-cs-why em { font-style: normal; font-size: 0.8rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
-.fib-cs-why .is-fact { background: var(--fact-soft); color: var(--fact); }
-.fib-cs-why .is-fib { background: var(--fib-soft); color: var(--fib); }
-.fib-cs-gain { font-weight: 800; color: var(--sv-accent-text); min-width: 5ch; text-align: right; }
-.fib-clue-scores .money { font: 1.3rem var(--display); color: var(--gold); min-width: 5ch; text-align: right; }
-
-.fib-lobby-players { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 760px; }
-.fib-lobby-players li { min-height: 38px; display: grid; place-items: center; padding: 0 14px; border-radius: 999px; background: var(--fact-soft); font-weight: 700; }
+.fib-cs-name { font: 600 1.4rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.fib-cs-why { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.fib-cs-why em { display: inline-flex; align-items: center; gap: 8px; font: 600 0.95rem/1.2 var(--flap-font); font-style: normal; letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-hi); }
+.fib-cs-why em::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; border: 2px solid currentColor; }
+.fib-cs-why .is-fact { color: var(--table); }
+.fib-cs-why .is-fact::before { background: currentColor; }
+.fib-cs-why .is-fib { color: var(--paint); }
+.fib-cs-why .is-none { color: var(--paint-dim); }
+.fib-cs-gain .flap-c { color: var(--table); }
+.fib-clue-scores li:not(.is-gain) .fib-cs-gain .flap-c { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
 
 /* ---------- Phone ---------- */
 .player.fib { text-align: center; }
-.fib-my-score { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 16px 0 12px; padding: 12px 16px; border-radius: 14px; background: var(--fact-soft); border: 2px solid var(--sv-accent); }
-.fib-my-score span { font-weight: 800; }
-.fib-my-score b { font: 1.8rem/1 var(--display); color: var(--sv-accent); }
-.player.fib .fib-clue { margin-top: 10px; padding: 16px; gap: 10px; border-width: 2px; }
-.player.fib .fib-clue p { font: 600 1.15rem/1.4 "DM Sans", system-ui, sans-serif; letter-spacing: 0; }
-.player.fib .fib-clue.is-small p { font-size: 0.95rem; }
-.fib-form input:focus { border-color: var(--sv-accent); }
-.fib-mine { color: var(--sv-accent-text); }
-.fib-pick, .fib-vote { display: grid; gap: 10px; margin-top: 16px; text-align: left; }
-.fib-pick-btn { min-height: 64px; padding: 12px 16px; border-radius: 14px; background: linear-gradient(180deg, #1b45d6 0%, #0e2a9e 100%); border: 2px solid rgb(255 255 255 / 0.2); font: 1.05rem/1.2 var(--display); text-transform: uppercase; text-align: center; }
-.fib-pick-btn:hover { border-color: var(--sv-accent); }
-.fib-vote ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.fib-vote button { width: 100%; min-height: 56px; display: grid; gap: 2px; padding: 10px 16px; border-radius: 12px; background: var(--panel-raised); border: 2px solid var(--line-strong); font-weight: 800; font-size: 1.05rem; text-transform: uppercase; text-align: left; overflow-wrap: anywhere; }
-.fib-vote button:hover:not(:disabled) { border-color: var(--sv-accent); }
-.fib-vote button:disabled { opacity: 0.5; }
-.fib-vote button small { font-size: 0.75rem; font-weight: 700; text-transform: none; color: var(--text-muted); }
+.fib-my-score {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin: 16px 0 12px; padding: 12px 14px; border-radius: 3px;
+  background: var(--well); box-shadow: inset 0 3px 0 var(--table);
+  font-size: 1.9rem;
+}
+.fib-my-score > span:first-child { font: 600 1rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
+.player.fib .fib-clue { margin-top: 10px; padding: 14px 16px 16px; gap: 10px; justify-items: start; text-align: left; }
+.player.fib .fib-clue-category { font-size: 1.15rem; }
+.player.fib .fib-clue-category .flap-cells { justify-content: flex-start; }
+.player.fib .fib-clue p { font: 500 1.14rem/1.42 var(--set); }
+.player.fib .fib-clue.is-small p { font-size: 1rem; }
+.fib-mine { font: 600 1.1em var(--flap-font); letter-spacing: 0.04em; color: var(--table); }
+.fib-pick, .fib-vote { display: grid; gap: 8px; margin-top: 16px; text-align: left; }
+.fib-vote ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+/* Ticket-machine keys: a hollow marker, the choice in board letters. Tapping one sends it. */
+.fib-pick-btn, .fib-vote button {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 60px; padding: 10px 16px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  border: 1px solid var(--steel-mid);
+  font: 600 1.18rem/1.2 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; text-align: left; overflow-wrap: anywhere;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.4);
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, transform 90ms ease-out;
+}
+.fib-pick-btn::before, .fib-vote button::before { content: ""; flex-shrink: 0; width: 10px; height: 10px; border: 2px solid currentColor; }
+.fib-pick-btn:hover, .fib-vote button:hover:not(:disabled) { border-color: var(--table); }
+.fib-pick-btn:active, .fib-vote button:active:not(:disabled) { transform: translateY(1px); background: var(--table); color: var(--on-table); border-color: var(--table); }
+.fib-pick-btn:active::before, .fib-vote button:active:not(:disabled)::before { background: currentColor; }
+.fib-vote button:disabled { color: var(--paint-dim); border-style: dashed; border-color: var(--rule-strong); background: transparent; box-shadow: none; }
+.fib-vote button small { margin-left: auto; flex-shrink: 0; font: 600 0.78rem var(--flap-font); letter-spacing: 0.16em; color: var(--steel); }
 .fib-my-result { margin-top: 10px; }
 
 /* ---------- Host controller ---------- */
-.controller.fib .fib-clue { margin: 14px 0 12px; padding: 14px; }
-.controller.fib .fib-clue p { font: 600 1.05rem/1.4 "DM Sans", system-ui, sans-serif; letter-spacing: 0; }
-.controller.fib .controller-answer span { color: var(--sv-accent); }
-.fib-ctrl-hint { margin-bottom: 12px; font-size: 0.9rem; }
-.fib-ctrl-fibs { margin: 12px 0; }
-.fib-ctrl-fibs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-.fib-ctrl-fibs li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel-raised); }
-.fib-ctrl-fibs q { flex: 1; font-weight: 700; overflow-wrap: anywhere; }
-.fib-ctrl-fibs li > span { color: var(--text-muted); font-size: 0.85rem; }
+.controller.fib .fib-clue { margin: 14px 0 12px; padding: 14px 16px; justify-items: start; text-align: left; }
+.controller.fib .fib-clue-category { font-size: 1.15rem; }
+.controller.fib .fib-clue-category .flap-cells { justify-content: flex-start; }
+.controller.fib .fib-clue p { font: 500 1.05rem/1.42 var(--set); }
+.fib-ctrl-hint { margin-bottom: 12px; font-size: 0.95rem; }
+.fib-ctrl-fibs { margin: 14px 0; }
+.fib-ctrl-fibs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.fib-ctrl-fibs li { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px 8px 6px 12px; border-radius: 2px; background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); }
+.fib-ctrl-fibs q { flex: 1; min-width: 0; font: 600 1.1rem/1.2 var(--flap-font); letter-spacing: 0.05em; text-transform: uppercase; overflow-wrap: anywhere; quotes: none; }
+.fib-ctrl-fibs li > span { flex-shrink: 0; font: 600 0.82rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
+.fib-ctrl-fibs li.muted { background: none; border: 1px dashed var(--rule-strong); color: var(--paint-dim); }
 .controller.fib .fib-clue-scores { margin: 12px 0; }
+.controller.fib .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; min-height: 0; padding: 10px 10px 10px 12px; font-size: 1.15rem; }
+.controller.fib .fib-cs-name { font-size: 1.1rem; }
+.controller.fib .fib-cs-why { grid-column: 1 / -1; grid-row: 2; }
+.controller.fib .fib-cs-why:empty { display: none; }
 .controller.fib .wide { margin: 8px 0; }
+
+/* The players tool (shared): name field, score on flaps, and the adjust and kick keys. */
 .fib-player-tools ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .fib-player-tools li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.fib-player-tools li input { flex: 1; min-width: 120px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); font-weight: 700; font-size: 16px; }
-.fib-player-tools .money { min-width: 4ch; text-align: right; font-weight: 800; color: var(--gold); }
+.fib-player-tools li input { flex: 1; min-width: 120px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--well); font: 600 16px var(--set); }
+.fib-player-tools li input:focus { border-color: var(--table); outline: none; box-shadow: 0 0 0 1px var(--table); }
+.fib-player-tools li > .money { min-width: 3ch; text-align: right; font: 600 1.15rem/1 var(--flap-font); }
+/* Fib or Fact and Price Check: the name and score on one line, the keys under them. */
+.fib .fib-player-tools li, .pc .fib-player-tools li {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "name name name score" "add sub . kick";
+  gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--rule);
+}
+.fib .fib-player-tools li input, .pc .fib-player-tools li input { grid-area: name; min-width: 0; }
+.fib .fib-player-tools li > .money, .pc .fib-player-tools li > .money { grid-area: score; align-self: center; font-size: 1.35rem; }
+.fib .fib-player-tools li > .add, .pc .fib-player-tools li > .add { grid-area: add; }
+.fib .fib-player-tools li > .subtract, .pc .fib-player-tools li > .subtract { grid-area: sub; }
+.fib .fib-player-tools li > .danger, .pc .fib-player-tools li > .danger { grid-area: kick; }
+.fib .fib-player-tools li.muted, .pc .fib-player-tools li.muted { display: block; border: 0; }
 
-/* ---------- End ---------- */
-.end.fib .place-1 { background: var(--sv-accent); border-color: var(--sv-accent); color: var(--sv-on-accent); }
-.end.fib .place-1 .rank, .end.fib .place-1 strong { color: var(--sv-on-accent); }
-
+/* ---------- Narrower and shorter screens ---------- */
 @media (max-width: 900px) {
   .fib-stage { grid-template-columns: minmax(0, 1fr); }
-  .fib-options.count-3, .fib-options.count-5, .fib-options.count-6, .fib-options.count-9 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fib-options.is-two { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; grid-template-rows: none; }
+}
+@media (max-width: 760px) {
+  .fib-categories { grid-template-columns: 1fr; }
+  .fib-categories li { min-height: 84px; }
+  .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; font-size: 1.15rem; }
+  .fib-cs-name { font-size: 1.1rem; }
+  .fib-cs-why { grid-column: 1 / -1; grid-row: 2; }
+  .fib-spotlight { padding: 14px 12px; }
+}
+/* A 720p TV or a laptop: slimmer rows and a tighter spotlight, so the clue, all nine choices and the verdict fit. */
+@media (max-height: 940px) and (min-width: 761px) {
+  .fib-center { gap: 10px; }
+  .fib-option { min-height: 5.9vh; padding-block: 3px; }
+  .fib-clue.is-small { padding: 9px 18px 11px; gap: 6px; }
+  .fib-clue.is-small p { font-size: clamp(1rem, 1.6vw, 1.25rem); }
+  .fib-spotlight { padding: 10px 18px; gap: 6px; }
+  .fib-spotlight-text { font-size: clamp(1.5rem, 2.8vw, 2.3rem); }
+  .fib-scoreboard li { min-height: 40px; }
+  .fib-clue-scores li { min-height: 44px; padding-block: 3px; }
+  .fib-clue-scores { gap: 4px; }
+  .fib-center.is-scores .fib-headline { font-size: 1.8rem; }
+  /* During the reveal the clue keeps only its category: the room has read it twice by now. */
+  .fib-center.is-reveal .fib-clue p { display: none; }
+  .fib-center.is-reveal .fib-clue { padding: 8px 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fib-spotlight, .fib-spotlight-verdict, .fib-clue-scores li { animation: none !important; }
-  .fib-option.is-current { transform: none; }
+  .fib-clue-scores li { animation: none !important; }
+}
+.fib-prompt-list .sv-q-round { width: 132px; }
+@media (max-width: 760px) {
+  .fib-prompt-list .sv-q-round { width: auto; }
+  .fib-lengths { flex-wrap: nowrap; }
+  .fib-lengths button { flex: 1; min-width: 0; padding: 0 10px; font-size: 1.05rem; }
 }

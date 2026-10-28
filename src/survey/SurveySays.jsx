@@ -1,11 +1,12 @@
 // Survey Says! screens: host setup, the shared TV display, players' phones, the host controller and the final scores.
 import React, { useEffect, useRef, useState } from "react";
 import { socket, tone, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner } from "../JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import SURVEYS from "../surveys.json";
 import { useSound, useEventSounds, playWinnersTune, playTick } from "./sounds";
 import "./survey.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Picking questions ----------
 const PLAYED_KEY = "gameNight.survey.played.v1";
@@ -62,6 +63,8 @@ const membersOf = (game, team) => game.players.filter((player) => player.team ==
 const points = (value) => (value || 0).toLocaleString();
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
 const XIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>;
+export const CheckIcon = () => <svg className="check-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+export const SwapIcon = () => <svg className="dep-swap" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const GUESS_RESULT = { hit: "On the board!", miss: "Not on the board", repeat: "Already on the board", timeout: "Time’s up" };
 
 function playHit() { tone(660, 0.14, "sine", 0.14); setTimeout(() => tone(990, 0.3, "sine", 0.14), 120); }
@@ -141,7 +144,7 @@ export function SurveySetup({ onCreate }) {
   return (
     <main className="setup survey-setup">
       <BackToHub />
-      <div className="brand survey-brand">SURVEY SAYS!</div>
+      <Brand text="SURVEY SAYS!" className="survey-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -228,6 +231,9 @@ export function SurveySetup({ onCreate }) {
 }
 
 // ---------- Shared pieces ----------
+// The answer board is a flap module: each slot is a rank cell, the answer on flaps and its points. A hidden answer
+// is a row of blank cells; when it's found its letters clack in, left to right. Answers nobody found are shown in
+// dim letters at the end of the round.
 function AnswerBoard({ round, showAll = false, onReveal, disabled }) {
   const rows = Math.max(2, Math.ceil(round.answers.length / 2));
   return (
@@ -235,16 +241,22 @@ function AnswerBoard({ round, showAll = false, onReveal, disabled }) {
       {round.answers.map((answer, i) => {
         const shown = answer.revealed || (showAll && answer.text);
         const className = `sv-slot${answer.revealed ? " is-revealed" : shown ? " is-missed" : ""}${answer.team != null ? ` team-${answer.team}` : ""}`;
-        const inner = shown ? (
-          <><span className="sv-slot-text">{answer.text}</span><span className="sv-slot-points">{answer.points}</span></>
-        ) : (
-          <span className="sv-slot-num">{i + 1}</span>
+        const inner = (
+          <>
+            <span className="sv-slot-num"><Flap text={String(i + 1)} /></span>
+            <span className="sv-slot-text"><Flap text={shown ? answer.text : ""} cells={shown ? 0 : 12} wrap={!!shown} label={shown ? answer.text : `Answer ${i + 1}, hidden`} /></span>
+            <span className="sv-slot-points"><Flap text={shown ? String(answer.points) : ""} cells={2} align="right" label={shown ? `${answer.points} points` : ""} /></span>
+            {answer.revealed && answer.team != null && <span className="sv-slot-team" aria-label={`found by team ${answer.team + 1}`}>{answer.team + 1}</span>}
+          </>
         );
         return (
-          <li key={`${i}-${!!shown}`} className={className}>
+          <li key={i} className={className}>
             {onReveal ? (
               <button disabled={disabled || answer.revealed} onClick={() => onReveal(i)} aria-label={answer.revealed ? `${answer.text}, already revealed` : `Reveal ${answer.text}, ${answer.points} points`}>
-                <span className="sv-slot-rank">{i + 1}</span>{inner}
+                <span className="sv-slot-rank">{i + 1}</span>
+                <span className="sv-slot-text">{answer.text}</span>
+                <span className="sv-slot-points">{answer.points}</span>
+                {answer.revealed && <CheckIcon />}
               </button>
             ) : inner}
           </li>
@@ -257,7 +269,7 @@ function AnswerBoard({ round, showAll = false, onReveal, disabled }) {
 function Strikes({ count, label = true }) {
   return (
     <div className="sv-strikes" role="img" aria-label={label ? `${count} of 3 strikes` : undefined}>
-      {[0, 1, 2].map((i) => <span key={i} className={i < count ? "is-on" : ""}><XIcon /></span>)}
+      {[0, 1, 2].map((i) => <span key={i} className={i < count ? "is-on" : ""}>{i < count && <XIcon />}</span>)}
     </div>
   );
 }
@@ -269,8 +281,8 @@ function TeamPanel({ game, team }) {
   const stealing = round?.phase === "steal" && round.stealTeam === team;
   return (
     <section className={`sv-team team-${team}${inControl ? " is-control" : ""}${stealing ? " is-stealing" : ""}`} aria-label={`${teamName(game, team)}: ${points(game.teams[team].score)} points`}>
-      <h2>{teamName(game, team)}</h2>
-      <div className="sv-team-score money">{points(game.teams[team].score)}</div>
+      <h2><span className="sv-team-num" aria-hidden="true">{team + 1}</span>{teamName(game, team)}</h2>
+      <div className="sv-team-score"><Money value={points(game.teams[team].score)} /></div>
       {inControl && <span className="sv-badge">In control</span>}
       {stealing && <span className="sv-badge">Stealing</span>}
       <ul>
@@ -319,11 +331,11 @@ function FinalCount({ round, serverNow, hidden }) {
     timers.push(setTimeout(() => setCount(null), end - Date.now()));
     return () => timers.forEach(clearTimeout);
   }, [deadline]);
-  return count && !hidden ? <div className="sv-final-count" key={count} aria-hidden="true">{count}</div> : null;
+  return count && !hidden ? <div className="sv-final-count" key={count} aria-hidden="true"><Flap text={String(count)} intro /></div> : null;
 }
 
 // Sound on/off for the TV (remembered in this browser). Until someone clicks the page, browsers keep it silent.
-function SoundToggle() {
+export function SoundToggle() {
   const [muted, toggle, waiting] = useSound();
   return (
     <button className="sv-sound" aria-pressed={!muted} onClick={toggle}>
@@ -353,7 +365,7 @@ function TeamTools({ game, onAction }) {
         <div className="sv-tool-team" key={team}>
           <div className="sv-tool-team-head">
             <input aria-label={`Team ${team + 1} name`} defaultValue={game.teams[team].name} key={game.teams[team].name} maxLength="24" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== game.teams[team].name && onAction("renameTeam", { team, name: e.target.value })} />
-            <span className="money">{points(game.teams[team].score)}</span>
+            <Money value={points(game.teams[team].score)} />
             <button className="chip-btn add" onClick={() => onAction("adjustScore", { team, amount: step })}>+{step}</button>
             <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { team, amount: -step })}>−{step}</button>
           </div>
@@ -391,24 +403,22 @@ function Lobby({ game, onAction }) {
     <div className="lobby sv-lobby">
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
-      <div className="sv-lobby-teams">
-        {[0, 1].map((team) => (
-          <section key={team} className={`sv-lobby-team team-${team}`}>
-            <h2>{teamName(game, team)}</h2>
-            <ul>
-              {membersOf(game, team).map((player) => (
-                <li key={player.id}>
-                  <button onClick={() => onAction("movePlayer", { playerId: player.id, team: 1 - team })} aria-label={`Move ${player.name} to ${teamName(game, 1 - team)}`}>
-                    {player.name} <span aria-hidden="true">⇄</span>
-                  </button>
-                </li>
-              ))}
-              {!membersOf(game, team).length && <li className="muted">Nobody yet</li>}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <p className="muted">Players choose a team on their phone. Tap a name to move someone.</p>
+      <Departures
+        head={["Player", "Team", "Status"]}
+        cols="0.85fr 1fr 0.62fr"
+        rows={game.players.map((player) => ({
+          key: player.id,
+          state: player.connected ? "ready" : "away",
+          label: `${player.name}, ${teamName(game, player.team)}, ${player.connected ? "ready" : "reconnecting"}`,
+          cells: [
+            <button type="button" className={`team-${player.team}`} onClick={() => onAction("movePlayer", { playerId: player.id, team: 1 - player.team })} aria-label={`Move ${player.name} to ${teamName(game, 1 - player.team)}`}><Flap text={player.name} /><SwapIcon /></button>,
+            <><span className={`sv-team-num team-${player.team}`} aria-hidden="true">{player.team + 1}</span><Flap text={teamName(game, player.team)} /></>,
+            player.connected ? "Ready" : "Away",
+          ],
+        }))}
+        openCells={game.players.length < 12 ? ["— — —", [0, 1].map((t) => membersOf(game, t).length ? null : teamName(game, t)).find(Boolean) || "Either", "Waiting"] : null}
+      />
+      <p className="muted">Players choose a team on their phone. Tap a name to move someone to the other team.</p>
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
       {!ready && <p className="muted">Each team needs at least one player to start.</p>}
     </div>
@@ -424,7 +434,7 @@ export function SurveyDisplay({ game, onAction }) {
     <main className="display survey">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand survey-brand">SURVEY SAYS!</div>
+        <Brand text="SURVEY SAYS!" className="survey-brand" />
         {game.status !== "lobby" ? (
           <JoinCorner code={game.code} />
         ) : <span />}
@@ -437,11 +447,11 @@ export function SurveyDisplay({ game, onAction }) {
           <TeamPanel game={game} team={0} />
           <div className="sv-center">
             <p className="sv-round-label">
-              Round {game.roundIndex + 1} of {game.roundCount}
-              {MULTIPLIER_NAME[game.multiplier] && <em>{MULTIPLIER_NAME[game.multiplier]} points</em>}
+              <Flap text={`Round ${game.roundIndex + 1} of ${game.roundCount}`} />
+              {MULTIPLIER_NAME[game.multiplier] && <Flap className="sv-multiplier" text={`${MULTIPLIER_NAME[game.multiplier]} points`} />}
             </p>
             <h1 className="sv-question">{round.question}</h1>
-            <div className="sv-bank" aria-label={`${points(round.bank)} points in the bank`}><span>Bank</span><b className="money">{points(round.bank)}</b></div>
+            <div className="sv-bank" aria-label={`${points(round.bank)} points in the bank`}><span className="label">Bank</span><Money value={points(round.bank)} cells={3} /></div>
             <div className="sv-board-wrap">
               <AnswerBoard round={round} showAll={round.phase === "roundEnd"} />
               {flash && <div className="sv-strike-flash" key={flash.at} aria-hidden="true">{Array.from({ length: flash.count }, (_, i) => <XIcon key={i} />)}</div>}
@@ -581,12 +591,12 @@ export function SurveyPlayer({ game, playerId }) {
   return (
     <main className={`player survey ${signal ? `signal-${signal}` : ""}`}>
       <header className="player-bar">
-        <span className="brand survey-brand">SURVEY SAYS!</span>
+        <Brand text="SURVEY SAYS!" className="survey-brand" />
         <span className="player-name">{player.name}</span>
       </header>
       <div className={`sv-my-team team-${player.team}`}>
-        <span>{myTeam.name}</span>
-        <b className="money">{points(myTeam.score)}</b>
+        <span className="sv-my-name"><span className="sv-team-num" aria-hidden="true">{player.team + 1}</span>{myTeam.name}</span>
+        <Money value={points(myTeam.score)} />
       </div>
       {game.status === "lobby" || !round ? (
         <div className="sv-team-pick">
@@ -594,7 +604,7 @@ export function SurveyPlayer({ game, playerId }) {
           <div className="sv-team-pick-buttons" role="radiogroup" aria-label="Your team">
             {[0, 1].map((team) => (
               <button key={team} role="radio" aria-checked={player.team === team} className={`team-${team}`} onClick={() => socket.emit("survey:team", { code: game.code, playerId, team })}>
-                {teamName(game, team)}
+                <span className="sv-pick-name"><span className="sv-team-num" aria-hidden="true">{team + 1}</span>{teamName(game, team)}</span>
                 <small>{membersOf(game, team).length} {membersOf(game, team).length === 1 ? "player" : "players"}</small>
               </button>
             ))}
@@ -622,8 +632,8 @@ export function SurveyController({ game, onAction }) {
   const round = game.round;
   const header = (
     <header className="controller-bar">
-      <span className="brand survey-brand">SURVEY SAYS!</span>
-      <span className="code-chip">{game.code}</span>
+      <Brand text="SURVEY SAYS!" className="survey-brand" />
+      <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "lobby" || !round)
@@ -706,13 +716,13 @@ export function SurveyEnd({ game, host, display, onAction }) {
   return (
     <main className="end survey">
       {display && <SoundToggle />}
-      <div className="brand survey-brand">SURVEY SAYS!</div>
-      <h1>{winner == null ? "It’s a tie!" : `${teamName(game, winner)} win!`}</h1>
+      <Brand text="SURVEY SAYS!" className="survey-brand" />
+      <h1><Flap text={winner == null ? "It’s a tie!" : `${teamName(game, winner)} win!`} wrap intro /></h1>
       <div className="sv-final-scores">
         {[0, 1].map((team) => (
           <section key={team} className={`sv-final-team team-${team}${winner === team ? " is-winner" : ""}`}>
-            <h2>{teamName(game, team)}</h2>
-            <strong className="money">{points(game.teams[team].score)}</strong>
+            <h2><span className="sv-team-num" aria-hidden="true">{team + 1}</span>{teamName(game, team)}{winner === team && <span className="sv-winner-tag">Winner</span>}</h2>
+            <Flap className="money" text={points(game.teams[team].score)} intro />
             <p>{membersOf(game, team).map((p) => p.name).join(", ") || "No players"}</p>
           </section>
         ))}

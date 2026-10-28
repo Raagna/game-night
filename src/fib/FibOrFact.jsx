@@ -1,13 +1,15 @@
 // Fib or Fact screens: host setup, the shared TV display, players' phones, the host controller and the final scores.
 import React, { useEffect, useState } from "react";
 import { socket, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner } from "../JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import { loadSeasonIndex, loadSeason } from "../questions";
 import { useSound, playWinnersTune } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
 import { useFibSounds } from "./sounds";
 import "./fib.css";
+import Flap, { Brand, Money } from "../Flap";
+import { CheckIcon } from "../survey/SurveySays";
 
 // ---------- Picking clues ----------
 // Clues come from the built-in Jeopardy archive: a few seasons are loaded at random when setup opens, and
@@ -97,6 +99,10 @@ const points = (value) => (value || 0).toLocaleString();
 const ranked = (game) => [...game.players].sort((a, b) => b.score - a.score);
 const ordinal = (n) => `${n}${["th", "st", "nd", "rd"][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || "th"}`;
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
+// Each choice on the board has a letter, like a gate.
+const LETTERS = "ABCDEFGHIJKL";
+// Mirrors the server's points, so the reveal can say what a choice was worth (votes are public by then).
+const POINTS = { fact: 1000, fooled: 500 };
 const isLast = (game) => game.index >= game.clueCount - 1;
 const roundLabel = (game) => (isLast(game) ? "Final clue" : `Clue ${game.index + 1} of ${game.clueCount}`);
 // The phone remembers its own fib for this clue (it survives a reload), so it can leave it out of the vote.
@@ -157,7 +163,7 @@ export function FibSetup({ onCreate }) {
   return (
     <main className="setup fib-setup">
       <BackToHub />
-      <div className="brand fib-brand">FIB OR FACT</div>
+      <Brand text="FIB OR FACT" className="fib-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -241,8 +247,8 @@ function Scoreboard({ game }) {
         {ranked(game).map((player) => (
           <li key={player.id} className={`${player.connected ? "" : "is-away"}${waiting?.includes(player.id) ? " is-done" : ""}`}>
             <span className="fib-sb-name">{player.name}{!player.connected && <small> · reconnecting</small>}</span>
-            {waiting && <span className="fib-sb-check" aria-label={waiting.includes(player.id) ? "done" : "still going"}>{waiting.includes(player.id) ? "✓" : "…"}</span>}
-            <b className="money">{points(player.score)}</b>
+            {waiting && <span className="fib-sb-check" aria-label={waiting.includes(player.id) ? "done" : "still going"}>{waiting.includes(player.id) && <CheckIcon />}</span>}
+            <Money value={points(player.score)} />
           </li>
         ))}
       </ol>
@@ -252,9 +258,9 @@ function Scoreboard({ game }) {
 
 function RoundMeta({ game }) {
   return (
-    <p className="sv-round-label">
-      {roundLabel(game)}
-      {MULTIPLIER_NAME[game.multiplier] && <em>{MULTIPLIER_NAME[game.multiplier]}</em>}
+    <p className="sv-round-label fib-round-label">
+      <Flap text={roundLabel(game)} />
+      {MULTIPLIER_NAME[game.multiplier] && <Flap className="sv-multiplier" text={MULTIPLIER_NAME[game.multiplier]} />}
     </p>
   );
 }
@@ -262,7 +268,7 @@ function RoundMeta({ game }) {
 function ClueCard({ clue, small = false }) {
   return (
     <div className={`fib-clue${small ? " is-small" : ""}`}>
-      <span className="fib-clue-category">{clue.category}</span>
+      <Flap className="fib-clue-category" text={clue.category} wrap />
       <p>{clue.question}</p>
     </div>
   );
@@ -274,19 +280,32 @@ function verdict(game, option) {
   if (option.house) return "A house fib";
   return `A fib by ${names(game, option.authors)}`;
 }
+// The verdict on the choice in the spotlight lands a beat after the choice and its voters: true once it has.
+function useLanded(id) {
+  const [landedId, setLandedId] = useState(null);
+  useEffect(() => { if (id == null) return; const t = setTimeout(() => setLandedId(id), 1400); return () => clearTimeout(t); }, [id]);
+  return id != null && landedId === id;
+}
 
-// The choices on the TV. During the reveal, the ones already revealed are marked.
-function Options({ game }) {
-  const round = game.round, current = round.reveal.at(-1);
+// The choices on the TV, as rows on the board: a letter, the choice on flaps, and a status cell that stays blank
+// until the reveal reaches it. Then a fib's letters dim and its cell names who wrote it; the fact's letters clack
+// in again in the lamp colour, with FACT in a lit cell.
+function Options({ game, landed }) {
+  const round = game.round, current = round.phase === "reveal" ? round.reveal.at(-1) : null;
+  const count = round.options.length;
   return (
-    <ol className={`fib-options count-${round.options.length}`}>
-      {round.options.map((option) => {
-        const revealed = option.authors !== undefined;
-        const state = !revealed ? "" : option.fact ? " is-fact" : " is-fib";
+    <ol className={`fib-options count-${count}${count > 4 ? " is-two" : ""}`} style={{ "--rows": Math.ceil(count / 2) }}>
+      {round.options.map((option, i) => {
+        const waiting = option.id === current && !landed;
+        const revealed = option.authors !== undefined && !waiting;
+        const fact = revealed && option.fact;
+        const state = !revealed ? "" : fact ? " is-fact" : " is-fib";
+        const tag = !revealed ? "" : fact ? "Fact" : option.house ? "House fib" : names(game, option.authors);
         return (
-          <li key={option.id} className={`fib-option${state}${option.id === current && round.phase === "reveal" ? " is-current" : ""}`}>
-            <span className="fib-option-text">{option.text}</span>
-            {revealed && <span className="fib-option-tag">{option.fact ? "Fact" : option.house ? "House fib" : names(game, option.authors)}</span>}
+          <li key={option.id} className={`fib-option${state}${option.id === current ? " is-current" : ""}`}>
+            <span className="fib-option-key"><Flap text={LETTERS[i]} /></span>
+            <span className="fib-option-text"><Flap key={fact ? "fact" : "choice"} text={option.text} wrap intro={fact} /></span>
+            <span className="fib-option-tag"><Flap strip text={tag} label={tag || "not revealed yet"} /></span>
           </li>
         );
       })}
@@ -294,40 +313,48 @@ function Options({ game }) {
   );
 }
 
-// The reveal's spotlight: the choice, who picked it, and then what it really was.
-function Spotlight({ game }) {
+// The reveal's spotlight: the choice, who picked it, and then what it really was and what it was worth.
+function Spotlight({ game, landed }) {
   const round = game.round, option = round.options.find((o) => o.id === round.reveal.at(-1));
-  const [shown, setShown] = useState(false);
-  // The verdict lands a beat after the choice and its voters.
-  useEffect(() => { setShown(false); const t = setTimeout(() => setShown(true), 1400); return () => clearTimeout(t); }, [option?.id]);
   if (!option) return null;
   const voters = option.voters || [];
+  const worth = !voters.length || option.house ? 0 : option.fact ? POINTS.fact * game.multiplier : POINTS.fooled * game.multiplier * voters.length;
+  const to = option.fact ? (voters.length > 1 ? "each" : `to ${names(game, voters)}`) : `to ${names(game, option.authors)}`;
   return (
-    <div className={`fib-spotlight${shown ? (option.fact ? " is-fact" : " is-fib") : ""}`} key={option.id} role="status">
-      <p className="fib-spotlight-text">{option.text}</p>
-      <p className="fib-spotlight-voters">
-        {voters.length ? `${option.fact ? "Found by" : "Fooled"} ${names(game, voters)}` : option.fact ? "Nobody found it!" : ""}
-      </p>
-      <p className="fib-spotlight-verdict" aria-hidden={!shown}>{shown ? verdict(game, option) : " "}</p>
+    <div className={`fib-spotlight${landed ? (option.fact ? " is-fact" : " is-fib") : ""}`} key={option.id} role="status">
+      <div className="fib-spotlight-text"><Flap text={option.text} wrap intro /></div>
+      <div className="fib-spotlight-voters">
+        {voters.length ? (
+          <>
+            <span className="label">{option.fact ? "Found by" : "Fooled"}</span>
+            {voters.map((id) => <Flap key={id} text={nameOf(game, id)} intro />)}
+          </>
+        ) : option.fact ? <span className="label">Nobody found it</span> : null}
+      </div>
+      <div className="fib-spotlight-verdict" aria-hidden={!landed}>
+        <Flap className="fib-verdict" text={landed ? verdict(game, option) : ""} wrap />
+        {landed && worth > 0 && <span className="fib-spotlight-points"><Flap text={`+${points(worth)}`} intro /><small>{to}</small></span>}
+      </div>
     </div>
   );
 }
 
-// The points from this clue, best first.
+// The points from this clue, best first: who found the fact, whose fib fooled whom, the gain and the new total.
 function ClueScores({ game }) {
   const awards = game.round.awards || {};
   const rows = ranked(game).map((player) => ({ player, award: awards[player.id] }));
   return (
     <ol className="fib-clue-scores">
       {rows.map(({ player, award }) => (
-        <li key={player.id}>
+        <li key={player.id} className={award?.points ? "is-gain" : ""}>
           <span className="fib-cs-name">{player.name}</span>
           <span className="fib-cs-why">
             {award?.fact > 0 && <em className="is-fact">Found the fact</em>}
-            {award?.fooledIds?.length > 0 && <em className="is-fib">Fooled {award.fooledIds.length}</em>}
+            {award?.fooledIds?.length > 0 && <em className="is-fib">Fooled {names(game, award.fooledIds)}</em>}
+            {!award?.points && <em className="is-none">No points</em>}
           </span>
-          <span className="fib-cs-gain">{award?.points ? `+${points(award.points)}` : ""}</span>
-          <b className="money">{points(player.score)}</b>
+          <span className="fib-cs-gain"><Flap text={award?.points ? `+${points(award.points)}` : ""} cells={6} align="right" intro label={award?.points ? `plus ${points(award.points)}` : "no points"} /></span>
+          <Money value={points(player.score)} cells={6} />
         </li>
       ))}
     </ol>
@@ -344,7 +371,7 @@ function PlayerTools({ game, onAction }) {
         {game.players.map((player) => (
           <li key={player.id}>
             <input aria-label={`${player.name}’s name`} defaultValue={player.name} key={player.name} maxLength="20" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name: e.target.value })} />
-            <span className="money">{points(player.score)}</span>
+            <Money value={points(player.score)} />
             <button className="chip-btn add" onClick={() => onAction("adjustScore", { playerId: player.id, amount: step })}>+{step}</button>
             <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { playerId: player.id, amount: -step })}>−{step}</button>
             <button className="chip-btn danger" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Kick</button>
@@ -372,26 +399,34 @@ function Lobby({ game, onAction }) {
     <div className="lobby fib-lobby">
       <h1>Join the game</h1>
       <LobbyJoin code={game.code} />
-      <ul className="fib-lobby-players">
-        {game.players.map((player) => <li key={player.id}>{player.name}</li>)}
-        {!game.players.length && <li className="muted">Nobody yet</li>}
-      </ul>
+      <Departures
+        head={["Player", "Status"]}
+        cols="1fr 0.42fr"
+        rows={game.players.map((player) => ({
+          key: player.id,
+          state: player.connected ? "ready" : "away",
+          label: `${player.name}, ${player.connected ? "ready" : "reconnecting"}`,
+          cells: [player.name, player.connected ? "Ready" : "Away"],
+        }))}
+        openCells={game.players.length < 8 ? ["— — —", "Waiting"] : null}
+      />
+      <p className="muted">{ready ? "Everyone writes a fib on their phone, then votes for the fact." : "Fib or Fact needs at least 2 players (it’s best with 4 or more)."}</p>
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
-      {!ready && <p className="muted">Fib or Fact needs at least 2 players (it’s best with 4 or more).</p>}
     </div>
   );
 }
 
 function Stage({ game, onAction }) {
   const round = game.round, { title, detail } = phaseText(game);
+  const landed = useLanded(round.phase === "reveal" ? round.reveal.at(-1) : null);
   const next = !game.hostless && (round.phase === "reveal" || round.phase === "scores");
   return (
-    <div className="fib-center">
+    <div className={`fib-center is-${round.phase}`}>
       <RoundMeta game={game} />
       {round.phase === "pick" ? (
         <>
           <h1 className="fib-headline">{title}</h1>
-          <ul className="fib-categories">{round.categories.map((category, i) => <li key={i}>{category}</li>)}</ul>
+          <ul className="fib-categories">{round.categories.map((category, i) => <li key={i}><Flap text={category} wrap intro /></li>)}</ul>
         </>
       ) : round.phase === "scores" ? (
         <>
@@ -401,8 +436,8 @@ function Stage({ game, onAction }) {
       ) : (
         <>
           <ClueCard clue={round.clue} small={round.phase !== "write"} />
-          {round.phase !== "write" && <Options game={game} />}
-          {round.phase === "reveal" ? <Spotlight game={game} /> : (
+          {round.phase !== "write" && <Options game={game} landed={landed} />}
+          {round.phase === "reveal" ? <Spotlight game={game} landed={landed} /> : (
             <div className="sv-status" role="status">
               <h2>{title}</h2>
               {detail && <p>{detail}</p>}
@@ -425,7 +460,7 @@ export function FibDisplay({ game, onAction }) {
     <main className="display fib">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand fib-brand">FIB OR FACT</div>
+        <Brand text="FIB OR FACT" className="fib-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={round && round.phase !== "scores" ? round.deadline : null} serverNow={game.serverNow} />
       </header>
@@ -561,10 +596,10 @@ export function FibPlayer({ game, playerId }) {
   return (
     <main className="player fib">
       <header className="player-bar">
-        <span className="brand fib-brand">FIB OR FACT</span>
+        <Brand text="FIB OR FACT" className="fib-brand" />
         <span className="player-name">{player.name}</span>
       </header>
-      <div className="fib-my-score"><span>Your score</span><b className="money">{points(player.score)}</b></div>
+      <div className="fib-my-score"><span>Your score</span><Money value={points(player.score)} /></div>
       {game.status === "lobby" || !round ? <p className="player-status">You’re in! The game starts when everyone’s here.</p> : (
         <>
           <p className="player-clue-meta">{roundLabel(game)}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]}` : ""}</p>
@@ -580,8 +615,8 @@ export function FibController({ game, onAction }) {
   const round = game.round, secret = useSecret(game);
   const header = (
     <header className="controller-bar">
-      <span className="brand fib-brand">FIB OR FACT</span>
-      <span className="code-chip">{game.code}</span>
+      <Brand text="FIB OR FACT" className="fib-brand" />
+      <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "lobby" || !round)
@@ -653,10 +688,10 @@ export function FibEnd({ game, host, display, onAction }) {
   return (
     <main className="end fib">
       {display && <SoundToggle />}
-      <div className="brand fib-brand">FIB OR FACT</div>
-      <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
-      <div className="podium">{top.map((p, i) => <div className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><strong className="money">{points(p.score)}</strong></div>)}</div>
-      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><b className="money">{points(p.score)}</b></li>)}</ol>}
+      <Brand text="FIB OR FACT" className="fib-brand" />
+      <h1><Flap text={!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`} wrap intro /></h1>
+      <ol className="podium">{top.map((p, i) => <li className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><Flap className="money" text={points(p.score)} intro /></li>)}</ol>
+      {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><Money value={points(p.score)} /></li>)}</ol>}
       {host ? (
         <div className="sv-end-buttons">
           <button className="primary" disabled={busy} onClick={playAgain}>{busy ? "Dealing clues…" : "Play again with new clues"}</button>

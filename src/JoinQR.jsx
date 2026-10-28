@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import qrcode from "qrcode-generator";
 import { SERVER } from "./shared";
+import Flap from "./Flap";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const stripProtocol = (url) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -44,25 +45,27 @@ export function QRCode({ value, label, className = "" }) {
   return (
     <svg className={`qr ${className}`} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label} shapeRendering="crispEdges">
       <rect width={size} height={size} fill="#fff" />
-      <path d={path} fill="#030a2a" />
+      <path d={path} fill="#0b0b0d" />
     </svg>
   );
 }
 
-// The lobby's join panel: a big QR code, plus the address and code for anyone who'd rather type.
+// The lobby's join row: the room code on six big flaps beside a QR code, and the address for anyone who'd rather
+// type. The code flips in when the lobby opens.
 export function LobbyJoin({ code }) {
   const base = useJoinBase();
   return (
-    <div className="lobby-join">
-      <figure className="qr-card">
-        <QRCode value={joinLink(base, code)} label={`QR code to join game ${code}`} />
-        <figcaption>Scan with your phone camera</figcaption>
-      </figure>
-      <div className="lobby-join-text">
-        <p className="lobby-url">or open <b>{displayAddress(base)}</b> and enter</p>
-        <div className="lobby-code">{code}</div>
+    <>
+      <div className="lobby-join">
+        <p className="lobby-code-label" aria-hidden="true">Room code</p>
+        <Flap className="lobby-code" text={code} intro label={`Room code ${code.split("").join(" ")}`} />
+        <figure className="qr-card">
+          <QRCode value={joinLink(base, code)} label={`QR code to join game ${code}`} />
+          <figcaption>Scan to join</figcaption>
+        </figure>
       </div>
-    </div>
+      <p className="lobby-url">Or open <b>{displayAddress(base)}</b> on your phone and key in the code.</p>
+    </>
   );
 }
 
@@ -72,7 +75,27 @@ export function JoinCorner({ code }) {
   return (
     <div className="join-hint">
       <QRCode value={joinLink(base, code)} label={`QR code to join game ${code}`} className="qr-small" />
-      <span>Join at <b>{displayAddress(base)}</b> <span className="code-chip">{code}</span></span>
+      <span>Join at <b>{displayAddress(base)}</b> <Flap className="code-chip" text={code} label={`code ${code.split("").join(" ")}`} /></span>
+    </div>
+  );
+}
+
+// Players in a lobby as departure rows: one row per player (name, then any other columns, then their status),
+// and an open seat in dim letters while there's room. state: "ready", "away" or "open".
+export function Departures({ head, rows, openCells, many = 4, cols }) {
+  const all = openCells ? [...rows, { key: "open", state: "open", label: "An open seat", cells: openCells }] : rows;
+  const isMany = all.length > many, style = cols ? { "--dep-cols": cols } : undefined;
+  const heading = (key) => <div className="departures-head" key={key}>{head.map((h) => <span key={h}>{h}</span>)}</div>;
+  return (
+    <div className={"departures-wrap" + (isMany ? " is-many" : "")} style={style}>
+      <div className="departures-heads label" aria-hidden="true">{isMany ? [heading(0), heading(1)] : heading(0)}</div>
+      <ol className={"departures" + (isMany ? " is-many" : "")}>
+        {all.map((row) => (
+          <li key={row.key} className={`is-${row.state}`} aria-label={row.label}>
+            {row.cells.map((cell, i) => (cell?.type === "button" ? <React.Fragment key={i}>{cell}</React.Fragment> : <span key={i} className={i === row.cells.length - 1 ? "dep-status" : undefined}>{typeof cell === "string" ? <Flap text={cell} /> : cell}</span>))}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

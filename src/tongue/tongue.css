@@ -1,65 +1,275 @@
-/* Tip of the Tongue — the pinball cabinet's lime table. The word is the one big thing on the clue-giver's phone;
-   the TV shows who's cluing, the category, the clock and the words as they land. --table comes from styles.css. */
+/* Tip of the Tongue — the board with a lime lamp. The TV shows who's cluing, the 45-second clock and the words
+   cleared on flaps, and a row for each of the turn's words that stays blank until the word is got: the word itself
+   is only ever on the clue-giver's phone (and the host controller). Fouls are red with an X cell.
+   Word Budget borrows several of these (tt-card-wrap, tt-headline, tt-pass-btn, tt-cats, tt-team-num). */
+
+/* A team's number on a small steel cell, so teams are told apart by more than their name. */
+.tt-team-num {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  width: 1.15em; height: 1.3em; margin-right: 0.45em;
+  border-radius: 2px; background: var(--steel-hi); color: #0d0e10;
+  font: 700 0.9em/1 var(--flap-font); letter-spacing: 0; vertical-align: 0.06em;
+}
+.tt-icon { flex-shrink: 0; width: 1em; height: 1em; }
+
+/* ---------- Setup ---------- */
+.tt-fieldset { margin-top: 28px; max-width: 760px; }
+.tt-cats-field { max-width: none; }
+.tt-cats-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tt-cats-tools .muted { font: 600 0.9rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; }
+/* Categories are choice cells: a hollow marker when off, filled in the lamp colour when on. */
+.tt-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; }
+.tt-cats > button {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 4px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--flap-face); border: 1px solid transparent;
+  color: var(--steel-hi); text-align: left;
+  font: 600 0.98rem/1.15 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+}
+.tt-cats > button::before { content: ""; flex-shrink: 0; width: 9px; height: 9px; border: 2px solid currentColor; }
+.tt-cats > button:hover { color: var(--paint); border-color: var(--rule-strong); }
+.tt-cats > button[aria-checked="true"] { color: var(--table); border-color: var(--table); background: color-mix(in srgb, var(--table) 9%, var(--flap-face)); }
+.tt-cats > button[aria-checked="true"]::before { background: currentColor; }
 
 /* ---------- TV ---------- */
-.display.tt { padding-bottom: 60px; }
-.tt-center { gap: 14px; }
-.tt-headline { display: grid; gap: 6px; font: clamp(2rem, 4.6vw, 4.4rem)/1.14 var(--display); letter-spacing: -0.015em; text-wrap: balance; max-width: 22ch; }
-.tt-headline small { font: 700 1rem/1.45 "DM Sans", system-ui, sans-serif; letter-spacing: 0; color: var(--text-muted); }
-.tt-count { display: flex; align-items: center; gap: 10px; font: 1.5rem var(--display); color: var(--text-muted); }
-.tt-count .dmd-line { font-size: 1.5rem; }
-.tt-got { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 900px; }
-.tt-got li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: var(--table); color: var(--on-table); font: 1.5rem var(--display); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -3px 0 rgb(0 0 0 / 0.2); animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1); }
-.tt .fib-scoreboard li.is-turn { background: color-mix(in srgb, var(--table) 18%, var(--panel-raised)); box-shadow: inset 0 0 0 1px var(--table); }
-.tt-playing { display: block; font: 700 0.875rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--table); }
-.tt-miss { font: 700 1rem/1.45 "DM Sans", system-ui, sans-serif; color: var(--red-text); animation: fib-in 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+.tt-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 270px); gap: 28px; align-items: start; max-width: 1400px; margin: 4px auto 0; }
+.tt-center { display: grid; justify-items: center; gap: 14px; min-width: 0; }
+.tt-round-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 18px; font-size: 1.15rem; }
+.tt-round-team { display: inline-flex; align-items: center; font: 600 1.05rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
+/* The headline is set type: the names in white, the words between them in steel. */
+.tt-headline {
+  display: block; max-width: 30ch;
+  font: 600 clamp(1.6rem, 3.1vw, 2.8rem)/1.15 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  color: var(--steel-hi);
+}
+.tt-headline em { font-style: normal; color: var(--paint); }
+.tt-headline small { display: block; margin-top: 8px; font: 500 clamp(1rem, 1.4vw, 1.2rem)/1.4 var(--set); letter-spacing: 0; text-transform: none; color: var(--steel); }
 
-/* The turn's words: got ones lit, the rest dim and labelled, so the result never rests on colour alone. */
-.tt-results { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 640px; display: grid; gap: 6px; text-align: left; }
-.tt-results li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
-.tt-results span { font: 1.5rem/1.1 var(--display); }
-.tt-results em { display: inline-flex; align-items: center; gap: 6px; font: 700 0.875rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--text-muted); }
-.tt-results .is-got { background: color-mix(in srgb, var(--table) 20%, var(--panel)); border-color: var(--table); }
-.tt-results .is-got em { color: var(--table); }
-.tt-results .is-foul span, .tt-results .is-missed span, .tt-results .is-passed span { color: var(--text-muted); }
-.tt-results .is-foul span { text-decoration: line-through; text-decoration-thickness: 2px; }
+/* The turn's board: the clock and the words cleared on big flaps, then one row per word. */
+.tt-play { display: grid; justify-items: center; gap: 14px; width: 100%; max-width: 1000px; }
+.tt-meters { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.tt-meter {
+  display: grid; justify-items: center; align-content: start; gap: 8px;
+  min-width: 190px; padding: 10px 22px 14px;
+  border-radius: 3px; background: var(--well);
+  box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--steel-lo);
+  font-size: clamp(2.6rem, 7vh, 4.4rem);
+}
+.tt-meter > .label { font-size: 0.82rem; }
+.tt-meter .clue-timer { grid-column: auto; grid-row: auto; justify-self: center; font-size: 1em; }
+.tt-of { display: inline-flex; align-items: center; gap: 0.18em; }
+.tt-of > small { font: 600 0.82rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel); padding: 0 0.3em; }
+.tt-of-n .flap-c { color: var(--table); }
+/* Waiting for the clock to start: dim letters. */
+.tt-play.is-waiting .tt-meter .flap-c { color: var(--paint-dim); }
 
-.tt-lobby-teams { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.tt-lobby-teams li { display: grid; gap: 6px; align-content: start; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); text-align: left; }
-.tt-lobby-teams h2 { font: 1rem var(--display); color: var(--table); }
-.tt-lobby-teams button { justify-self: start; min-height: 36px; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--table) 18%, var(--panel-raised)); font-weight: 700; }
-.tt-lobby-teams button:hover { box-shadow: inset 0 0 0 2px var(--table); }
+.tt-board-wrap { position: relative; width: 100%; }
+.tt-board {
+  list-style: none; margin: 0; padding: 8px; width: 100%;
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows, 4), auto); grid-template-columns: 1fr 1fr; gap: 6px 10px;
+  border-radius: 3px;
+  background: var(--flap-gap);
+  box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+  text-align: left;
+}
+/* A word's row: its marker cell, then the word on flaps (sized to the row; past a floor the words wrap), then its
+   status for the turn's results. */
+.tt-row {
+  --side: 3.2em;
+  container-type: inline-size;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5em;
+  min-height: clamp(44px, 6.4vh, 64px); padding: 4px 8px;
+  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+}
+.tt-results .tt-row { --side: 8.5em; }
+.tt-row > .tt-row-word { min-width: 0; display: flex; }
+.tt-row > .tt-row-word > .flap { font-size: clamp(0.95rem, calc((100cqi - var(--side)) / (var(--n) * 0.74)), 1.7rem); }
+.tt-row > .tt-row-word .flap-c { width: 0.64em; }
+.tt-row > .tt-row-word .flap-cells, .tt-row > .tt-row-word .flap-w { gap: 0.06em; }
+.tt-row > .tt-row-word .flap-wrap .flap-cells { gap: 0.1em 0.32em; }
+/* The marker: an empty cell until the word is got (a lamp cell with a check), red with an X for a foul. */
+.tt-mark {
+  position: relative; display: grid; place-items: center; flex-shrink: 0;
+  width: 1.25em; height: 1.45em; border-radius: 2px;
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  color: var(--paint-dim);
+}
+.tt-mark > svg { width: 0.8em; height: 0.8em; position: relative; z-index: 1; }
+.tt-row > em { font: 600 0.78rem var(--flap-font); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); white-space: nowrap; }
+.tt-row.is-got .tt-mark { background: var(--table); color: var(--on-table); }
+.tt-row.is-got > em { color: var(--table); }
+.tt-row.is-foul .tt-mark { color: var(--red); box-shadow: inset 0 0 0 2px var(--red); }
+.tt-row.is-foul .tt-row-word .flap-c, .tt-row.is-foul > em { color: var(--red-text); }
+.tt-row.is-passed .tt-row-word .flap-c, .tt-row.is-missed .tt-row-word .flap-c { color: var(--paint-dim); }
+.tt-row.is-passed .tt-mark, .tt-row.is-missed .tt-mark { box-shadow: inset 0 0 0 2px var(--steel-mid); background: transparent; }
+/* Rows still to come are blank cells, a shade darker than lit ones. */
+.tt-slots .tt-row:not(.is-got) .flap-c { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
 
-/* ---------- Setup: word categories as lamp switches (hollow ring off, filled on) ---------- */
-.tt-cats-field { max-width: none; }
-.tt-cats-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.tt-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
-.tt-cats button { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--field); color: var(--text-muted); font-weight: 700; text-align: left; }
-.tt-cats button::before { content: ""; flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; }
-.tt-cats button:hover { color: var(--text); border-color: var(--chrome); }
-.tt-cats button[aria-checked="true"] { background: color-mix(in srgb, var(--table) 22%, var(--panel-raised)); border-color: var(--table); color: var(--text); }
-.tt-cats button[aria-checked="true"]::before { background: var(--table); border-color: var(--table); }
+/* A foul: a red X cell and FOUL across the board for a moment (the word itself stays hidden). */
+.tt-foul-flash {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center; gap: 0.3em;
+  font-size: clamp(3rem, 10vh, 6.5rem); pointer-events: none;
+  background: rgb(11 11 13 / 0.6);
+  animation: tt-foul 1.3s ease-out forwards;
+}
+.tt-foul-x {
+  display: grid; place-items: center; width: 1.25em; height: 1.4em; border-radius: 0.06em;
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  color: var(--red); box-shadow: 0 0 0 0.05em var(--flap-gap), inset 0 0 0 0.04em var(--red);
+}
+.tt-foul-x > svg { width: 0.8em; height: 0.8em; }
+.tt-foul-flash .flap-c { color: var(--red-text); box-shadow: 0 0 0 0.05em var(--flap-gap); }
+@keyframes tt-foul { 0% { opacity: 0; transform: scale(1.2); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+
+/* A typed guess that wasn't it. */
+.tt-miss { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 1.6em; font: 500 1.15rem var(--set); color: var(--steel-hi); animation: rise 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+.tt-miss > svg { width: 18px; height: 18px; color: var(--red-text); }
+.tt-miss q { font: 600 1.15em var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--paint); }
+.tt-miss.is-empty { animation: none; }
+
+/* The turn's result: the points clack onto the headline. */
+.tt-scored-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.3em 0.4em; }
+.tt-scored-n .flap-c { color: var(--table); }
+
+/* The teams down the side: number and name, the score on flaps, the players. The team playing has the lamp edge. */
+.tt-scores { position: sticky; top: 16px; padding: 14px; border-radius: 3px; background: var(--well); text-align: left; }
+.tt-scores > h2 { margin-bottom: 10px; }
+.tt-scores > ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tt-scores li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px;
+  padding: 10px 12px; border-radius: 2px; background: var(--flap-face);
+}
+.tt-team-head { display: flex; align-items: center; min-width: 0; font: 600 1.05rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.tt-team-head > b { font-weight: 600; overflow-wrap: anywhere; }
+.tt-team-score { grid-column: 2; grid-row: 1 / span 2; font-size: 1.7rem; }
+.tt-scores li > small { grid-column: 1; font: 500 0.92rem/1.3 var(--set); color: var(--steel); overflow-wrap: anywhere; }
+.tt-scores li.is-turn { box-shadow: inset 0 0 0 2px var(--table); }
+.tt-playing {
+  grid-column: 1 / -1; justify-self: start;
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 5px 9px;
+  border-radius: 2px; background: var(--table); color: var(--on-table);
+  font: 700 0.8rem var(--flap-font); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.tt-playing::before { content: ""; width: 8px; height: 8px; background: currentColor; }
+
+.tt-lobby .departures li > button { gap: 12px; }
+.tt-lobby .departures .tt-team-num { font-size: 0.8em; }
 
 /* ---------- Phone ---------- */
 .player.tt { text-align: center; }
-.tt-team { margin-top: 6px; font-weight: 700; color: var(--text-muted); }
+.tt-my-team {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin: 16px 0 12px; padding: 12px 14px;
+  border-radius: 3px; background: var(--well); box-shadow: inset 0 3px 0 var(--steel-mid);
+  font-size: 1.9rem; text-align: left;
+}
+.tt-my-name { display: flex; align-items: center; min-width: 0; font-size: 1.15rem; }
+.tt-my-text { display: grid; gap: 2px; min-width: 0; }
+.tt-my-text > b { font: 600 1.15rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; overflow-wrap: anywhere; }
+.tt-my-text > small { font: 500 0.9rem var(--set); color: var(--steel); overflow-wrap: anywhere; }
 .tt-card-wrap { display: grid; gap: 14px; margin-top: 16px; text-align: left; }
 .tt-card-wrap .player-status { text-align: center; }
-/* The word: as big as the phone allows, on a lit card the guesser can't mistake for anything else. */
+
+/* The word: the one big thing on the clue-giver's phone, on flaps as big as the phone allows. */
 .tt-word {
-  display: grid; place-items: center; min-height: 160px; padding: 18px; border-radius: 18px; text-align: center;
-  background: radial-gradient(90% 120% at 50% 40%, color-mix(in srgb, var(--table) 40%, var(--chrome-hi)) 0%, var(--table) 60%, color-mix(in srgb, var(--table) 70%, var(--bg-deep)) 100%);
-  color: var(--on-table); font: clamp(2rem, 11vw, 4.4rem)/1.05 var(--display); letter-spacing: -0.015em; overflow-wrap: anywhere;
-  box-shadow: inset 0 3px 0 rgb(255 255 255 / 0.45), inset 0 -6px 0 rgb(0 0 0 / 0.2), 0 0 0 4px #15101e, 0 0 0 6px var(--chrome-lo), 0 0 0 7px var(--chrome);
+  container-type: inline-size;
+  display: grid; justify-items: center; gap: 12px;
+  padding: 14px 10px 20px;
+  border-radius: 3px; background: var(--well);
+  box-shadow: inset 0 3px 0 var(--table), 0 0 0 1px #000, 0 0 0 4px var(--steel-lo);
+  text-align: center;
 }
-.tt-progress { display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: 700; color: var(--text-muted); }
-.tt-progress .dmd-line { font-size: 1.5rem; }
+.tt-word > .label { color: var(--table); }
+.tt-word-flaps { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 1.3em; }
+.tt-word-flaps > .flap { font-size: clamp(1.4rem, calc(100cqi / (var(--w) * 0.86)), 4.2rem); }
+.tt-word-flaps .flap-wrap .flap-cells { justify-content: center; gap: 0.14em 0.4em; }
+.tt-word.is-small .tt-word-flaps > .flap { font-size: clamp(1.2rem, calc(100cqi / (var(--w) * 0.86)), 2.8rem); }
+
+.tt-tally { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px; font-size: 1.6rem; }
+.tt-tally > .label { margin-left: 4px; }
+.tt-tally > .label:first-child { margin-left: 0; }
+
 .tt-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
-.tt-got-btn, .tt-pass-btn { min-height: 72px; border-radius: 999px; font: 1.5rem var(--display); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 var(--chrome-dark), 0 6px 14px rgb(0 0 0 / 0.5); transition: transform 90ms ease-out; }
-.tt-got-btn { background: radial-gradient(90% 130% at 50% 25%, color-mix(in srgb, var(--green) 60%, var(--chrome-hi)) 0%, var(--green) 55%, color-mix(in srgb, var(--green) 60%, var(--bg-deep)) 100%); color: var(--text); }
-.tt-pass-btn { background: var(--panel-raised); color: var(--text); border: 1px solid var(--line-strong); }
-.tt-got-btn:active, .tt-pass-btn:active { transform: translateY(2px); }
-.tt-foul-btn { justify-self: center; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgb(255 154 162 / 0.45); color: var(--red-text); font-weight: 700; }
+/* Phone keys: Got it is the lit key, Pass a dark one, a foul a red outline. */
+.tt-got-btn, .tt-pass-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 72px; padding: 0 12px; border-radius: var(--radius-sm);
+  font: 700 1.4rem/1 var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase;
+  transition: transform 90ms ease-out, border-color 160ms ease-out;
+}
+.tt-got-btn { background: var(--table); color: var(--on-table); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.22); }
+.tt-got-btn > svg { width: 24px; height: 24px; }
+.tt-pass-btn { background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); color: var(--paint); border: 1px solid var(--steel-mid); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.35); }
+.tt-pass-btn:hover:not(:disabled) { border-color: var(--steel); }
+.tt-pass-btn:disabled { color: var(--paint-dim); border-color: var(--rule); }
+.tt-got-btn:active, .tt-pass-btn:active:not(:disabled) { transform: translateY(2px); }
+.tt-foul-btn {
+  justify-self: center; display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 0 18px; border-radius: var(--radius-sm);
+  border: 1px solid rgb(198 70 60 / 0.6); color: var(--red-text);
+  font: 600 1rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase;
+  transition: background-color 160ms ease-out;
+}
+.tt-foul-btn > svg { width: 18px; height: 18px; }
+.tt-foul-btn:hover { background: rgb(198 70 60 / 0.12); }
 .tt-big { min-height: 72px; font-size: 1.5rem; }
 .tt-guess input:focus { border-color: var(--table); }
+.tt-guess .tt-tally { margin: 2px 0; }
+.tt-not-it { display: flex; align-items: center; gap: 8px; }
+.tt-not-it > svg { width: 18px; height: 18px; }
 
+/* Boards on a phone: one column of slimmer rows. */
+.tt-board.is-compact { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; padding: 5px; gap: 4px; box-shadow: 0 0 0 1px #000, 0 0 0 3px var(--steel-lo); }
+.tt-board.is-compact .tt-row { min-height: 40px; font-size: 1rem; }
+.tt-board.is-compact .tt-row > .tt-row-word > .flap { font-size: clamp(0.85rem, calc((100cqi - var(--side)) / (var(--n) * 0.74)), 1.25rem); }
+.tt-my-result { display: grid; gap: 12px; margin-top: 10px; }
+.tt-status-n { font-size: 1.05em; margin-left: 0.2em; }
+.tt-status-n .flap-c { color: var(--table); }
+
+/* ---------- Host controller ---------- */
+.controller-bar .tt-brand { font-size: 0.8rem; }
+.tt-ctrl-top { margin-bottom: 10px; }
+.tt-ctrl-top .player-clue-meta { margin: 0; }
+.controller.tt .tt-word { margin: 6px 0 14px; }
+.controller.tt .tt-tally { margin-bottom: 12px; }
+.controller.tt .tt-actions { margin-bottom: 12px; }
+.controller.tt .tt-foul-btn { display: flex; margin: 0 auto 6px; }
+.controller.tt .tt-results { margin-bottom: 8px; }
+.tt-team-tools { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tt-team-tools > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; border-radius: 2px; background: var(--flap-face); font-size: 1.1rem; }
+.tt-team-tools .tt-team-num { margin-right: 0; }
+.tt-team-tools input { flex: 1 1 130px; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--well); font: 600 1rem var(--set); }
+.tt-team-tools input:focus { border-color: var(--table); outline: none; }
+.tt-team-tools .money { font-size: 1.3rem; }
+
+/* ---------- End ---------- */
+.tt-place-name { display: grid; gap: 3px; min-width: 0; }
+.tt-place-name > small { font: 500 0.95rem var(--set); color: var(--steel-hi); }
+
+/* A 720p TV: tighter rows and smaller flaps so the board, the scores and the rail all fit. */
+@media (max-height: 800px) {
+  .tt-center { gap: 10px; }
+  .tt-headline { font-size: clamp(1.4rem, 2.6vw, 2.2rem); }
+  .tt-headline small { font-size: 1rem; margin-top: 4px; }
+  .tt-meter { padding: 8px 18px 10px; gap: 4px; min-width: 170px; font-size: clamp(2.2rem, 7.5vh, 3.6rem); }
+  .tt-row { min-height: 5.8vh; }
+  .tt-play { gap: 10px; }
+  .tt-scores { padding: 12px; }
+  .tt-scores li { padding: 8px 10px; }
+}
+@media (max-width: 960px) {
+  .tt-stage { grid-template-columns: 1fr; }
+  .tt-scores { position: static; }
+  .tt-scores > ol { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .tt-board { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
+  .tt-meter { min-width: 0; flex: 1; padding: 8px 10px 10px; font-size: 2.4rem; }
+  .tt-row { min-height: 40px; font-size: 1.05rem; }
+}
+
+/* The setup's choice rows (shared with Word Budget's setup). */
+.tt-fieldset .pc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
