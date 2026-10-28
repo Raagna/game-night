@@ -1,108 +1,215 @@
-/* Word Budget — the cabinet's violet table. The TV's centrepiece is the countdown board (the bid while bidding,
-   the words left while a card is played); phones get the card, the bid pad, and the judge's big +1 button.
-   --table comes from styles.css; the sv-* layout classes read their accent from the variables below. */
-.wb, .wb-setup { --sv-accent: var(--table); --sv-accent-text: #dcc6ff; --sv-on-accent: var(--on-table); }
+/* Word Budget — the board with a violet lamp. The TV's centrepieces are flap meters: the bid and the shot clock while
+   bidding, then the clock and the words left of the budget while a card is played. The card's five words reach the
+   TV only once they've been said; until then each is a row of blank cells. A blown budget or a no-no is red with an
+   X cell. Shares the tt-* rows, meters and keys (src/tongue/tongue.css) and the team colours of src/survey. */
+.wb, .wb-setup { --team-0: #74a9d8; --team-1: #93c48b; }
 
 /* ---------- TV ---------- */
-.display.wb { padding-bottom: 60px; }
-.wb-center { gap: 16px; }
-.wb-headline { max-width: 26ch; }
-.wb .fib-scoreboard li { flex-wrap: wrap; }
-.wb .fib-scoreboard li.is-turn { background: color-mix(in srgb, var(--table) 18%, var(--panel-raised)); box-shadow: inset 0 0 0 1px var(--table); }
-.wb-saved { flex-basis: 100%; color: var(--text-muted); font-weight: 600; }
-.wb-scoreboard .money { color: var(--table); }
-/* Cards won: a lamp per card toward the target, lit as they're won. */
-.wb-lamps { display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 120px; justify-content: flex-end; }
-.wb-lamps i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--table) 50%, transparent); }
-.wb-lamps i.is-lit { background: var(--table); border-color: var(--table); box-shadow: 0 0 8px var(--table); }
+.wb-center { gap: 14px; }
+.wb-headline { max-width: 32ch; }
+.wb-howto { max-width: 60ch; font-size: 1.1rem; line-height: 1.45; color: var(--steel-hi); text-wrap: balance; }
+.wb-pass-note { font: 600 1.05rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--table); }
+.wb-pass-note::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 10px; background: currentColor; }
 
-/* The countdown board: one huge dot-matrix number. */
-.wb-board-number {
-  display: inline-block; min-width: 2.2ch; padding: 0.1em 0.3em; border-radius: 14px;
-  font: 800 clamp(5rem, 16vh, 11rem)/1.2 var(--dot); letter-spacing: 0; font-variant-numeric: tabular-nums;
-  color: var(--dmd); background-color: var(--dmd-bg);
-  background-image: radial-gradient(circle, var(--dmd-dim) 0.026em, transparent 0.034em); background-size: 0.1em 0.1em; background-position: 0 0.05em;
-  box-shadow: inset 0 3px 10px rgb(0 0 0 / 0.85), 0 0 0 3px #2a2a2e, 0 0 0 5px var(--chrome-lo);
-  animation: wb-flip 260ms cubic-bezier(0.16, 1, 0.3, 1);
+/* The teams down the side: number on its colour, name, cards on flaps, a square per card toward the target. */
+.wb-scores { position: sticky; top: 16px; padding: 14px; border-radius: 3px; background: var(--well); text-align: left; }
+.wb-scores > h2 { margin-bottom: 10px; }
+.wb-scores > ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wb-scores li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px;
+  padding: 12px; border-radius: 2px; background: var(--flap-face);
+  box-shadow: inset 0 3px 0 var(--team);
 }
-.wb-board-number.is-idle { color: rgb(255 138 36 / 0.4); }
-@keyframes wb-flip { from { transform: scale(1.08); filter: brightness(1.6); } }
-.wb-board-label { font-weight: 800; font-size: 1.1rem; color: var(--text-muted); }
-.wb-countdown, .wb-bid-main { display: grid; justify-items: center; gap: 8px; }
-.wb-bidboard { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 28px 48px; }
-.wb-shot { display: grid; justify-items: center; gap: 8px; }
-.wb-shot .clue-timer { font-size: clamp(3rem, 9vh, 6rem); grid-column: auto; justify-self: center; }
-.wb-howto { max-width: 52ch; color: var(--text-muted); font-weight: 600; }
-.wb-pass-note { font-weight: 800; color: var(--sv-accent-text); }
-.wb-steal-head { color: var(--sv-accent-text); }
+.wb-team-score { grid-column: 2; grid-row: 1; font-size: 1.8rem; }
+.wb-scores li > small { grid-column: 1 / -1; font: 500 0.92rem/1.3 var(--set); color: var(--steel); overflow-wrap: anywhere; }
+.wb-scores li > .wb-saved { margin-top: -4px; font: 600 0.78rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
+.wb-scores li.is-turn { box-shadow: inset 0 3px 0 var(--team), inset 0 0 0 2px var(--table); }
+.wb-lamps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.wb-lamps i { width: 12px; height: 12px; border: 2px solid var(--steel-mid); }
+.wb-lamps i.is-lit { background: var(--table); border-color: var(--table); }
 
-/* The card's five slots: blank lamps until a word is said, lit with the word once it is. */
-.wb-slots { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 980px; }
-.wb-slots li { display: grid; align-content: center; justify-items: center; gap: 4px; min-height: 64px; padding: 8px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); }
-.wb-slots.is-big li { min-height: 96px; }
-.wb-slots span { font: clamp(1rem, 2.2vw, 1.6rem)/1.1 var(--display); overflow-wrap: anywhere; text-align: center; }
-.wb-slot-blank { color: color-mix(in srgb, var(--table) 35%, transparent); }
-.wb-slots em { display: inline-flex; align-items: center; gap: 4px; font: 700 0.85rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--text-muted); }
-.wb-slots .is-got, .wb-slots .is-stolen { background: var(--table); border-color: var(--table); color: var(--on-table); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -3px 0 rgb(0 0 0 / 0.2); animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1); }
-.wb-slots .is-got em, .wb-slots .is-stolen em { color: var(--on-table); }
-.wb-slots .is-stolen { background: color-mix(in srgb, var(--table) 60%, #fff); }
-.wb-slots .is-missed span { color: var(--text-muted); }
-@media (max-width: 720px) { .wb-slots { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); } }
+/* Meters: the bid, the shot clock, the clock and the words left. */
+.wb-bidboard { gap: 16px; }
+.wb-bid { font-size: clamp(4.4rem, 15vh, 8.5rem); min-width: 280px; }
+.wb-bid > .flap .flap-c { color: var(--table); }
+.wb-bid.is-idle > .flap .flap-c { color: var(--paint-dim); }
+.wb-bid > .label, .wb-shot > .label { font-size: 0.9rem; }
+.wb-meter-note { font: 600 0.95rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
+.wb-shot { font-size: clamp(3rem, 10vh, 5.6rem); }
+.wb-play { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 18px; width: 100%; max-width: 920px; }
+.wb-meters { display: grid; gap: 14px; }
+.wb-meters .tt-meter { min-width: 200px; }
+.wb-meter-main { display: inline-flex; align-items: center; gap: 0.08em; }
+.wb-meter-main .flap-c { color: var(--table); }
+.wb-meter-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 1.15rem; }
+.wb-meter-sub > .label { font-size: 0.72rem; }
+/* Over budget: red letters and an X cell. */
+.wb-meter.is-over { box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--steel-lo), inset 0 0 0 2px var(--red); }
+.wb-meter.is-over > .label, .wb-meter.is-over .wb-meter-main .flap-c { color: var(--red-text); }
+.wb-x-cell {
+  display: grid; place-items: center; width: 0.74em; height: 1.18em; border-radius: 0.06em;
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  color: var(--red); box-shadow: inset 0 0 0 0.03em var(--red);
+}
+.wb-x-cell > svg { width: 0.5em; height: 0.5em; }
 
-.wb-lobby-teams { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* The card on the TV: five rows, one column. */
+.wb-slots { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
+.wb-slots .tt-row { --side: 8em; }
+.wb-center > .wb-slots { max-width: 760px; }
+.tt-row.is-stolen .tt-mark { background: var(--table); color: var(--on-table); }
+.tt-row.is-stolen > em { color: var(--table); }
+
+/* Red and lamp tags: what went wrong on a card, or right. */
+.wb-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.wb-tags:empty { display: none; }
+.wb-tag {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 38px; padding: 0 14px 0 6px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  font: 700 1rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase;
+}
+.wb-tag > svg { width: 26px; height: 26px; padding: 5px; border-radius: 2px; }
+.wb-tag.is-bad { color: var(--red-text); box-shadow: inset 0 0 0 2px var(--red); }
+.wb-tag.is-bad > svg { color: var(--red); background: var(--flap-gap); }
+.wb-tag.is-good { color: var(--table); box-shadow: inset 0 0 0 2px var(--table); }
+.wb-tag.is-good > svg { color: var(--on-table); background: var(--table); }
+
+/* The result clacks onto the board: lamp letters for a card won, red for a no-no or a card nobody gets. */
+.wb-result { display: flex; justify-content: center; max-width: 100%; font-size: clamp(1.5rem, 2.7vw, 2.5rem); }
+.wb-result .flap-cells { justify-content: center; }
+.wb-result .flap-c { color: var(--table); }
+.wb-result.is-bad .flap-c { color: var(--red-text); }
+
+/* The steal: the stealing team's name and "steal it!" cascade in big lamp letters over a red "over budget". */
+.wb-steal { display: grid; justify-items: center; gap: 12px; animation: wb-steal-in 420ms cubic-bezier(0.16, 1, 0.3, 1); }
+.wb-steal-head { display: flex; justify-content: center; max-width: 100%; font-size: clamp(2rem, 4.4vw, 3.8rem); }
+.wb-steal-head .flap-cells { justify-content: center; }
+.wb-steal-head .flap-c { color: var(--table); }
+.wb-steal-clock .clue-timer .flap-c { color: var(--table); }
+@keyframes wb-steal-in { from { opacity: 0; transform: scale(1.06); } }
+
+.wb-lobby .departures li > button { gap: 12px; }
+.wb-lobby .departures .sv-team-num { font-size: 0.8em; }
 
 /* ---------- Phone ---------- */
 .player.wb { text-align: center; }
-/* The card on a clue-giver's or judge's phone: five words on lit lamps. */
-.wb-card { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.wb-card li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--table) 22%, var(--panel-raised)); border: 1px solid var(--table); }
-.wb-card span { font: 1.35rem/1.1 var(--display); overflow-wrap: anywhere; text-align: left; }
-.wb-card em { display: inline-flex; align-items: center; gap: 4px; font: 700 0.85rem "DM Sans", system-ui, sans-serif; font-style: normal; color: var(--table); }
-.wb-card .is-got, .wb-card .is-stolen { background: var(--table); color: var(--on-table); }
-.wb-card .is-got em, .wb-card .is-stolen em { color: var(--on-table); }
-.wb-card-tap li { padding: 0; }
-.wb-card-tap button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 60px; padding: 8px 16px; border-radius: 14px; font: 1.4rem/1.1 var(--display); text-align: left; color: inherit; }
-.wb-card-tap button:disabled { opacity: 1; cursor: default; }
-.wb-card-tap li:not(.is-got):not(.is-stolen) button:active { transform: translateY(2px); }
+.player.wb .tt-my-team { box-shadow: inset 0 3px 0 var(--team, var(--steel-mid)); }
+.wb-card .tt-row { --side: 5.4em; }
+.wb-card .tt-row > em:empty { display: none; }
+/* Words not yet said: a hollow marker; said ones fill it with the lamp. */
+.wb-card .tt-row.is-waiting .tt-mark { background: transparent; box-shadow: inset 0 0 0 2px var(--steel-mid); }
+/* Tap rows: each is a key the width of the card. */
+.wb-card-tap > li { display: block; }
+.wb-card-tap .tt-row {
+  width: 100%; min-height: 56px; padding: 6px 10px;
+  border-radius: 2px; border: 1px solid var(--steel-mid);
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  text-align: left; color: var(--paint);
+  transition: border-color 160ms ease-out, transform 80ms ease-out;
+}
+.wb-card-tap .tt-row:hover:not(:disabled) { border-color: var(--table); }
+.wb-card-tap .tt-row:active:not(:disabled) { transform: translateY(1px); }
+.wb-card-tap .tt-row:disabled { cursor: default; border-color: transparent; }
+.wb-card-tap .tt-row.is-waiting > em { color: var(--paint-dim); }
 .wb-rules { font-size: 0.9rem; text-align: center; }
 
-.wb-phone-bid, .wb-phone-left { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; font-weight: 700; color: var(--text-muted); }
-.wb-phone-bid .dmd-line, .wb-phone-left .dmd-line { font-size: 1.5rem; }
+.wb-phone-bid { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px; font-size: 1.7rem; }
+.wb-phone-bid .flap-c { color: var(--table); }
+.wb-phone-left.is-over .flap-c { color: var(--red-text); }
+/* Bid keys: a dark key per step, the bid it makes in big letters. */
 .wb-bid-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.wb-bid-steps button {
-  display: grid; justify-items: center; min-height: 76px; border-radius: 18px; font: 1.8rem/1.1 var(--display);
-  background: radial-gradient(90% 130% at 50% 25%, color-mix(in srgb, var(--table) 55%, var(--chrome-hi)) 0%, var(--table) 55%, color-mix(in srgb, var(--table) 60%, var(--bg-deep)) 100%); color: var(--on-table);
-  box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 var(--chrome-dark); transition: transform 90ms ease-out;
+.wb-bid-steps > button {
+  display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 80px; border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
+  border: 1px solid var(--table); color: var(--paint);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.35);
+  transition: transform 90ms ease-out, background-color 160ms ease-out;
 }
-.wb-bid-steps small { font: 800 0.85rem "DM Sans", system-ui, sans-serif; }
-.wb-bid-steps button:active:not(:disabled) { transform: translateY(2px); }
-.wb-bid-steps button:disabled { opacity: 0.4; }
+.wb-bid-steps > button > b { font: 700 2.1rem/1 var(--flap-font); font-variant-numeric: tabular-nums; }
+.wb-bid-steps > button > small { font: 600 0.85rem var(--flap-font); letter-spacing: 0.14em; color: var(--table); }
+.wb-bid-steps > button:active:not(:disabled) { transform: translateY(2px); }
+.wb-bid-steps > button:disabled { border-color: var(--rule); color: var(--paint-dim); }
+.wb-bid-steps > button:disabled > small { color: var(--paint-dim); }
 .wb-bid-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-.wb-bid-type input { min-height: 52px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--field); color: var(--text); font: 1.4rem var(--display); text-align: center; }
-.wb-bid-type input:focus { border-color: var(--table); outline: none; }
-.wb-pass-btn:disabled { opacity: 0.7; }
+.wb-bid-type input { min-height: 52px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); background: var(--well); font: 600 1.4rem var(--flap-font); letter-spacing: 0.08em; text-align: center; }
+.wb-bid-type input:focus { border-color: var(--table); outline: none; box-shadow: 0 0 0 1px var(--table); }
+.wb-pass-btn { justify-self: center; }
 .wb-switch { justify-self: center; margin: 8px auto 0; }
+.wb-switch > svg { width: 18px; height: 18px; }
 
-/* The judge's +1: the biggest thing on the phone, so a thumb finds it without looking. */
+/* The judge's +1: the biggest key on the phone, so a thumb finds it without looking. */
 .wb-plus {
-  display: grid; justify-items: center; gap: 4px; width: 100%; min-height: 168px; border-radius: 28px;
-  background: radial-gradient(90% 120% at 50% 25%, color-mix(in srgb, var(--table) 55%, var(--chrome-hi)) 0%, var(--table) 55%, color-mix(in srgb, var(--table) 60%, var(--bg-deep)) 100%); color: var(--on-table);
-  box-shadow: inset 0 3px 0 rgb(255 255 255 / 0.45), inset 0 -6px 0 rgb(0 0 0 / 0.22), 0 4px 0 var(--chrome-dark), 0 8px 18px rgb(0 0 0 / 0.5);
+  display: grid; justify-items: center; align-content: center; gap: 10px; width: 100%; min-height: 176px;
+  border-radius: 6px; background: var(--table); color: var(--on-table);
+  box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--steel-mid), inset 0 -6px 0 rgb(0 0 0 / 0.25);
   touch-action: manipulation; user-select: none; transition: transform 70ms ease-out;
 }
-.wb-plus b { font: 4.4rem/1 var(--display); }
-.wb-plus span { font-weight: 800; }
+.wb-plus > b { font: 700 4.6rem/1 var(--flap-font); letter-spacing: 0.04em; }
+.wb-plus-count { display: inline-flex; align-items: center; gap: 6px; font-size: 1.5rem; }
+.wb-plus-count > small { font: 700 0.8rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; }
+.wb-plus-warn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 2px; background: var(--flap-gap); color: var(--red-text); font: 700 0.85rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; }
+.wb-plus-warn > svg { width: 16px; height: 16px; color: var(--red); }
 .wb-plus:active { transform: translateY(3px); }
-.wb-plus.is-last { outline: 3px solid var(--red-text); outline-offset: 3px; }
+.wb-plus.is-last { box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--red), inset 0 -6px 0 rgb(0 0 0 / 0.25); }
 .wb-judge-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
-.wb-judge-row .tt-pass-btn { min-height: 60px; font-size: 1.2rem; }
-.wb-nono { min-height: 60px; padding: 0 16px; border-radius: 999px; background: var(--red); color: var(--text); font: 1.2rem var(--display); box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.3), inset 0 -3px 0 rgb(0 0 0 / 0.25); }
-.wb-nono-confirm { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; border-radius: 16px; border: 1px solid var(--red-text); background: rgb(224 48 62 / 0.12); }
-.wb-nono-confirm p { grid-column: 1 / -1; font-weight: 700; }
+.wb-judge-row .tt-pass-btn { min-height: 60px; font-size: 1.15rem; }
+/* The no-no: a red key with an X; it asks once before it costs the card. */
+.wb-nono {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 60px; padding: 0 16px; border-radius: var(--radius-sm);
+  background: var(--red); color: #fff;
+  font: 700 1.15rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.25);
+}
+.wb-nono > svg { width: 20px; height: 20px; }
+.wb-nono-confirm { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; border-radius: 3px; border: 1px solid var(--red); background: rgb(198 70 60 / 0.1); }
+.wb-nono-confirm p { grid-column: 1 / -1; font-weight: 600; }
 .wb-card .chip-btn { flex-shrink: 0; }
+.wb-phone-steal { justify-items: center; text-align: center; }
+.wb-phone-steal .wb-steal-head { font-size: 2.6rem; }
+.wb-phone-clock { display: grid; justify-items: center; gap: 6px; }
+.wb-phone-clock .clue-timer { font-size: 3rem; }
 
 /* ---------- Controller ---------- */
-.controller.wb .wb-card, .controller.wb .wb-plus, .controller.wb .wb-judge-row, .controller.wb .wb-slots { margin-bottom: 12px; }
-.controller.wb .wb-plus { min-height: 110px; }
+.controller-bar .wb-brand { font-size: 0.95rem; }
+.controller.wb .wb-card, .controller.wb .wb-plus, .controller.wb .wb-judge-row, .controller.wb .wb-slots, .controller.wb .wb-phone-bid, .controller.wb .wb-tags { margin-bottom: 12px; }
+.controller.wb .wb-plus { min-height: 130px; margin-top: 8px; }
+.controller.wb .wb-tags { justify-content: flex-start; }
 .wb-newcard { margin-bottom: 12px; }
 .wb-award { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.wb-tool-cards { display: inline-flex; align-items: center; gap: 6px; }
+.wb-tool-cards > small { font: 600 0.75rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+.tt-team-tools > li.team-0, .tt-team-tools > li.team-1 { box-shadow: inset 3px 0 0 var(--team); }
+
+/* ---------- End ---------- */
+.end.wb .place { box-shadow: inset 3px 0 0 var(--team); }
+.end.wb .place-1 { box-shadow: inset 3px 0 0 var(--team), inset 0 0 0 2px var(--table); }
+.end.wb .tt-place-name > b { display: flex; align-items: center; }
+.end.wb .tt-place-name .sv-team-num { font-size: 0.7em; }
+.wb-place-score { display: grid; justify-items: end; gap: 2px; }
+.wb-place-score > small { font: 600 0.75rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+
+/* A 720p TV: smaller meters so the meters, the card and the rail fit. */
+@media (max-height: 800px) {
+  .wb-bid { font-size: clamp(3.6rem, 14vh, 7rem); }
+  .wb-shot { font-size: clamp(2.6rem, 9vh, 4.6rem); }
+  .wb-meters { gap: 10px; }
+  .wb-meters .tt-meter { font-size: clamp(2rem, 6.6vh, 3.2rem); }
+  .wb-steal { gap: 8px; }
+  .wb-steal-head { font-size: clamp(1.8rem, 3.8vw, 3rem); }
+  .wb-howto { font-size: 1rem; }
+  .wb-scores { padding: 12px; }
+  .wb-scores li { padding: 10px; }
+}
+@media (max-width: 960px) {
+  .wb-scores { position: static; }
+  .wb-scores > ol { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .wb-play { grid-template-columns: 1fr; }
+  .wb-meters { grid-template-columns: 1fr 1fr; }
+  .wb-meters .tt-meter { min-width: 0; font-size: 2.2rem; }
+  .wb-bid { min-width: 0; }
+  .wb-scores > ol { grid-template-columns: 1fr; }
+}
