@@ -1,9 +1,10 @@
 // A host's double tap: the same ruling (same action, same details) sent twice within TAP_MS, from either host screen.
 // The second is ignored, so one tap on Strike, Got it, Next or a reveal can't count twice. Deliberate repeats (two
 // wrong answers in a row) are never that close together. Score adjustments and renames aren't rulings, and tapping
-// +100 three times means +300, so they always go through.
+// +100 three times means +300, so they always go through. So does Word Budget's +1 word, which the judge taps once
+// for every word the clue-giver says (budget.js caps how fast instead).
 export const TAP_MS = 700
-const ALWAYS = new Set(['adjustScore', 'renamePlayer', 'renameTeam'])
+const ALWAYS = new Set(['adjustScore', 'renamePlayer', 'renameTeam', 'countWord'])
 
 export function isRepeatTap(last, action, payload, now) {
   return !ALWAYS.has(action) && !!last && last.key === tapKey(action, payload) && now - last.at < TAP_MS

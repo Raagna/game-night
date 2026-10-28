@@ -23,9 +23,9 @@ describe('a host double tap counts once', () => {
     assert.equal(repeatHostTap(game, 'reveal', { index: 3 }, 1100), false)
     assert.equal(repeatHostTap(game, 'strike', {}, 1200), false)
   })
-  test('score adjustments and renames always go through', () => {
+  test('score adjustments, renames and Word Budget's +1 always go through', () => {
     const game = {}
-    for (const action of ['adjustScore', 'renamePlayer', 'renameTeam']) {
+    for (const action of ['adjustScore', 'renamePlayer', 'renameTeam', 'countWord']) {
       repeatHostTap(game, action, { playerId: 'p', amount: 100 }, 1000)
       assert.equal(isRepeatTap(game.lastHostTap, action, { playerId: 'p', amount: 100 }, 1010), false)
     }
