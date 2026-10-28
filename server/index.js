@@ -9,6 +9,7 @@ import { createWheelGames } from './wheel.js'
 import { createFibGames } from './fib.js'
 import { createPriceGames } from './price.js'
 import { createTongueGames } from './tongue.js'
+import { repeatHostTap } from './taps.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -317,6 +318,7 @@ io.on('connection', (socket) => {
   })
   socket.on('host:action', ({ code, action, payload }) => {
     const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return
+    if (repeatHostTap(game, action, payload)) return
     const mode = modeOf(game); if (mode) return mode.hostAction(game, action, payload || {})
     if (action === 'start') { game.status = 'playing'; const players=connectedPlayers(game); game.turnPlayerId=players[Math.floor(Math.random()*players.length)]?.id || null }
     if (action === 'select') {
