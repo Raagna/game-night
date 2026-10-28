@@ -62,7 +62,7 @@
 /* Answers keep the row's full letter size; only a single word too long for the slot condenses to fit. */
 .sv-slot .sv-slot-text .flap { font-size: min(clamp(1.3rem, 2.1vw, 1.65rem), calc((100cqi - var(--side)) / (var(--w) * 0.7))); }
 /* On the TV every slot is a two-line module, so a long answer wraps between words at full size and the rows stay equal. */
-.display .sv-slot { min-height: clamp(66px, 9.6vh, 86px); }
+@media (min-width: 761px) { .display .sv-slot { min-height: clamp(66px, 9.6vh, 86px); } }
 .sv-slot .sv-slot-text .flap-c { width: 0.64em; }
 .sv-slot .sv-slot-text .flap-cells, .sv-slot .sv-slot-text .flap-w { gap: 0.06em; }
 .sv-slot .sv-slot-text .flap-wrap .flap-cells { gap: 0.1em 0.32em; }
@@ -209,7 +209,7 @@
 /* A 720p TV: tighter slots so the whole board, both teams and the strikes fit. */
 @media (max-height: 800px) {
   .sv-center { gap: 10px; }
-  .display .sv-slot { min-height: 8.9vh; }
+  .display .sv-slot { min-height: max(48px, 8.9vh); }
   .sv-status { min-height: 64px; }
   .sv-team { padding: 12px; gap: 8px; }
   .sv-question { font-size: clamp(1.4rem, 2.6vw, 2.3rem); }
