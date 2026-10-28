@@ -21,6 +21,7 @@ import MyBoards from "./MyBoards";
 import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
 import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
 import Hub, { Arrow, BackToHub } from "./Hub";
+import { repeatHostTap } from "../server/taps.js";
 import { LobbyJoin, JoinCorner } from "./JoinQR";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
@@ -1029,7 +1030,7 @@ function App() {
     [pick, setPick] = useState(() => (host ? params.get("game") : null)),
     [restoring, setRestoring] = useState(() =>
       host ? Boolean(sessionStorage.displayCode) : controller ? true : Boolean(sessionStorage.playerId && sessionStorage.gameCode));
-  const gameCode = useRef(null), gameKind = useRef(null), lastFail = useRef(null);
+  const gameCode = useRef(null), gameKind = useRef(null), lastFail = useRef(null), hostTaps = useRef({});
   gameCode.current = game?.code;
   gameKind.current = game ? game.kind || "jeopardy" : gameKind.current;
   // The host closed the room (from this screen or the other host screen).
@@ -1110,8 +1111,12 @@ function App() {
       document.removeEventListener("resume", wake);
     };
   }, []);
-  const action = (action, payload = {}) =>
-    socket.emit("host:action", { code: game.code, action, payload });
+  const action = (action, payload = {}) => {
+    // A double tap on a ruling sends it once (the server ignores repeats too; see server/taps.js), and each ruling
+    // carries the turn it was meant for, so the server can ignore one sent from an out-of-date screen.
+    if (repeatHostTap(hostTaps.current, action, payload, Date.now())) return;
+    socket.emit("host:action", { code: game.code, action, payload: game.rulingTurn != null ? { ...payload, turn: game.rulingTurn } : payload });
+  };
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   const create = (config, fail) => {
     lastFail.current = fail;

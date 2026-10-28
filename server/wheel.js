@@ -216,6 +216,15 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   }
   const isTossup = (round) => round.type === 'tossup' || round.type === 'tiebreak'
 
+  // The turn a host ruling is meant for (see survey.js): it changes with every ruling and whenever play moves on, so a
+  // double tap on Skip turn or a solve verdict, or a tap on an out-of-date screen, is ignored.
+  const RULINGS = new Set(['judgeSolve', 'skipTurn', 'revealPuzzle', 'finishBonus'])
+  function rulingTurn(game) {
+    const round = game.round, bonus = game.status === 'bonus' ? game.bonus : null
+    if (game.status !== 'playing' && !bonus) return null
+    return JSON.stringify([game.status, game.segmentIndex, round?.phase, round?.actorId, round?.control, round?.called.length, bonus?.phase])
+  }
+
   function publicGame(game) {
     const round = game.round, ended = round?.phase === 'roundEnd' || game.status === 'complete'
     const segment = game.segments[game.segmentIndex]
@@ -1018,5 +1027,5 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     })
   }
 
-  return { MAX_PLAYERS: MAX_SOLO, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }
+  return { MAX_PLAYERS: MAX_SOLO, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register, RULINGS, rulingTurn }
 }

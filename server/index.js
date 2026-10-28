@@ -9,6 +9,7 @@ import { createWheelGames } from './wheel.js'
 import { createFibGames } from './fib.js'
 import { createPriceGames } from './price.js'
 import { createTongueGames } from './tongue.js'
+import { repeatHostTap } from './taps.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -52,7 +53,7 @@ function assignLowestConnected(game) {
 }
 
 function publicGame(game) {
-  const mode=modeOf(game); if(mode) return mode.publicGame(game)
+  const mode=modeOf(game); if(mode) return mode.rulingTurn ? { ...mode.publicGame(game), rulingTurn: mode.rulingTurn(game) } : mode.publicGame(game)
   const activeQuestion=game.activeQuestion ? clone(game.activeQuestion) : null
   const board=game.hostless ? clone(game.boards[game.boardIndex]) : game.boards[game.boardIndex]
   if(game.hostless) board?.forEach((category)=>category.questions.forEach((question)=>delete question.answer))
@@ -317,7 +318,11 @@ io.on('connection', (socket) => {
   })
   socket.on('host:action', ({ code, action, payload }) => {
     const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return
-    const mode = modeOf(game); if (mode) return mode.hostAction(game, action, payload || {})
+    if (repeatHostTap(game, action, payload)) return
+    const mode = modeOf(game)
+    // A ruling tagged with the turn it was meant for only counts while that's still the turn (see survey.js).
+    if (mode?.RULINGS?.has(action) && payload?.turn != null && payload.turn !== mode.rulingTurn(game)) return emitGame(game)
+    if (mode) return mode.hostAction(game, action, payload || {})
     if (action === 'start') { game.status = 'playing'; const players=connectedPlayers(game); game.turnPlayerId=players[Math.floor(Math.random()*players.length)]?.id || null }
     if (action === 'select') {
       beginClue(game, payload.categoryIndex, payload.questionIndex); return
