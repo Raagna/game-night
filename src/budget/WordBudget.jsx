@@ -12,6 +12,7 @@ import { repeatHostTap } from "../../server/taps.js";
 import { standings } from "../../server/budget.js";
 import WORDS from "../tongue/words.json";
 import "./budget.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Dealing the words ----------
 const CARD_SIZE = 5, START_BID = 25;
@@ -103,7 +104,7 @@ export function BudgetSetup({ onCreate }) {
   return (
     <main className="setup wb-setup">
       <BackToHub />
-      <div className="brand wb-brand">WORD BUDGET</div>
+      <Brand text="WORD BUDGET" className="wb-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -311,7 +312,7 @@ export function BudgetDisplay({ game, onAction }) {
     <main className="display wb">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand wb-brand">WORD BUDGET</div>
+        <Brand text="WORD BUDGET" className="wb-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         {phase !== "bid" && <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />}
       </header>
@@ -474,7 +475,7 @@ export function BudgetPlayer({ game, playerId }) {
   const other = team && otherTeam(game, team.id);
   return (
     <main className="player wb">
-      <header className="player-bar"><span className="brand wb-brand">WORD BUDGET</span><span className="player-name">{player.name}</span></header>
+      <header className="player-bar"><Brand text="WORD BUDGET" className="wb-brand" /><span className="player-name">{player.name}</span></header>
       <b className="player-score money">{team ? progress(game, team) : 0}</b>
       <p className="tt-team">{team ? `${team.name} · ${scoreLine(game, team)} · ${names(game, team.members)}` : "No team yet"}</p>
       {game.status === "lobby" || !turn ? (
@@ -512,7 +513,7 @@ function TeamTools({ game, onAction }) {
 export function BudgetController({ game, onAction }) {
   const turn = game.turn, phase = turn?.phase;
   const words = useCard(game, undefined, !game.hostless && !!turn && phase !== "done");
-  const header = <header className="controller-bar"><span className="brand wb-brand">WORD BUDGET</span><span className="code-chip">{game.code}</span></header>;
+  const header = <header className="controller-bar"><Brand text="WORD BUDGET" className="wb-brand" /><Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} /></header>;
   if (game.status === "lobby" || !turn)
     return <main className="controller wb">{header}<h1>Lobby</h1><p className="muted">Start the game from the main screen. Move players between teams by tapping their names there.</p><section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section></main>;
   const current = turn.bid?.amount ?? START_BID + 1, control = teamById(game, turn.control);
@@ -577,7 +578,7 @@ export function BudgetEnd({ game, host, display, onAction }) {
   return (
     <main className="end wb">
       {display && <SoundToggle />}
-      <div className="brand wb-brand">WORD BUDGET</div>
+      <Brand text="WORD BUDGET" className="wb-brand" />
       <h1>{tie ? "It’s a tie!" : `${ranked[0].name} wins!`}</h1>
       {byBonus && <p className="muted">Level on {game.scoring === "points" ? "points" : "cards"}, so saved words decide it.</p>}
       <div className="podium">{ranked.map((t, i) => <div className={`place place-${i + 1}`} key={t.id}><span className="rank">{i + 1}</span><b>{t.name}</b><small>{names(game, t.members)} · {plural(t.bonus, "word")} saved</small><strong className="money">{game.scoring === "points" ? t.points : t.cards}</strong></div>)}</div>

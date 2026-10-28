@@ -9,20 +9,22 @@ import {
   parseKaggleCsv,
   parseSeasonZip,
 } from "./questions";
-import "@fontsource/archivo-black/400.css";
-import "@fontsource/dm-sans/400.css";
-import "@fontsource/dm-sans/500.css";
-import "@fontsource/dm-sans/700.css";
-import "@fontsource/doto/800.css";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/barlow-semi-condensed/400.css";
+import "@fontsource/barlow-semi-condensed/500.css";
+import "@fontsource/barlow-semi-condensed/600.css";
 import "./styles.css";
 import topicList from "./topics.json";
 import BoardEditor from "./BoardEditor";
 import MyBoards from "./MyBoards";
 import { FastMoneyController, FastMoneyDisplay, FastMoneyPlayer } from "./FastMoney";
 import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, newBoard, pickFastMoneyClues, saveBoard } from "./boards";
-import Hub, { Arrow, BackToHub } from "./Hub";
+import Hub, { Arrow, BackToHub, CodeEntry } from "./Hub";
+import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
-import { LobbyJoin, JoinCorner } from "./JoinQR";
+import { LobbyJoin, JoinCorner, Departures } from "./JoinQR";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
@@ -63,6 +65,8 @@ const makeCategory = ([, qs], boardIndex) => ({
     .map((q, i) => ({ ...q, value: (i + 1) * (boardIndex === 0 ? 200 : 400) })),
 });
 const uid = () => Math.random().toString(36).slice(2);
+// A score in dollars, with a real minus sign when it's below zero.
+const dollars = (score) => (score < 0 ? `−$${Math.abs(score).toLocaleString()}` : `$${score.toLocaleString()}`);
 const TOPICS = topicList.map(({ id, label, aliases }) => ({ id, label, names: [label.toLowerCase(), ...aliases] }));
 const TOPIC_LABEL = Object.fromEntries(TOPICS.map((topic) => [topic.id, topic.label]));
 // Topics a search refers to: "sport" or "sports" means the Sports topic, "movie" means Movies & TV, and so on.
@@ -191,20 +195,18 @@ function Setup({ onCreate }) {
   };
   if (editing)
     return (
-      <main className="setup">
+      <main className="setup table-jeopardy">
         <BackToHub />
-        <div className="brand">JEOPARTY!</div>
+        <Brand text="JEOPARTY!" />
         <section className="setup-card">
           <BoardEditor initial={editing.board} notes={editing.notes} onSave={saveEdited} onCancel={() => setEditing(null)} />
         </section>
       </main>
     );
   return (
-    <main className="setup">
+    <main className="setup table-jeopardy">
       <BackToHub />
-      <div className="brand">
-        JEOPARTY!
-      </div>
+      <Brand text="JEOPARTY!" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -408,7 +410,7 @@ function Scores({ players, turnPlayerId }) {
       {players.map((p) => (
         <li key={p.id} className={(p.id === turnPlayerId ? "is-turn " : "") + (p.connected ? "" : "is-away")}>
           <b>{p.name}</b>
-          <span className="money">${p.score.toLocaleString()}</span>
+          <Money value={dollars(p.score)} />
           {!p.connected && <small>Reconnecting…</small>}
         </li>
       ))}
@@ -433,9 +435,9 @@ function Display({ game, host = false, onAction }) {
     if (game.lastEvent?.type === "daily") playDailyDouble();
   }, [game.lastEvent?.at]);
   return (
-    <main className="display">
+    <main className="display table-jeopardy">
       <header className="display-bar">
-        <div className="brand">JEOPARTY!</div>
+        <Brand text="JEOPARTY!" />
         {game.status !== "lobby" && <JoinCorner code={game.code} />}
         <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} frozenMs={game.clockPaused ? game.pausedRemaining : null} />
       </header>
@@ -443,7 +445,11 @@ function Display({ game, host = false, onAction }) {
         <div className="lobby">
           <h1>Join the game</h1>
           <LobbyJoin code={game.code} />
-          {game.players.length ? <Scores players={game.players} /> : <p className="muted">No players yet.</p>}
+          <Departures
+            head={["Player", "Status"]}
+            rows={game.players.map((p) => ({ key: p.id, state: p.connected ? "ready" : "away", label: `${p.name}, ${p.connected ? "ready" : "reconnecting"}`, cells: [p.name, p.connected ? "Ready" : "Away"] }))}
+            openCells={game.players.length < 6 ? ["— — —", "Waiting"] : null}
+          />
           {host && (
             <button className="primary" onClick={() => onAction("start")}>
               Start game
@@ -455,28 +461,28 @@ function Display({ game, host = false, onAction }) {
       ) : game.activeQuestion ? (
         <div className="clue-screen">
           <p className="clue-meta">
-            {dailyPending ? "Daily Double" : <>{q.category} <span>{q.value ? `$${q.value.toLocaleString()}` : "Final Jeoparty"}</span></>}
+            {dailyPending ? <Flap text="Daily Double" intro /> : <><Flap text={q.category} wrap /><Flap className="clue-value" text={q.value ? `$${q.value.toLocaleString()}` : "Final Jeoparty"} /></>}
           </p>
           <h1>{dailyPending ? "Wager required" : q.question}</h1>
           {game.status === "final" && !game.hostless && <FinalReveals game={game} />}
-          {game.reveal && <div className="answer">{q.answer}</div>}
+          {game.reveal && <div className="answer" role="status"><Flap text={q.answer} wrap intro /></div>}
           {game.clockPaused && <p className="paused-note">Clock paused while {game.status === "final" ? "a player confirms" : `${buzzed?.name || "the player"} confirms`} their answer</p>}
           {buzzed && <div className="buzzed">{game.activeQuestion.dailyDouble ? `${buzzed.name} buzzed in` : `${buzzed.name} buzzed in at ${formatBuzzTime(game.buzzedAtMs)}`}</div>}
         </div>
       ) : game.status === "final" ? (
         <div className="clue-screen">
-          <p className="clue-meta">Final Jeoparty</p>
+          <p className="clue-meta"><Flap text="Final Jeoparty" /></p>
           <h1>Ready for the final clue</h1>
         </div>
       ) : (
         <>
-          <div className="round-title">
-            {game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeoparty!" : "Double Jeoparty!")}
-          </div>
+          <h2 className="round-title">
+            <Flap text={game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeoparty!" : "Double Jeoparty!")} />
+          </h2>
           <div className="board" style={{ "--cols": game.board.length, "--cols-small": Math.min(3, game.board.length) }}>
             {game.board.map((c, ci) => (
               <div className="column" key={ci}>
-                <div className="cat">{c.name}</div>
+                <div className="cat"><Flap text={c.name} wrap /></div>
                 {c.questions.map((q, qi) => (
                   <button
                     disabled={q.used || !host || game.hostless}
@@ -490,7 +496,7 @@ function Display({ game, host = false, onAction }) {
                     className={q.used ? "used" : ""}
                     aria-label={q.used ? `${c.name} $${q.value}, already played` : `${c.name} for $${q.value}`}
                   >
-                    ${q.value}
+                    <Flap text={q.used ? "" : `$${q.value}`} cells={String(q.value).length + 1} />
                   </button>
                 ))}
               </div>
@@ -555,7 +561,7 @@ function ControllerPlayerTools({ player, onAction }) {
   return <div className="controller-player-tools">
     <div className="player-line">
       <input aria-label={`${player.name} name`} value={name} maxLength="20" onChange={(event) => setName(event.target.value)} onBlur={() => name.trim() && name.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name })} />
-      <span className="money">${player.score.toLocaleString()}</span>
+      <Money value={dollars(player.score)} />
     </div>
     <div className="score-adjustment">
       <input aria-label={`Amount to adjust ${player.name}'s score by`} type="number" min="1" step="1" value={amount} onChange={(event) => setAmount(event.target.value)} />
@@ -570,19 +576,19 @@ function Controller({ game, onAction }) {
     finalMode = game.status === "final", next = nextStage(game);
   if (game.status === "fastmoney")
     return (
-      <main className="controller">
+      <main className="controller table-jeopardy">
         <header className="controller-bar">
-          <span className="brand">JEOPARTY!</span>
-          <span className="code-chip">{game.code}</span>
+          <Brand text="JEOPARTY!" />
+          <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
         </header>
         <FastMoneyController game={game} onAction={onAction} />
       </main>
     );
   return (
-    <main className="controller">
+    <main className="controller table-jeopardy">
       <header className="controller-bar">
-        <span className="brand">JEOPARTY!</span>
-        <span className="code-chip">{game.code}</span>
+        <Brand text="JEOPARTY!" />
+        <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
       </header>
       <h1>
         {finalMode
@@ -778,11 +784,11 @@ function DailyWager({ game, playerId, player }) {
   const [wager,setWager]=useState("5"); const max=Math.max(player.score,...(game.board||[]).flatMap((c)=>c.questions.map((q)=>q.value||0)),5)
   if(game.activeQuestion.judged?.includes(playerId) || game.reveal) return <><p className="status-card">Answer locked in</p><p className="player-status">{game.reveal ? "Answer revealed" : "Waiting for the ruling"}</p></>
   if(game.activeQuestion.dailyReady) return <><p className="status-card">Wager locked: ${game.activeQuestion.dailyWager.toLocaleString()}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : game.hostless ? "Your buzzer opens in 10 seconds." : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
-  return <div className="final-form"><p className="daily-title">Daily Double!</p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
+  return <div className="final-form"><p className="daily-title"><Flap text="Daily Double!" intro /></p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
 }
 function HostlessBoard({ game, playerId }) {
   const chooser=game.players.find((player)=>player.id===game.turnPlayerId), canSelect=chooser?.id===playerId;
-  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat">{category.name}</div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>${question.value}</button>)}</div>)}</div></div>
+  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat"><Flap text={category.name} wrap /></div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}><Flap text={question.used ? "" : `$${question.value}`} cells={String(question.value).length + 1} /></button>)}</div>)}</div></div>
 }
 function HostlessAnswer({ game, playerId }) {
   const [response,setResponse]=useState(""), [confirming,setConfirming]=useState(false), [sent,setSent]=useState(false);
@@ -817,15 +823,15 @@ function Player({ game, playerId }) {
     return () => clearTimeout(timeout);
   }, [personalBuzzTime]);
   useEffect(() => { if(signal === "correct") tone(880,.28); if(signal === "incorrect") tone(150,.35); if(signal === "daily") playDailyDouble(); if(game.lastEvent?.type === "reveal") tone(1047,.55,"sine",.16); }, [game.lastEvent?.at]);
-  if (!p) return <main className="player"><p className="status-card">You’re no longer in this game.</p></main>;
+  if (!p) return <main className="player table-jeopardy"><p className="status-card">You’re no longer in this game.</p></main>;
   const clue = game.activeQuestion && !game.activeQuestion.final ? game.activeQuestion.question : null;
   return (
-    <main className={`player ${signal === "correct" ? "signal-correct" : signal === "incorrect" ? "signal-incorrect" : ""}`}>
+    <main className={`player table-jeopardy ${signal === "correct" ? "signal-correct" : signal === "incorrect" ? "signal-incorrect" : ""}`}>
       <header className="player-bar">
-        <span className="brand">JEOPARTY!</span>
+        <Brand text="JEOPARTY!" />
         <span className="player-name">{p.name}</span>
       </header>
-      <div className="player-score money">${p.score.toLocaleString()}</div>
+      <div className="player-score"><Money value={dollars(p.score)} /></div>
       {clue && !game.activeQuestion.dailyDouble && <p className="player-clue-meta">{clue.category} · ${clue.value?.toLocaleString()}</p>}
       {game.status === "lobby" ? (
         <p className="player-status">{game.hostless ? "Waiting for the game to start…" : "Waiting for the host to start…"}</p>
@@ -914,27 +920,19 @@ function Join({ onJoined, initialError, presetCode = "" }) {
   };
   return (
     <main className="join">
-      <div className="brand hub-brand">GAME NIGHT</div>
+      <Brand text="GAME NIGHT" />
       <h1>{editCode ? "Join a game" : "What’s your name?"}</h1>
       <form onSubmit={join}>
         {!editCode && (
           <p className="join-code-line">
-            Joining game <span className="code-chip">{code}</span>
+            Joining game <Flap className="code-chip" text={code} label={`code ${code}`} />
             <button type="button" className="link-btn" onClick={() => setEditCode(true)}>Different code?</button>
           </p>
         )}
-        {editCode && <label className="field">
-          <span>Game code</span>
-          <input
-            className="code-input"
-            value={code}
-            maxLength="6"
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck="false"
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-          />
-        </label>}
+        {editCode && <div className="field">
+          <label className="label" htmlFor="join-code">Game code</label>
+          <CodeEntry id="join-code" value={code} onChange={setCode} autoFocus={!presetCode} />
+        </div>}
         <label className="field">
           <span>Your name</span>
           <input
@@ -952,18 +950,18 @@ function Join({ onJoined, initialError, presetCode = "" }) {
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
       <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Survey Says! and Tip of the Tongue 12, and Word Budget 16. You can join after a game starts.</p>
-      <a href="./">← Game Night</a>
+      <a className="back-link" href="./"><Arrow back /> Game Night</a>
     </main>
   );
 }
 function EndGame({ game, host }) {
   const ranked=[...game.players].sort((a,b)=>b.score-a.score), top=ranked.slice(0,3), rest=ranked.slice(3);
   return (
-    <main className="end">
-      <div className="brand">JEOPARTY!</div>
-      <h1>Final standings</h1>
-      <div className="podium">{top.map((p,i)=><div className={`place place-${i+1}`} key={p.id}><span className="rank">{i+1}</span><b>{p.name}</b><strong className="money">${p.score.toLocaleString()}</strong></div>)}</div>
-      {rest.length>0&&<ol className="remaining-players" start="4">{rest.map((p)=><li key={p.id}><span>{p.name}</span><b className="money">${p.score.toLocaleString()}</b></li>)}</ol>}
+    <main className="end table-jeopardy">
+      <Brand text="JEOPARTY!" />
+      <h1><Flap text={game.players.length ? `${[...game.players].sort((a, b) => b.score - a.score)[0].name} wins!` : "Final standings"} wrap intro /></h1>
+      <ol className="podium">{top.map((p,i)=><li className={`place place-${i+1}`} key={p.id}><span className="rank">{i+1}</span><b>{p.name}</b><Flap className="money" text={dollars(p.score)} intro /></li>)}</ol>
+      {rest.length>0&&<ol className="remaining-players" start="4">{rest.map((p)=><li key={p.id}><span>{p.name}</span><Money value={dollars(p.score)} /></li>)}</ol>}
       {host ? (
         <button className="primary" onClick={() => { sessionStorage.removeItem("displayCode"); location.assign("./"); }}>
           New game
@@ -1138,7 +1136,7 @@ function App() {
   function renderScreen() {
   if (!game) {
     if (restoring || controller)
-      return <main className="join"><div className="brand hub-brand">GAME NIGHT</div>{controllerNote && !restoring && <p className="player-status" role="status">{controllerNote}</p>}{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
+      return <main className="join"><Brand text="GAME NIGHT" />{controllerNote && !restoring && <p className="player-status" role="status">{controllerNote}</p>}{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
     if (host) return HostSetup ? null : <Hub />;
     if (!joining && !joinError) return <Hub />;
     return (

@@ -7,6 +7,7 @@ import PUZZLES from "./puzzles.json";
 import { useWheelSounds, useClockTicks, playPegs } from "./sounds";
 import { useSound, playWinnersTune } from "../survey/sounds";
 import "./wheel.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Picking puzzles ----------
 const PLAYED_KEY = "gameNight.wheel.played.v1";
@@ -288,7 +289,7 @@ export function WheelSetup({ onCreate }) {
   return (
     <main className="setup ws-setup">
       <BackToHub />
-      <div className="brand ws-brand">SPIN &amp; SOLVE</div>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -745,7 +746,7 @@ export function WheelDisplay({ game, onAction }) {
     <main className="display wheel-game">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand ws-brand">SPIN &amp; SOLVE</div>
+        <Brand text="SPIN & SOLVE" className="ws-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         {game.status === "bonus" ? <BonusClock game={game} /> : <Clock game={game} />}
       </header>
@@ -1051,7 +1052,7 @@ export function WheelPlayer({ game, playerId }) {
   return (
     <main className="player wheel-game">
       <header className="player-bar">
-        <span className="brand ws-brand">SPIN &amp; SOLVE</span>
+        <Brand text="SPIN & SOLVE" className="ws-brand" />
         <span className="player-name">{player.name}</span>
       </header>
       {isTeams(game) && <p className={`ws-my-team ${colorOf(player.contestant)}`}>{me?.name}</p>}
@@ -1095,8 +1096,8 @@ export function WheelController({ game, onAction }) {
   const round = game.round, solution = useSolution(game.code);
   const header = (
     <header className="controller-bar">
-      <span className="brand ws-brand">SPIN &amp; SOLVE</span>
-      <span className="code-chip">{game.code}</span>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
+      <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "bonus")
@@ -1343,7 +1344,7 @@ export function WheelEnd({ game, host, display, onAction }) {
   return (
     <main className="end wheel-game">
       {display && <SoundToggle />}
-      <div className="brand ws-brand">SPIN &amp; SOLVE</div>
+      <Brand text="SPIN & SOLVE" className="ws-brand" />
       <h1>{!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
       {game.bonus?.prize != null && (
         <p className="ws-bonus-result">

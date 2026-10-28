@@ -8,6 +8,7 @@ import { useClockTicks } from "../wheel/sounds";
 import { playClue, playPop, playFact } from "../fib/sounds";
 import SHOWCASE from "./showcase.json";
 import "./price.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- The packs ----------
 // Real prices: public/data/prices-openprices.json, built from Open Prices by scripts/build-openprices-pack.py
@@ -151,7 +152,7 @@ export function PriceSetup({ onCreate }) {
   return (
     <main className="setup pc-setup">
       <BackToHub />
-      <div className="brand pc-brand">PRICE CHECK</div>
+      <Brand text="PRICE CHECK" className="pc-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -432,7 +433,7 @@ export function PriceDisplay({ game, onAction }) {
     <main className="display pc">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand pc-brand">PRICE CHECK</div>
+        <Brand text="PRICE CHECK" className="pc-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={round?.deadline} serverNow={game.serverNow} />
       </header>
@@ -601,7 +602,7 @@ export function PricePlayer({ game, playerId }) {
   return (
     <main className="player pc">
       <header className="player-bar">
-        <span className="brand pc-brand">PRICE CHECK</span>
+        <Brand text="PRICE CHECK" className="pc-brand" />
         <span className="player-name">{player.name}</span>
       </header>
       <b className="player-score money">{points(player.score)}</b>
@@ -619,7 +620,7 @@ export function PricePlayer({ game, playerId }) {
 // ---------- Host controller ----------
 export function PriceController({ game, onAction }) {
   const round = game.round, secret = useSecret(game);
-  const header = <header className="controller-bar"><span className="brand pc-brand">PRICE CHECK</span><span className="code-chip">{game.code}</span></header>;
+  const header = <header className="controller-bar"><Brand text="PRICE CHECK" className="pc-brand" /><Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} /></header>;
   if (game.status === "lobby" || !round)
     return (
       <main className="controller pc">
@@ -670,7 +671,7 @@ export function PriceEnd({ game, host, display, onAction }) {
   return (
     <main className="end pc">
       {display && <SoundToggle />}
-      <div className="brand pc-brand">PRICE CHECK</div>
+      <Brand text="PRICE CHECK" className="pc-brand" />
       <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
       <div className="podium">{top.map((p, i) => <div className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><strong className="money">{points(p.score)}</strong></div>)}</div>
       {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><b className="money">{points(p.score)}</b></li>)}</ol>}

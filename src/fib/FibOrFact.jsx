@@ -8,6 +8,7 @@ import { useSound, playWinnersTune } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
 import { useFibSounds } from "./sounds";
 import "./fib.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Picking clues ----------
 // Clues come from the built-in Jeopardy archive: a few seasons are loaded at random when setup opens, and
@@ -157,7 +158,7 @@ export function FibSetup({ onCreate }) {
   return (
     <main className="setup fib-setup">
       <BackToHub />
-      <div className="brand fib-brand">FIB OR FACT</div>
+      <Brand text="FIB OR FACT" className="fib-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -425,7 +426,7 @@ export function FibDisplay({ game, onAction }) {
     <main className="display fib">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand fib-brand">FIB OR FACT</div>
+        <Brand text="FIB OR FACT" className="fib-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={round && round.phase !== "scores" ? round.deadline : null} serverNow={game.serverNow} />
       </header>
@@ -561,7 +562,7 @@ export function FibPlayer({ game, playerId }) {
   return (
     <main className="player fib">
       <header className="player-bar">
-        <span className="brand fib-brand">FIB OR FACT</span>
+        <Brand text="FIB OR FACT" className="fib-brand" />
         <span className="player-name">{player.name}</span>
       </header>
       <div className="fib-my-score"><span>Your score</span><b className="money">{points(player.score)}</b></div>
@@ -580,8 +581,8 @@ export function FibController({ game, onAction }) {
   const round = game.round, secret = useSecret(game);
   const header = (
     <header className="controller-bar">
-      <span className="brand fib-brand">FIB OR FACT</span>
-      <span className="code-chip">{game.code}</span>
+      <Brand text="FIB OR FACT" className="fib-brand" />
+      <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "lobby" || !round)
@@ -653,7 +654,7 @@ export function FibEnd({ game, host, display, onAction }) {
   return (
     <main className="end fib">
       {display && <SoundToggle />}
-      <div className="brand fib-brand">FIB OR FACT</div>
+      <Brand text="FIB OR FACT" className="fib-brand" />
       <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
       <div className="podium">{top.map((p, i) => <div className={`place place-${i + 1}`} key={p.id}><span className="rank">{i + 1}</span><b>{p.name}</b><strong className="money">{points(p.score)}</strong></div>)}</div>
       {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((p) => <li key={p.id}><span>{p.name}</span><b className="money">{points(p.score)}</b></li>)}</ol>}

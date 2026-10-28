@@ -1,6 +1,7 @@
 // Pieces shared by the main app and the custom-board / Fast Money screens.
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import Flap from "./Flap";
 
 export const SERVER =
   import.meta.env.VITE_SERVER_URL ||
@@ -31,11 +32,12 @@ export function ClueTimer({ deadline, serverNow, frozenMs = null }) {
   }, [deadline,serverNow]);
   if (frozenMs != null) {
     const left = Math.ceil(frozenMs / 1000);
-    return <div className={"clue-timer is-paused" + (left >= 60 ? " is-long" : "")} role="timer" aria-label={`Clock paused with ${left} seconds left`}>{clockText(left)}</div>;
+    return <div className={"clue-timer is-paused" + (left >= 60 ? " is-long" : "")} role="timer" aria-label={`Clock paused with ${left} seconds left`}><Flap text={clockText(left)} cells={left >= 60 ? 4 : 2} align="right" still /><small>Paused</small></div>;
   }
   if (!deadline) return null;
   const seconds = Math.ceil(remaining / 1000);
-  return <div className={"clue-timer" + (seconds <= 5 ? " is-low" : "") + (seconds >= 60 ? " is-long" : "")} role="timer" aria-label={`${seconds} seconds left`}>{clockText(seconds)}</div>;
+  // The clock turns over quietly until its last ten seconds, then every second clacks.
+  return <div className={"clue-timer" + (seconds <= 5 ? " is-low" : "") + (seconds >= 60 ? " is-long" : "")} role="timer" aria-label={`${seconds} seconds left`}><Flap text={clockText(seconds)} cells={seconds >= 60 ? 4 : 2} align="right" still={seconds > 10} /></div>;
 }
 
 // "Submit this answer?" step. The server pauses the clock while it is open; "Go back" resumes it from the same point.

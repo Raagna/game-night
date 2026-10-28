@@ -8,6 +8,7 @@ import { useClockTicks } from "../wheel/sounds";
 import { playClue, playPop } from "../fib/sounds";
 import WORDS from "./words.json";
 import "./tongue.css";
+import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Dealing the words ----------
 const WORDS_PER_TURN = 7;
@@ -83,7 +84,7 @@ export function TongueSetup({ onCreate }) {
   return (
     <main className="setup tt-setup">
       <BackToHub />
-      <div className="brand tt-brand">TIP OF THE TONGUE</div>
+      <Brand text="TIP OF THE TONGUE" className="tt-brand" />
       <section className="setup-card">
         <div className="setup-top">
           <div>
@@ -230,7 +231,7 @@ export function TongueDisplay({ game, onAction }) {
     <main className="display tt">
       <SoundToggle />
       <header className="display-bar">
-        <div className="brand tt-brand">TIP OF THE TONGUE</div>
+        <Brand text="TIP OF THE TONGUE" className="tt-brand" />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />
       </header>
@@ -322,7 +323,7 @@ export function TonguePlayer({ game, playerId }) {
   if (!player) return <main className="player tt"><p className="status-card">You’re no longer in this game.</p></main>;
   return (
     <main className="player tt">
-      <header className="player-bar"><span className="brand tt-brand">TIP OF THE TONGUE</span><span className="player-name">{player.name}</span></header>
+      <header className="player-bar"><Brand text="TIP OF THE TONGUE" className="tt-brand" /><span className="player-name">{player.name}</span></header>
       <b className="player-score money">{team?.score ?? 0}</b>
       <p className="tt-team">{team ? `${team.name} · ${names(game, team.members)}` : "No team yet"}</p>
       {game.status === "lobby" || !turn ? <p className="player-status">You’re in! {team?.members.length < 2 ? "Waiting for a partner…" : "The game starts when everyone’s here."}</p> : (
@@ -354,7 +355,7 @@ function TeamTools({ game, onAction }) {
 }
 export function TongueController({ game, onAction }) {
   const turn = game.turn, word = useWord(game, undefined, !game.hostless && turn?.phase === "play");
-  const header = <header className="controller-bar"><span className="brand tt-brand">TIP OF THE TONGUE</span><span className="code-chip">{game.code}</span></header>;
+  const header = <header className="controller-bar"><Brand text="TIP OF THE TONGUE" className="tt-brand" /><Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} /></header>;
   if (game.status === "lobby" || !turn)
     return <main className="controller tt">{header}<h1>Lobby</h1><p className="muted">Start the game from the main screen. Move players between teams by tapping their names there.</p><section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section></main>;
   const team = teamById(game, turn.teamId);
@@ -393,7 +394,7 @@ export function TongueEnd({ game, host, display, onAction }) {
   return (
     <main className="end tt">
       {display && <SoundToggle />}
-      <div className="brand tt-brand">TIP OF THE TONGUE</div>
+      <Brand text="TIP OF THE TONGUE" className="tt-brand" />
       <h1>{!standings.length ? "Game over" : tie ? "It’s a tie!" : `${standings[0].name} wins!`}</h1>
       <div className="podium">{top.map((t, i) => <div className={`place place-${i + 1}`} key={t.id}><span className="rank">{i + 1}</span><b>{t.name}</b><small>{names(game, t.members)}</small><strong className="money">{t.score}</strong></div>)}</div>
       {rest.length > 0 && <ol className="remaining-players" start="4">{rest.map((t) => <li key={t.id}><span>{t.name}</span><b className="money">{t.score}</b></li>)}</ol>}
