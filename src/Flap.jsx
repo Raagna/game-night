@@ -26,7 +26,8 @@ function plan(from, to) {
 
 function useCascade(target, { intro, still, strip }) {
   const [state, setState] = useState(() => ({ shown: intro && !still && !reducedMotion() ? "" : target, moving: false, fading: false }));
-  const shownRef = useRef(state.shown), frame = useRef(0), fadeTimer = useRef(0);
+  // Which cells are turning over in the current change; the others hold still.
+  const shownRef = useRef(state.shown), frame = useRef(0), fadeTimer = useRef(0), changing = useRef([]);
   useEffect(() => {
     const from = shownRef.current;
     if (from === target) return;
@@ -39,6 +40,7 @@ function useCascade(target, { intro, still, strip }) {
       fadeTimer.current = setTimeout(() => setState((s) => ({ ...s, moving: false })), 220);
       return;
     }
+    changing.current = Array.from({ length: Math.max(from.length, target.length) }, (_, i) => (from[i] || " ") !== (target[i] || " "));
     if (reducedMotion()) {
       shownRef.current = target; setState({ shown: target, moving: false, fading: true });
       fadeTimer.current = setTimeout(() => setState((s) => ({ ...s, fading: false })), 260);
@@ -67,7 +69,7 @@ function useCascade(target, { intro, still, strip }) {
     frame.current = requestAnimationFrame(tick);
   }, [target, still, strip]);
   useEffect(() => () => { cancelAnimationFrame(frame.current); clearTimeout(fadeTimer.current); }, []);
-  return state;
+  return { ...state, changing: changing.current };
 }
 
 // text: what the cells say. cells: pad to this many cells (blanks on the right, or the left with align="right").
@@ -77,8 +79,9 @@ function useCascade(target, { intro, still, strip }) {
 export default function Flap({ text, cells = 0, align = "left", wrap = false, strip = false, intro = false, still = false, label, className = "" }) {
   let target = String(text ?? "").toUpperCase();
   if (cells && target.length < cells) target = align === "right" ? target.padStart(cells) : target.padEnd(cells);
-  const { shown, moving, fading } = useCascade(target, { intro, still, strip });
+  const { shown, moving, fading, changing } = useCascade(target, { intro, still, strip });
   const anim = moving ? " f" : fading ? " x" : "";
+  const animAt = (i) => (changing[i] ? anim : "");
   const spoken = label ?? String(text ?? "");
   if (strip) {
     return (
@@ -89,7 +92,7 @@ export default function Flap({ text, cells = 0, align = "left", wrap = false, st
     );
   }
   const padded = shown.padEnd(target.length);
-  const cell = (ch, i) => <span className={"flap-c" + (ch === " " ? " is-blank" : "")} key={i}><span className={"fg" + anim} key={moving || fading ? `${i}${ch}` : undefined}>{ch === " " ? " " : ch}</span></span>;
+  const cell = (ch, i) => <span className={"flap-c" + (ch === " " ? " is-blank" : "")} key={i}><span className={"fg" + animAt(i)} key={moving || fading ? `${i}${ch}` : undefined}>{ch === " " ? " " : ch}</span></span>;
   let body;
   if (wrap) {
     // Words keep their cells together; the board breaks between them.
