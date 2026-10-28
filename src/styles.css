@@ -875,7 +875,8 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 .fm-judge button:first-child[aria-pressed="true"] { background: var(--table); border-color: var(--table); color: var(--on-table); }
 .fm-judge button:last-child[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
 .fm-results tfoot th, .fm-results tfoot td { padding: 10px 14px; font: 600 1rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; }
-.fm-results tfoot td { font-size: 1.5rem; color: var(--table); letter-spacing: 0.04em; }
+.fm-results tfoot td { font-size: 1.6rem; }
+.fm-results tfoot .flap-c { color: var(--table); }
 .fm-verdict { font: 600 clamp(1.3rem, 2.4vw, 1.9rem) var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--steel-hi); }
 .fm-verdict.is-win { color: var(--table); }
 .fm-finish { min-width: 220px; }
@@ -941,7 +942,7 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 .wb, .wb-setup, .row--budget { --table: #a993e3; --on-table: #170c2e; }
 
 /* ---------- Game Night hub ---------- */
-.back-to-hub { display: inline-flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 16px; font: 600 0.92rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; color: var(--steel-hi); }
+.back-to-hub { display: flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 16px; font: 600 0.92rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; color: var(--steel-hi); }
 .back-to-hub:hover { color: var(--paint); }
 .arrow { flex-shrink: 0; }
 

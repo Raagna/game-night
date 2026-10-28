@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ClueTimer, clockText, socket, tone } from "./shared";
+import Flap from "./Flap";
 
 const money = (amount) => `$${(amount || 0).toLocaleString()}`;
 const nameOf = (game, id) => game.players.find((p) => p.id === id)?.name || "Player";
@@ -67,7 +68,7 @@ function Results({ game, judge }) {
           <tfoot>
             <tr>
               <th scope="row">Won</th>
-              {fm.playerIds.map((id) => <td key={id} className="money">{money(earned[id])}</td>)}
+              {fm.playerIds.map((id) => <td key={id}><Flap className="money" text={money(earned[id])} intro /></td>)}
             </tr>
           </tfoot>
         </table>
@@ -86,7 +87,7 @@ export function FastMoneyDisplay({ game, host, onAction }) {
   if (fm.phase === "reveal")
     return (
       <div className="fm">
-        <h1 className="fm-title">Fast Money results</h1>
+        <h1 className="fm-title"><Flap text="Fast Money results" wrap /></h1>
         <Results game={game} />
         {host && <button className="primary fm-finish" onClick={() => onAction("close")}>Final standings</button>}
         {game.hostless && <p className="muted">Final standings appear in a few seconds.</p>}
@@ -94,7 +95,7 @@ export function FastMoneyDisplay({ game, host, onAction }) {
     );
   return (
     <div className="fm">
-      <h1 className="fm-title">Fast Money</h1>
+      <h1 className="fm-title"><Flap text="Fast Money" intro /></h1>
       {fm.phase === "intro" && <p className="fm-lede">{rules(fm, game)}</p>}
       {fm.phase === "between" && (
         <>
