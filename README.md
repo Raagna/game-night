@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeoparty!, Survey Says!, Spin & Solve, Fib or Fact, Price Check and Tip of the Tongue. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeoparty!, Survey Says!, Spin & Solve, Fib or Fact, Price Check, Tip of the Tongue and Word Budget. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -84,11 +84,22 @@ A team word game for teams of two (up to 12 players). Players pair up as they jo
 - **Guessing**: set up to be typed (the guesser types on their phone and the game checks it) or said out loud (the clue-giver, or the host, taps Got it).
 - **Words**: 32 categories in `src/tongue/words.json`, written for this project.
 
-### With or without a host
-All six games can be played two ways:
+### Word Budget
+A bid-and-clue word game for two teams of two or more (4 to 16 players). New players join the smaller team; players can switch teams from their phones in the lobby, and the host can move them by tapping their names on the TV.
 
-- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along. In Tip of the Tongue, the controller shows the current word and can call Got it, Pass or Foul, which helps when guesses are shouted out loud.
-- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeoparty, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, Price Check and Tip of the Tongue, the reveals and turns move on by themselves. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
+- **A card** is five random words from the chosen categories (the same 32 as Tip of the Tongue). It only ever shows on the two clue-givers' phones and the host controller, never on the TV, because the guessers can see the TV.
+- **Bidding**: both clue-givers get 5 seconds to look at the card, then bid on their phones: "we can get all five in N words". Tap −1, −3 or −5, or type a number. Each bid must be lower than the last (25 down to 1), and every bid restarts a 5-second shot clock shown big on the TV. When it runs out, the lowest bid plays; if nobody bids, the team whose turn it is to start plays at 25. The starting team alternates card to card. Both clue-givers can tap Pass to swap the card for a new one.
+- **Playing the card**: the winning clue-giver has 60 seconds to get their team to say all five words, in any order, using no more than the bid in spoken clue words (repeats count). The other team's clue-giver is the judge: they tap a big +1 for every word said (with Undo), and the TV counts down the words left. The clue-giver taps each word as their team says it, and the TV fills in its slot; the judge can tap Not it to dispute one.
+- **No-nos**: rhymes, "sounds like", gestures, or any part of an answer word ("fights fires" for "fireman"). The judge taps No-no! and confirms, and the card goes to the judge's team.
+- **The steal**: if the clue-giver's team goes over budget or runs out of time, the other team gets 10 seconds to say every word still left, using only the clues already given. If they get them all, they steal the card. If they miss any, **nobody gets the card** (in the classic game the other team wins it on any fail; here they have to earn it). Without a host, the clue-giver who just lost the card confirms the stealing team's words, and the TV shows the whole card afterwards so the room can see.
+- **Words saved**: finishing a card under budget banks the unused words (bid 19, used 14: 5 saved). They break a tie and show on the scoreboard.
+- **Winning**: first to 5, 7 or 10 cards (10 by default), with saved words as the tiebreak. Or set up "Points": a card is worth 10 and every saved word 1, first to 10 × the target. Clue-givers move along their team every card, so everyone gets a go.
+
+### With or without a host
+All seven games can be played two ways:
+
+- **With a host**: the host runs the game from the host controller (the "Open host controller" link opens it in a second window), judges responses and reveals answers. In Survey Says!, the controller's "Time!" button gives a stalling player a 3-second count, like the TV host does, and no answer by then is a strike. In Spin & Solve, the controller shows the answer (which never goes to the TV or the phones), judges spoken solves, pauses the clocks, starts the speed-up and can undo the last move. In Fib or Fact, the controller shows the real answer and every fib as it comes in, can throw out a fib (its writer writes another, or it leaves the vote), and moves the reveals along; picking, writing and voting are still timed. In Price Check, the controller shows every real price (which never goes to the TV or the phones) and moves the reveals along. In Tip of the Tongue, the controller shows the current word and can call Got it, Pass or Foul, which helps when guesses are shouted out loud. In Word Budget, the controller sees every card and can do the judge's and the clue-giver's jobs (count, undo, mark or unmark a word, call a no-no), bid for a team, draw a new card, confirm steal words, give a finished card to either team or to nobody, and move on to the next card; the judge and clue-giver can still use their phones.
+- **Without a host** ("Play without a host" in setup): the game runs itself. In Jeoparty, players pick clues and type their own responses; in Survey Says!, players type guesses and the server checks them against the survey; in Spin & Solve, solves are checked exactly and the rounds move on by themselves; in Fib or Fact, Price Check and Tip of the Tongue, the reveals and turns move on by themselves; in Word Budget, the judge and clue-giver run each card from their phones and the next card starts by itself. Survey Says! answers are on a show-paced clock: 8 seconds for a face-off answer, 10 per guess and 20 for the other team to confer on a steal, with a 3-2-1 count on the TV and a strike when time runs out. Spin & Solve gives 10 seconds to decide, 10 to call a letter and 20 to solve (twice that at Relaxed pace). Fib or Fact gives 15 seconds to pick a category, 50 to write a fib and 25 to vote, with or without a host.
 
 ## How to play
 
@@ -153,6 +164,7 @@ src/                  React client
   fib/                Fib or Fact screens, styles and sounds
   price/              Price Check screens, styles and its showcase pack (showcase.json)
   tongue/             Tip of the Tongue screens, styles and its word pack (words.json)
+  budget/             Word Budget screens and styles (its cards come from tongue/words.json)
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -170,6 +182,8 @@ server/               game server (Express + Socket.IO)
   fib.js              Fib or Fact game logic (fib.test.js tests it)
   price.js            Price Check game logic (price.test.js tests it)
   tongue.js           Tip of the Tongue game logic (tongue.test.js tests it)
+  budget.js           Word Budget game logic (budget.test.js tests it)
+  taps.js             ignores a host's (or phone's) double tap on a ruling (taps.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers, including Jeopardy responses
 public/

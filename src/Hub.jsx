@@ -40,10 +40,16 @@ const GAMES = [
     tag: "Teams of two · up to 12 players",
     blurb: "One partner sees the word, the other guesses. Clue as many as you can in 45 seconds — and clear all seven for a bonus on every second left.",
   },
+  {
+    id: "budget",
+    name: "Word Budget",
+    tag: "Two teams · 4–16 players",
+    blurb: "Five words, one budget. Bid down to the fewest clue words you need, then get your team to say all five while the other side counts every word. Blow it and they can steal.",
+  },
 ];
 
 // One drawn glyph per table, in the same stroke: the clue board, the survey board, the wheel, the two answers,
-// the price tag, the speech bubbles.
+// the price tag, the speech bubbles, the word counter.
 function TableGlyph({ id }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" };
   return (
@@ -52,6 +58,7 @@ function TableGlyph({ id }) {
       {id === "survey" && <g {...common}><rect x="6" y="7" width="36" height="34" rx="3" /><path d="M12 15h16M12 22h20M12 29h12" /><path d="M33 27l6 6M39 27l-6 6" /></g>}
       {id === "wheel" && <g {...common}><circle cx="24" cy="25" r="16" />{[0, 45, 90, 135].map((a) => <path key={a} d="M24 9v32" transform={`rotate(${a} 24 25)`} />)}<path d="M20 4h8l-4 5z" fill="currentColor" /></g>}
       {id === "tongue" && <g {...common}><path d="M8 10h20v14H17l-6 5v-5H8z" /><path d="M24 30v4h9l6 5v-5h3V20h-8" /><path d="M14 17h8" /></g>}
+      {id === "budget" && <g {...common}><rect x="6" y="9" width="36" height="30" rx="3" /><path d="M12 17h10M12 24h14M12 31h8" /><path d="M31 21v12M28 24l3-3 3 3" /></g>}
       {id === "price" && <g {...common}><path d="M6 24V8h16l20 20-14 14z" /><circle cx="14" cy="16" r="3" /><path d="M22 30l8-8" /></g>}
       {id === "fib" && <g {...common}><path d="M6 10h22v14H15l-6 5v-5H6z" /><path d="M20 28v6h13l6 5v-5h3V20h-8" /><path d="M14 15.5l4 4M18 15.5l-4 4" /><path d="M27 30l2.5 2.5L34 28" /></g>}
     </svg>
