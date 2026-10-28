@@ -1,323 +1,343 @@
 ---
 name: Game Night
-description: TV game shows for a shared screen and a room of phones, built as a pinball cabinet.
+description: TV game shows for a shared screen and a room of phones, set on a split-flap departure board.
 colors:
-  cabinet: "#120a22"
-  cabinet-deep: "#08040f"
-  panel: "#170d2b"
-  panel-raised: "#22143d"
-  field: "#0f0820"
-  line: "rgb(214 196 255 / 0.14)"
-  line-strong: "rgb(214 196 255 / 0.3)"
-  text: "#f7f1ff"
-  text-muted: "#b9abd6"
-  chrome-hi: "#f4f6fa"
-  chrome: "#c4cad4"
-  chrome-lo: "#6d7380"
-  chrome-dark: "#343844"
-  art-magenta: "#ff2f8e"
-  art-violet: "#7a1fd0"
-  art-night: "#1a0b3d"
-  dmd: "#ff8a24"
-  dmd-dim: "rgb(255 138 36 / 0.16)"
-  dmd-bg: "#140800"
-  dmd-hurry: "#ff5a3c"
-  gold: "#ffd23f"
-  on-gold: "#1f1300"
-  jeopardy-art: "#1d3bd6"
-  jeopardy-cell: "#0b1f8c"
-  jeopardy-cell-hover: "#1430a8"
-  jeopardy-board: "#020722"
-  survey-lamp: "#ff8a3d"
-  on-survey-lamp: "#2a1205"
-  survey-art: "#c2410c"
-  wheel-lamp: "#ff4fa3"
-  on-wheel-lamp: "#2a0718"
-  wheel-art: "#b0177a"
-  fib-lamp: "#3ddc97"
-  on-fib-lamp: "#04261a"
-  fib-art: "#0e7a55"
-  price-lamp: "#46b6ff"
-  on-price-lamp: "#031a2e"
-  price-art: "#0b4f9e"
-  tongue-lamp: "#b8f04a"
-  on-tongue-lamp: "#1a2600"
-  tongue-art: "#4d7a00"
-  green: "#17a35f"
-  green-text: "#6ff0b0"
-  red: "#e0303e"
-  red-text: "#ff9aa2"
-  card-paper: "#f4ecd9"
-  card-ink: "#22132f"
+  board: "#16171a"
+  flap-face: "#222327"
+  flap-face-lo: "#1d1e21"
+  flap-gap: "#0b0b0d"
+  well: "#0e0f11"
+  frame-hi: "#9da1a8"
+  frame-lo: "#6f737a"
+  steel-hi: "#a7aaaf"
+  steel: "#8b8f96"
+  steel-mid: "#5b5e63"
+  steel-lo: "#2a2d31"
+  rule: "#303237"
+  rule-strong: "#45484e"
+  paint: "#f2f2ee"
+  paint-dim: "#6b6e75"
+  lamp-house: "#e8a23a"
+  on-lamp-house: "#1a1205"
+  lamp-jeopardy: "#e2b54a"
+  on-lamp-jeopardy: "#1c1405"
+  lamp-survey: "#e08a3c"
+  on-lamp-survey: "#1f1004"
+  lamp-wheel: "#d4699d"
+  on-lamp-wheel: "#22070f"
+  lamp-fib: "#5fc9a0"
+  on-lamp-fib: "#04201a"
+  lamp-price: "#63ade0"
+  on-lamp-price: "#041827"
+  lamp-tongue: "#a9c94d"
+  on-lamp-tongue: "#172005"
+  lamp-budget: "#a993e3"
+  on-lamp-budget: "#170c2e"
+  show-blue: "#1b2a7a"
+  show-blue-lo: "#172468"
+  show-blue-used: "#0f1641"
+  tile-face: "#e9e8e2"
+  tile-face-lo: "#dcdbd4"
+  tile-ink: "#131417"
+  team-1: "#74a9d8"
+  team-2: "#93c48b"
+  contestant-3: "#d6bf72"
+  contestant-4: "#b3a2dc"
+  contestant-5: "#6cc3bd"
+  contestant-6: "#c9a68a"
+  number-ink: "#0d0e10"
+  red: "#c6463c"
+  red-text: "#ee7a6f"
 typography:
   display:
-    fontFamily: "Archivo Black, Arial Black, sans-serif"
-    fontSize: "clamp(2.5rem, 9vw, 7rem)"
-    fontWeight: 400
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "clamp(2.4rem, 6.4vw, 5.6rem)"
+    fontWeight: 600
     lineHeight: 1
-    letterSpacing: "-0.01em"
+    letterSpacing: "0"
+  flap:
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "1em"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0"
   headline:
-    fontFamily: "Archivo Black, Arial Black, sans-serif"
-    fontSize: "clamp(2rem, 4.6vw, 4.4rem)"
-    fontWeight: 400
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "clamp(2rem, 4.4vw, 4.1rem)"
+    fontWeight: 600
     lineHeight: 1.14
-    letterSpacing: "-0.015em"
+    letterSpacing: "0.02em"
   title:
-    fontFamily: "Archivo Black, Arial Black, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 400
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "2rem"
+    fontWeight: 600
     lineHeight: 1.1
-    letterSpacing: "-0.01em"
+    letterSpacing: "0.04em"
   body:
-    fontFamily: "DM Sans, system-ui, sans-serif"
-    fontSize: "1rem"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "1.06rem"
     fontWeight: 400
     lineHeight: 1.45
+  input:
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "1.06rem"
+    fontWeight: 500
+    lineHeight: 1.3
   label:
-    fontFamily: "DM Sans, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 700
-  dmd:
-    fontFamily: "Doto, ui-monospace, monospace"
-    fontSize: "1.5rem"
-    fontWeight: 800
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "0.82rem"
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "0"
-    fontFeature: "\"tnum\""
+    letterSpacing: "0.2em"
+  key:
+    fontFamily: "Barlow Condensed, Arial Narrow, sans-serif"
+    fontSize: "1.05rem"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "0.14em"
 rounded:
-  cell: "4px"
-  dmd: "6px"
-  sm: "10px"
-  md: "14px"
-  card: "18px"
-  lamp: "999px"
+  flap: "0.06em"
+  cell: "2px"
+  sm: "3px"
+  md: "4px"
+  buzzer: "6px"
 spacing:
-  dot: "0.1em"
-  xs: "6px"
+  row-gap: "6px"
   sm: "10px"
-  md: "14px"
-  lg: "18px"
-  xl: "24px"
-  2xl: "28px"
+  md: "16px"
+  lg: "26px"
+  frame: "clamp(8px, 2.9vmin, 26px)"
 components:
-  button-start:
-    backgroundColor: "{colors.gold}"
-    textColor: "{colors.on-gold}"
-    rounded: "{rounded.lamp}"
-    padding: "0 24px"
-    height: "48px"
-  button-start-disabled:
-    backgroundColor: "{colors.panel-raised}"
-    textColor: "{colors.text-muted}"
-  chip-button:
-    backgroundColor: "{colors.panel-raised}"
-    typography: "{typography.label}"
-    rounded: "{rounded.lamp}"
-    padding: "0 14px"
-    height: "36px"
-  input-field:
-    backgroundColor: "{colors.field}"
-    textColor: "{colors.text}"
+  flap-cell:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.paint}"
+    typography: "{typography.flap}"
+    rounded: "{rounded.flap}"
+    width: "0.74em"
+    height: "1.18em"
+  button-primary:
+    backgroundColor: "{colors.lamp-house}"
+    textColor: "{colors.on-lamp-house}"
+    typography: "{typography.key}"
     rounded: "{rounded.sm}"
-    padding: "10px 13px"
+    padding: "0 30px"
+    height: "50px"
+  button-primary-disabled:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.paint-dim}"
+    rounded: "{rounded.sm}"
+  button-secondary:
+    textColor: "{colors.paint}"
+    rounded: "{rounded.sm}"
+    padding: "0 20px"
     height: "46px"
-  dmd-readout:
-    backgroundColor: "{colors.dmd-bg}"
-    textColor: "{colors.dmd}"
-    typography: "{typography.dmd}"
-    rounded: "{rounded.dmd}"
-    padding: "0.1em 0.3em"
-  code-input:
-    backgroundColor: "{colors.dmd-bg}"
-    textColor: "{colors.dmd}"
-    typography: "{typography.dmd}"
-    padding: "0.2em 0.3em"
-  arrow-insert:
-    backgroundColor: "{colors.panel-raised}"
-    textColor: "{colors.text-muted}"
-    padding: "0 24px 0 20px"
-    height: "40px"
-  arrow-insert-lit:
-    backgroundColor: "{colors.gold}"
-    textColor: "{colors.on-gold}"
-  table-lamp-lens:
-    rounded: "{rounded.lamp}"
-    width: "220px"
-  score-plate:
-    backgroundColor: "{colors.panel}"
-    rounded: "12px"
-    padding: "10px 14px 12px"
-  setup-card:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.card}"
-    padding: "28px"
-  jeopardy-cell:
-    backgroundColor: "{colors.jeopardy-cell}"
-    textColor: "{colors.gold}"
+  button-secondary-hover:
+    backgroundColor: "{colors.flap-face}"
+  choice-cell:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.steel-hi}"
+    rounded: "{rounded.sm}"
+    padding: "0 16px"
+    height: "42px"
+  choice-cell-active:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.lamp-house}"
+  input-field:
+    backgroundColor: "{colors.well}"
+    textColor: "{colors.paint}"
+    typography: "{typography.input}"
+    rounded: "{rounded.sm}"
+    padding: "10px 14px"
+    height: "48px"
+  departure-row:
+    backgroundColor: "{colors.well}"
+    textColor: "{colors.paint}"
     rounded: "{rounded.cell}"
-    padding: "8px"
+    padding: "0 14px"
+    height: "52px"
+  phone-key:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.paint}"
+    rounded: "{rounded.sm}"
+    height: "58px"
+  phone-key-on:
+    backgroundColor: "{colors.lamp-house}"
+    textColor: "{colors.on-lamp-house}"
+  buzzer:
+    backgroundColor: "{colors.flap-face}"
+    textColor: "{colors.paint-dim}"
+    rounded: "{rounded.buzzer}"
+    size: "min(76vw, 300px)"
+  buzzer-ready:
+    backgroundColor: "{colors.lamp-house}"
+    textColor: "{colors.on-lamp-house}"
+  jeopardy-cell:
+    backgroundColor: "{colors.show-blue}"
+    textColor: "{colors.lamp-jeopardy}"
+    rounded: "{rounded.cell}"
 ---
 
 # Design System: Game Night
 
 ## Overview
 
-**Creative North Star: "The Pinball Cabinet"**
+**Creative North Star: "The Concourse Departure Board"**
 
-Game Night is a pinball cabinet. The shared screen is the backglass: airbrushed art glowing down from the top, rays fanning up from below, the whole screen framed in a chrome bezel. Every score, clock, code and verdict sits on an orange dot-matrix display. Choices are lit playfield inserts: arrows and round lenses that are dark when off and lit in the table's colour when on. Each phone carries the cabinet's domed start and flipper buttons. Each game is its own table, with its own lamp colour and its own backglass art, set on the cabinet's black-violet wood.
+Every screen in Game Night is one matte split-flap board in a brushed steel frame, the departure board of a quiet station concourse at night. The shared screen is the board itself: codes, scores, clocks, categories, answers, titles and winners are set on flap cells that clack over, left to right, when they change. Phones are the ticket machine beside it: a small board on top carrying your score, and one big key at a time below. The ground values were taken from the user-chosen first-viewport sketch (`splitflap.html`, the TV lobby) and that is what shipped: a dark charcoal board rather than pure black, with lighter flap faces sitting on it.
 
-The TV and the home hub are where the show happens: chrome lettering, deep glass, lamps that brighten under the cursor. Phones, setup and the host controller are the cabinet's apron: dark glass panels with one obvious lit button at a time. Jeopardy!'s blue-and-gold board and Survey Says!' answer board keep their show looks inside the cabinet's chrome, because each game should still evoke its show.
+The board is quiet so the data can be loud. There is no glow, no chrome bevel, no bolts, no gradients beyond the flap's two halves and the frame's brushed steel. Each game keeps exactly one lamp colour, the way a real board has one row-lamp colour; the house lamp is amber. Big moments are big because flaps get big (the six-cell room code, the winner's name), not because anything shines. Red is held back for strikes, fouls and fails only.
 
-The system rejects flat, rounded party cards on a purple ground. Depth here comes from physical materials (chrome, glass, lenses, plasma dots), not from floating cards.
+The system rejects the pinball cabinet it replaced (chrome lettering, sunburst rays, dot-matrix numbers, neon lamps and glows) and the category default of rounded party cards on purple.
 
 **Key Characteristics:**
-- Black-violet cabinet ground with a violet glow at the top.
-- Chrome trim drawn as a stepped metal ramp, used for bezels and display lettering.
-- One orange dot-matrix display for every score, clock, code and verdict, and nowhere else.
-- Lamp states (off, lit, flashing) that never rely on colour alone.
-- Per-game tables that swap one lamp colour and one art colour.
+- One charcoal board (#16171a) inside a brushed steel frame on every screen.
+- Data rides on split-flap cells; instructions and prose are set type, never flaps.
+- One quiet lamp colour per game, set as `--table` on the game's root; red only for strikes, fouls and fails.
+- State is row state: dim letters, white letters, lamp-coloured status plus a filled marker; never colour alone.
+- Barlow Condensed for flaps and labels, Barlow Semi Condensed for prose, both self-hosted.
 
 ## Colors
 
-A dark cabinet of violet-black glass, lit by one orange plasma display and one lamp colour per table, with chrome around everything that frames.
+A near-black charcoal board with lighter matte flap faces, steel greys for the frame and labels, one warm painted white for letters, and a single lamp colour per game.
 
 ### Primary
-- **Table Lamp Gold** (gold): the default lamp colour and Jeoparty!'s money. Lights the start button, selected tabs and chips, the whose-turn plate, focus rings and the connection banner. On other tables, the table's own lamp colour replaces it through `--table`.
-- **Plasma Orange** (dmd): the dot-matrix display's lit dots. Used only on Doto readouts on their dark grille (dmd-bg), with unlit dots in dmd-dim. When a clock is in its last five seconds it turns Hurry-Up Red (dmd-hurry) and flashes.
+- **House Lamp Amber** (`lamp-house`): the default `--table`. Lights the screen's one main action, the turn marker, the timer's last seconds, ready status cells, selection and the caret. Ink on it is `on-lamp-house`.
+- **Per-Game Lamps** (each game root re-sets `--table` / `--on-table`): Jeoparty Gold (`lamp-jeopardy`), Survey Orange (`lamp-survey`), Spin & Solve Magenta (`lamp-wheel`), Fib Mint (`lamp-fib`), Price Sky (`lamp-price`), Tongue Lime (`lamp-tongue`), Word Budget Lilac (`lamp-budget`), each with its own dark `on-lamp-*` ink. The same classes (`.row--survey` and so on) light the hub's departure rows. Components always read `--table`, never a game's literal hex.
 
 ### Secondary
-- **Chrome** (chrome-hi, chrome, chrome-lo, chrome-dark): solid steps of polished metal. chrome-lo and chrome ring readouts and lenses, chrome-dark is the skirt under domed buttons. The full chrome ramp (a gradient with a hard reflection line just past the middle) paints bezels and the chrome face paints lettering; both live in the sidecar.
+- **Show Blue** (`show-blue` / `show-blue-lo`): the Jeoparty board only, a flap module in two halves of show blue with gold values; a played clue goes to blank `show-blue-used` cells. It is a game-specific module, not a house colour.
+- **Puzzle Tile Pale** (`tile-face` / `tile-face-lo`, ink `tile-ink`): Spin & Solve's puzzle board only, the show's lit-but-blank tile.
 
 ### Tertiary
-- **House Art** (art-magenta, art-violet, art-night): Game Night's own backglass, a magenta burst over violet night. art-magenta is also the text selection colour; art-night is the outline of the chrome lettering.
-- **Table colours**: each game pairs a lamp, the ink on that lamp and an art field. Jeoparty! is gold on Show Blue (jeopardy-art), Survey Says! is survey-lamp on survey-art, Spin & Solve is wheel-lamp on wheel-art, Fib or Fact is fib-lamp on fib-art, Price Check is price-lamp (sky blue) on price-art, and Tip of the Tongue is tongue-lamp (lime) on tongue-art. Survey teams (#ff6b6b, #4cc9f0) and Spin & Solve contestant colours are game-local and stay in their game stylesheets.
-- **Show Blue Board** (jeopardy-cell, jeopardy-cell-hover, jeopardy-board): Jeoparty!'s board, kept from the show. Survey Says! slots and Fib or Fact options use the same blue family.
+- **Team and Contestant Colours** (`team-1` steel blue, `team-2` sage; contestants add `contestant-3` straw, `contestant-4` lavender, `contestant-5` teal, `contestant-6` tan): quiet, desaturated and never red. They appear as a 3px top edge on a team's panel or podium and as the fill of a small number cell (ink `number-ink`). A team or contestant is always also carried by its number and name.
 
 ### Neutral
-- **Cabinet** (cabinet, cabinet-deep): the page ground, a vertical fade from cabinet to cabinet-deep under a violet glow at the top.
-- **Glass** (panel, panel-raised, field): panel for cards and plates, panel-raised for pills, unlit buttons and list rows, field for inputs and inset wells.
-- **Lines** (line, line-strong): hairlines in a lilac tint. line-strong outlines inputs and chips.
-- **Text** (text, text-muted): near-white lilac and a muted lavender for secondary copy.
-- **Instruction Card** (card-paper, card-ink): the printed card on the apron, the only light surface in the system.
-- **Verdicts** (green, green-text, red, red-text): green and red fill buttons and marks; their -text tints carry the words.
+- **Board Charcoal** (`board`): the ground of every screen and dialog.
+- **Flap Face** (`flap-face`, lower half `flap-face-lo`): the two matte halves of every flap cell, and the fill of choice cells, phone keys, status cards and disabled main actions.
+- **Flap Gap** (`flap-gap`): the hairline across the middle of every flap where the halves meet, the board's 1px outer edge, and the dark ground behind flap modules (Jeoparty board, editor grid). It is a hairline and gap colour, not the cell colour.
+- **Well** (`well`): recessed rows and fields: departure rows, hub rows, inputs, team panels, host tools.
+- **Steel Frame** (`frame-hi` to `frame-lo`): the body background, a top-to-bottom gradient with a faint brushed line texture, visible as the frame around the board.
+- **Steel Greys** (`steel-hi`, `steel`, `steel-mid`, `steel-lo`): secondary text, labels, hollow markers and outlines, and the 5px ring around flap modules.
+- **Rules** (`rule`, `rule-strong`): 2px dividers between board sections; 1px field and hover borders.
+- **Paint White** (`paint`): letters on flaps and primary text; also the QR card's ground.
+- **Dim Paint** (`paint-dim`): waiting, away, empty and disabled letters.
+
+### Red
+- **Strike Red** (`red`) and **Red Text** (`red-text`): strikes, fouls, fails, over-budget, Bankrupt, wrong verdicts, danger keys and the incorrect flash. Red always comes with a mark (an X cell, a strike count, a struck-through response), never as colour alone.
 
 ### Named Rules
-**The One Display Rule.** Plasma orange on a dot grille means "the machine is telling you something": a score, clock, code, round or verdict. Never use Doto or dmd orange for body text, headings or buttons. The one exception is the JOIN lamp, which closes the join strip's code display.
+**The One Lamp Rule.** A game has one lamp colour, set once as `--table` on its root. Everything lit on that game's screens uses `var(--table)`; a second accent is a defect.
 
-**The Table Swap Rule.** A game recolours the cabinet only through `--table`, `--on-table` and `--table-art` on its root. Components read those variables. They never hard-code a game's colour.
+**The Red Is Bad News Rule.** Red appears only for strikes, fouls, fails and destructive actions. Teams, contestants and lamps are never red.
+
+**The Charcoal Not Black Rule.** The board is `board` charcoal and flap faces are lighter than the board. `flap-gap` black is reserved for hairlines, edges and gaps; it is never the fill of a cell.
 
 ## Typography
 
-**Display Font:** Archivo Black (with Arial Black, sans-serif)
-**Body Font:** DM Sans (with system-ui, sans-serif)
-**Label/Mono Font:** Doto 800 (with ui-monospace, monospace), the dot-matrix
+**Flap and Label Font:** Barlow Condensed 500 / 600 / 700 (with Arial Narrow, sans-serif)
+**Body Font:** Barlow Semi Condensed 400 / 500 / 600 (with Arial Narrow, sans-serif)
 
-**Character:** Archivo Black is the backglass's heavy chrome lettering. DM Sans is the cabinet's printed small type. Doto is the plasma display, uppercase and tabular.
+Both are self-hosted through `@fontsource` packages imported in `src/main.jsx`; no font loads from a CDN.
+
+**Character:** a condensed grotesk in tracked capitals, like the painted letters on a station board, paired with its semi-condensed sibling for anything that is read rather than glanced at.
 
 ### Hierarchy
-- **Display** (Archivo Black, clamp(2.5rem, 9vw, 7rem), 1): the GAME NIGHT title and game brands, always as chrome lettering. Brand lockups in setup and display bars run 1.35rem to 2.6rem.
-- **Headline** (Archivo Black, clamp(2rem, 4.6vw, 4.4rem), 1.14, -0.015em): the clue on the TV, Survey questions, Fib clues, balanced wrapping.
-- **Title** (Archivo Black, 1.5rem, -0.01em): round titles (in the table colour), setup and join headings, confirm dialogs.
-- **Body** (DM Sans 400–500, 1rem, 1.45): instructions, hints, status cards. The tagline stays under 46ch.
-- **Label** (DM Sans 700, 0.875rem): field labels, chips, tabs, player names. Buttons use 700–800.
-- **DMD** (Doto 800, uppercase, line-height 1.2, tabular numbers): readouts from 1rem (code chip) to clamp(3.6rem, 9vw, 6rem) (lobby code).
+- **Display** (600, up to clamp(2.4rem, 6.4vw, 5.6rem), on flaps): the winner's name, the hub title, the six-cell room code (clamp(64px, 15vh, 138px)). Big moments are big flaps.
+- **Flap** (600, 1em, line-height 1, uppercase, no tracking): the type on every cell. Its size comes from wherever the flap sits, because a cell is sized in em (0.74em by 1.18em).
+- **Headline** (600, clamp(2rem, 4.4vw, 4.1rem), 1.14, 0.02em, uppercase, balanced, max 26ch): a clue or question on the TV, set type.
+- **Title** (600, 1.7rem to 2rem, 1.1, 0.04em, uppercase): setup, join and controller headings.
+- **Body** (Semi Condensed 400, about 1.06rem, 1.45, max about 68ch): instructions, how-to-play, hints and notes, in steel-hi or paint.
+- **Label** (600, 0.82rem, 0.2em tracking, uppercase, steel): board legends beside a datum (Bank, Clock, Total, Words left), column heads of departure rows, field labels.
+- **Key** (700, about 1.05rem, 0.12 to 0.16em, uppercase): the text on main actions, phone keys and the buzzer.
 
 ### Named Rules
-**The Whole-Dot Rule.** Doto draws on a 0.1em dot grid. Each glyph's dot centres sit half a pitch in from the pen origin and the baseline, with an ascent of 0.95em and a descent of 0.25em. So every readout sets its grille to `background-size: 0.1em 0.1em` at `background-position: 0 0.05em`, uses `line-height: 1.2` and `letter-spacing` in 0.1em steps, pads in 0.1em steps (0.1em 0.3em is standard) and shrink-wraps its box (`inline-block` or `width: fit-content`). Lit dots then land exactly on grille dots. Never centre-stretch a readout or pad it in px.
+**The Flaps Carry Data Rule.** Codes, scores, clocks, answers, titles and names-in-lights go on flap cells. Instructions, prose and clue text are set type, never flaps.
 
-**The Chrome Lettering Rule.** Display type that names the show or a table is chrome: the chrome face clipped into the letters, a 1px art-night stroke, stacked 1px drop steps (#9aa1ad, #5c6270, #2a2e38) for the bevelled edge and a soft shadow underneath, skewed -6° to -7°. Per-game brands swap the face for one built from the table colour.
+**The Tracked Capitals Rule.** Barlow Condensed is always uppercase; tracking widens as size drops (0 on flaps, 0.02 to 0.06em on headings and row names, 0.1 to 0.24em on labels and keys). Barlow Semi Condensed stays in sentence case.
 
 ## Layout
 
-Each surface has its own column. The hub is up to 1240px wide, setup 1180px, the lobby 820px, the host controller 560px and player and join phones 480px. The TV display fills the viewport with 24px 32px 44px padding inside a fixed 10px chrome frame. Spacing steps observed in the build are 6, 10, 14, 18, 24 and 28px. Dot-matrix readouts use their own 0.1em step.
+The steel frame is body padding (`frame`, clamp(8px, 2.9vmin, 26px)); every screen root fills the viewport inside it as one board. Board sections are divided by 2px `rule` lines, not boxes.
 
-The hub's first viewport is the backglass, holding the chrome title, a tagline and four table lamps in a row of four. Below the glass sit the join strip and then the printed instruction card. Below 1020px the lamps become a 2×2 grid. Below 760px they become rows (small lens, name and count, arrow), so the join strip rises close to the top for players.
-
-**The 720p Rule.** On TV screens shorter than 800px, the display tightens. Top padding drops to 14px and score plates become one row (name and score side by side). The lobby QR code and code scale with viewport height (24vh, 11vh). Spin & Solve's podiums turn to single rows and its board steps down a size. A whole board plus its scores must fit at 1280×720 without scrolling.
-
-Below 760px, setup collapses to one column, the Jeopardy board drops to `--cols-small` columns and the display bar wraps the join hint under the brand.
+- **TV display:** a header row (game name on flaps with its lamp, the join corner, the clock) over a 2px rule, the game's stage, and scores along the foot of the board. A bottom rail carries Sound, Back to settings and Host controller as quiet steel labels, with Start game as the one lit cell bottom-centre in the lobby. At heights of 800px and below the display tightens (smaller code and QR, slimmer rows) so a 720p TV fits without scrolling.
+- **Lobby:** the room code on six big flaps with the QR card beside it, then players as departure rows (player, team, status), two columns when the room is full.
+- **Hub:** a departure board of games (lamp, name on flaps, how many play, a Set up cell), the code entry under it, and how-to-play in set type below. On phones the code entry moves to the top.
+- **Phone and join:** a single column, max 480px, centred; a small board on top and one big key at a time. The host controller is max 560px.
+- **Setup:** max 1180px content with the game's name as the header row, settings as set type and choice cells.
+- **Rhythm:** rows stack with a 6px gap (`row-gap`) like board rows; component padding sits at 10 to 16px; section breaks at 22 to 26px. Narrow breakpoints at 760px (and 720px for the TV rail, 1020px for the hub's columns).
 
 ## Elevation & Depth
 
-Depth is physical, not floating. Chrome bezels frame glass. Readouts are recessed: an inner shadow (inset 0 2px 6px at 0.8 black) cut into the panel, then a dark gasket and a chrome-lo ring. Lamps and lenses are lit from inside, with radial gradients that have a hot centre and a darkened rim. Domed buttons sit on a 3px chrome-dark skirt directly below them, so they press down 2px when active. Ambient drop shadows are soft and dark (the cabinet `--shadow`) and appear only under framed objects.
+The board is flat. Depth comes from tone (well below board below flap face), from the flap's two-tone halves and its hairline, and from ring outlines rather than drop shadows.
 
 ### Shadow Vocabulary
-- **Cabinet shadow** (`0 2px 4px rgb(0 0 0 / 0.4), 0 14px 34px rgb(0 0 0 / 0.45)`): under bezels, dialogs and the QR card.
-- **Bezel** (`inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 0 1px #0a0b10` plus the cabinet shadow): chrome-bordered panels such as the setup card and the board.
-- **Readout recess** (`inset 0 2px 6px rgb(0 0 0 / 0.8), 0 0 0 2px #2a2a2e, 0 0 0 3px var(--chrome-lo)`): every framed dot-matrix readout.
-- **Domed button** (`inset 0 2px 0 rgb(255 255 255 / 0.45), inset 0 -4px 0 rgb(0 0 0 / 0.22), 0 3px 0 var(--chrome-dark), 0 6px 14px rgb(0 0 0 / 0.5)`): the start button and lit lamps.
+- **Board edge** (`box-shadow: 0 0 0 1px #0b0b0d, inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 0 1px rgb(255 255 255 / 0.12)`): every screen root, seating the board in the frame.
+- **Flap module ring** (`box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo)`): the Jeoparty board and other modules, a steel band around a `flap-gap` ground.
+- **Key underside** (`box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.22)` on main actions, `inset 0 -6px 0 rgb(0 0 0 / 0.35)` on the buzzer): a pressed-plastic lip; press moves the key down 1 to 3px.
+- **Lit outline** (`box-shadow: inset 0 0 0 2px var(--table)`): the winner's row, the team in control, the hovered Jeoparty cell.
+- **Dialog** (`box-shadow: 0 0 0 1px #0b0b0d, 0 0 0 9px var(--frame-lo), 0 0 0 10px var(--frame-hi), var(--shadow)`): a small board in its own steel frame; the only place `--shadow` is used.
 
 ### Named Rules
-**The Lit-From-Inside Rule.** A lit lamp glows through its lens, with a lighter centre and a darker rim. It does not get a halo around it. At rest, hub lenses sit at brightness 0.86. Hover or focus lights them full and lifts them 4px.
-
-**The Vertical Skirt Rule.** The only hard-edged offsets are vertical steps directly below an object: the skirt of a domed button and the bevel of chrome lettering. They read as metal thickness. Never offset them sideways.
+**The No Glow Rule.** Lamps are flat fills. No outer glow, no blur halo, no neon text-shadow. The only brightness change is the momentary flash on a falling flap (`brightness(1.6)` at the start of the fall).
 
 ## Shapes
 
-The cabinet uses four shapes. Lamps are round: lenses, the buzzer, Survey round lenses and the whose-turn dot. Buttons and chips are domed pills (999px). Glass panels have softly rounded corners (10–18px). The backglass is 30px 30px 12px 12px, wider at the top like a real backglass. Playfield arrow inserts are square-cut and clipped to an arrow point (`clip-path` with a 14px point and a 10px notch). Show boards use tight 4px cells inside a chrome bezel. Chrome borders are drawn as a 6–11px transparent border with the chrome ramp painted into `border-box`.
+Nearly square. Flap cells round by 0.06em; board cells and rows by 2px; buttons and fields by 3px; cards by 4px; the buzzer by 6px. The only circles are lamps (the game's lamp dot in its name and hub row). Row markers are small squares, hollow when off and filled when on, so selection never depends on colour alone; dashed borders mean away, passed or empty.
 
 ## Components
 
+### Flap Cell (signature)
+The board's one moving part (`src/Flap.jsx`). One cell per character, two matte halves (`flap-face` over `flap-face-lo`) with a `flap-gap` hairline at the middle, paint letters, uppercase.
+- **Cascade:** only changed cells flip. Each starts a stagger after its left neighbour (18 to 45ms, 900ms divided by length), runs 1 to 3 drum characters at 55ms each, then lands; each step falls from the hinge in 70ms.
+- **Strip:** a whole-word flap (a destination name) turns over once in 200ms.
+- **Reduced motion:** a single 240ms crossfade, no cascade.
+- **Sound:** a synthesized clack (`playClack` in `src/survey/sounds.js`) only on the TV, through the TV's own mute; phones and setup flip silently.
+- **Modules:** the Jeoparty board (show-blue cells, gold values), the Survey Says! answer board and the Spin & Solve puzzle board (pale tiles) are literal flap modules.
+
+### Brand
+The game's lamp dot followed by its name on flaps; the header row of every board.
+
 ### Buttons
-Domed cabinet buttons, physical and pressable.
-- **Shape:** full pill (999px), min-height 48px. On phones, lobby and join, 54–58px.
-- **Start (primary):** the table lamp colour with the on-table ink, weight 800, on the domed-button shadow.
-- **Hover / Active:** brightness 1.1 on hover. Active presses down 2px and the skirt shrinks to 1px.
-- **Disabled (unlit):** the colour drains to panel-raised glass with a line-strong ring, so "not yet" never reads as a faded "yes".
-- **Secondary:** a 10px-radius outline in line-strong that fills with panel-raised on hover.
-- **Chip button:** a 36px pill on panel-raised. Add is green and subtract or danger is a red-text outline.
-- **Phone wide buttons:** full-width 58px pills. The "on" state is a green dome lit from inside.
-- **Buzzer:** a round dome (290px max) set in a chrome ring stack. Its ready state is red lit from inside.
+- **Shape:** gently squared (3px).
+- **Primary (the one lit cell):** lamp fill with on-lamp ink, Key type, 50px tall, 0 30px padding. Hover brightens 7%; press drops 1px. One per screen.
+- **Disabled:** a dark flap-face cell with dim letters and a rule-strong inset ring, so "not yet" never reads as a faded "yes".
+- **Secondary:** transparent with a 1px steel-mid border, 46px; hover fills flap-face.
+- **Chip button:** 36px, the same outline; `add` takes the lamp, `danger` and `subtract` take red text with a red border.
 
-### Chips
-- **Style:** pills with a line hairline and muted text. Pressed chips fill with gold and gold ink.
-- **Tabs:** pills. The active tab is lit in the table colour with an inset highlight. Randomize uses a dashed edge.
-
-### Cards / Containers
-- **Setup card (the apron):** dark panel glass inside a 6px chrome-ramp border, 18px radius, bezel shadow, 28px padding (20px 16px on mobile).
-- **Score plate:** panel, line-strong hairline, 12px radius, name above a framed DMD score. On the current turn the plate is gold-edged with a 14% gold wash and a filled gold dot before the name. An away player's plate is 0.55 opacity with a dashed edge.
-- **Instruction card:** printed paper (card-paper and card-ink), 6px radius, uppercase Archivo Black headings with a 2px ink rule.
+### Choice Cells
+Tabs, packs, rounds and options: flap-face cells with a square row marker, steel-hi letters. Selected: lamp letters, lamp border, a 9% lamp tint and a filled marker.
 
 ### Inputs / Fields
-- **Style:** field glass, a line-strong 1px border, 10px radius, min-height 46px, 16px text, a dmd caret.
-- **Focus:** the border turns the table colour. Global focus is a 3px gold outline offset 3px.
-- **Code input:** keyed straight into the dot-matrix. Doto at 1.9rem (2.4rem on the hub), 0.3em letter-spacing, a recessed dmd-bg well, and placeholder dots at 0.32 alpha.
+- **Style:** well fill, 1px rule-strong border, 3px radius, 48px tall, Semi Condensed 500.
+- **Focus:** border and a 1px ring in the lamp colour; caret in the lamp colour.
+- **Code entry:** six flap cells with the real input laid over them; a lamp bar marks the next cell.
 
-### Navigation
-- **Back to hub:** muted DM Sans 700 with the drawn arrow. Hover brightens it to text.
-- **Hub tables:** the table lamps (below) are the main navigation.
+### Departure Rows
+Lobby players and hub games as board rows: well fill, 52px tall, each datum on its own flap cells. Ready: white letters, lamp-coloured status cell with a filled marker. Away: dim letters, dashed marker. Open seat: dim letters, hollow marker. Hub rows light their Set up cell in the game's lamp on hover and focus.
 
-### Dot-Matrix Readout (signature)
-Plasma orange Doto on a dmd-bg ground with a 0.1em radial dot grille in dmd-dim, set in the readout recess with a 6px radius. Clocks, scores, codes, round labels, categories and verdicts all use it. A secondary value inside a readout (a clue's dollar value, a round's points) switches to gold. In the last five seconds a clock turns hurry red and flashes in two steps per second. A paused clock dims to 0.45 alpha.
+### Scores
+Along the foot of the board: a tracked name with a square marker, then the score on flaps. Whose turn: lamp name and filled marker. Away: dim letters and a dashed marker. Team panels and podiums carry the team or contestant colour as a 3px top edge and a number cell; the team in control adds the lamp outline.
 
-### Table Lamp (signature)
-The hub's game picker. A round lens up to 220px across, lit from below with a hot centre and a dark bevelled edge, framed by a 4px gasket and chrome rings. It holds the table's drawn glyph (a 48-unit SVG, 3px round stroke). The table name is set over the lens in Archivo Black, with the player count printed on the glass beneath. The Jeopardy! lens uses Show Blue with gold lettering. At rest the lens is dimmed. Hover and focus light it full and lift it 4px.
+### Phone Keys and Buzzer
+Ticket-machine keys: full-width 58px flap-face keys with a steel border and an underside lip; lit keys take the lamp. The buzzer is a big square key (min(76vw, 300px)) inside a well ring and a steel ring; dark with dim letters until live, lamp-lit when ready.
 
-### Playfield Inserts (signature)
-Setup choices are inserts. Arrow inserts (question packs, game length, rounds) are clipped to an arrow shape, in dark violet glass when off and lit with the table colour's radial glow when on. Each holds a 10px lamp ring that is hollow when off and filled when on, so state never rests on colour alone. Because the arrow clip hides any outside outline, keyboard focus is drawn inside it (3px gold, offset -6px, brightness 1.25). Survey round lenses are 60px round lamps: a dark lens with a thin chrome-lo ring when off, and lit with a thick chrome ring when on.
-
-### Join Grille (signature)
-The strip under the backglass: a 7px chrome-ramp border around near-black glass, holding the code input and the JOIN lamp. The lamp is an orange dome lettered in Doto. It stays unlit (dark, with dots at 0.3 alpha) until a code is keyed.
-
-### Show Boards
-The Jeoparty! board is a grid of 4px-radius blue cells (a #1029a3 to jeopardy-cell gradient) inside a 6px chrome bezel on jeopardy-board. Values are Archivo Black in gold with a 2px dark drop. Used cells go dark. The Survey Says! answer board is blue slots on navy inside a gold rule, with a white oval rank and gold points. Revealed slots flip in, and a team's colour shows as a 4px inner edge.
+### Dialogs
+A small board (`board` fill, 2px radius) in its own steel frame over an 80% dark backdrop.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** put every score, clock, code, round label and verdict on a dot-matrix readout, sized and padded in whole 0.1em dots with the grille at `0 0.05em`.
-- **Do** recolour a game only through `--table`, `--on-table` and `--table-art` on its root.
-- **Do** pair every lamp state with a non-colour cue: a hollow versus filled lamp ring, a dashed edge for away or missed, a dot before the active name.
-- **Do** frame anything that is the machine (boards, the setup apron, the join strip, the TV edge) in the chrome ramp painted into a transparent border.
-- **Do** make unlit states dark glass, not faded colour.
-- **Do** draw icons as inline SVG in the table glyphs' stroke (round caps and joins, 2.6–3px on a 24–48 unit box).
-- **Do** keep Jeoparty!'s blue-and-gold board and the Survey answer board in their show looks inside the cabinet's chrome.
-- **Do** compact the TV layout under 800px tall so a full board and its scores fit at 720p.
+- **Do** set every screen on the `board` charcoal inside the steel frame, with flap faces lighter than the board.
+- **Do** put data on flap cells and prose in Barlow Semi Condensed set type.
+- **Do** read the lamp through `var(--table)` / `var(--on-table)` and set each game's pair once on its root.
+- **Do** carry every state with a second cue: filled versus hollow markers, dim versus white letters, number cells for teams, X cells and strike counts for misses.
+- **Do** flip only the cells that change, and collapse the cascade to one 240ms crossfade under reduced motion.
+- **Do** keep the clack on the TV only, behind the TV's mute.
 
 ### Don't:
-- **Don't** use Doto or plasma orange for prose, headings or ordinary buttons.
-- **Don't** fake chrome with a flat grey or a single two-stop gradient. Use the ramp with its reflection line.
-- **Don't** light a lamp or button with an outer halo. Light it from inside its lens. Show-moment flashes (the Survey strike X, the final countdown) are effects, not lamps, and are exempt.
-- **Don't** offset a hard shadow sideways. The only hard steps are vertical skirts and lettering bevels.
-- **Don't** let colour alone carry a state, team, or right versus wrong.
-- **Don't** fall back to flat rounded party cards floating on a purple ground.
+- **Don't** use `flap-gap` (#0b0b0d) as a cell fill; it is the hairline, edge and gap colour.
+- **Don't** use red for anything but strikes, fouls, fails and destructive actions; never for a team, contestant or lamp.
+- **Don't** add glow, chrome lettering, sunburst rays, dot-matrix numbers or neon lamps (the pinball cabinet this replaced).
+- **Don't** use rounded party cards on purple.
+- **Don't** give a game a second accent alongside its lamp.
+- **Don't** set instructions or paragraphs on flaps.
