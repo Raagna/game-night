@@ -150,16 +150,23 @@ function answerFastMoney(game, playerId, response, pass) {
   else { entry.response=text; entry.correct=answersMatch(text,game.fastMoneyClues[index].answer); entry.status='answered'; fm.queue.shift() }
   if(!fm.queue.length) endFastMoneyTurn(game); else emitGame(game)
 }
-function revealThenReturn(game, eventType='reveal', giveLowestControl=false) { clearGameTimers(game); if(giveLowestControl) assignLowestConnected(game); game.buzzerOpen=false; game.reveal=true; game.answerDeadline=null; game.lastEvent={type:eventType,playerId:game.answeringPlayerId,at:Date.now()}; emitGame(game); schedule(game,'reveal',5000,()=>returnToBoard(game)) }
-function timeoutClue(game) { const active=game.activeQuestion; if(active?.dailyDouble) { const player=game.players.get(active.dailyPlayerId); if(player) player.score-=active.dailyWager; revealThenReturn(game,'reveal',true) } else revealThenReturn(game,'reveal',true) }
+// Shows the answer, then goes back to the board. Giving the lowest score the next pick sets who chooses the next clue
+// only: nobody is answering while the answer is up (handing the clue back here let a player who had just missed a
+// Daily Double submit again, and lose the wager again, on every press).
+function revealThenReturn(game, eventType='reveal', giveLowestControl=false) { const answering=game.answeringPlayerId; clearGameTimers(game); clearHolds(game); if(giveLowestControl) assignLowestConnected(game); game.answeringPlayerId=null; game.buzzedPlayer=null; game.buzzerOpen=false; game.reveal=true; game.answerDeadline=null; game.lastEvent={type:eventType,playerId:answering,at:Date.now()}; emitGame(game); schedule(game,'reveal',5000,()=>returnToBoard(game)) }
+// Each player's answer to a clue (or to Final Jeoparty) is scored at most once, however many times a phone sends it
+// or the host taps Correct / Incorrect. Returns true the first time for that player and clue.
+function judgeOnce(game, playerId) { const active=game.activeQuestion; if(!active || !playerId) return false; active.judged ||= []; if(active.judged.includes(playerId)) return false; active.judged.push(playerId); return true }
+const alreadyJudged = (game, playerId) => !!game.activeQuestion?.judged?.includes(playerId)
+function timeoutClue(game) { const active=game.activeQuestion; if(active?.dailyDouble) { const player=game.players.get(active.dailyPlayerId); if(player && active.dailyReady && judgeOnce(game, player.id)) player.score-=active.dailyWager; revealThenReturn(game,'reveal',true) } else revealThenReturn(game,'reveal',true) }
 // Final Jeopardy clock ran out (or everyone locked in). Hostless games score and reveal straight away.
 // With a host, responses are only locked: the host reveals each player's response on the main screen, then the correct answer.
 function revealFinal(game) { clearTimeout((gameTimers.get(game.code)||{}).final); clearHolds(game); game.finalDeadline=null; game.finalTimeUp=true; if(!game.hostless) { emitGame(game); return } for(const [playerId,response] of game.finalResponses){ if(response.scored) continue; const player=game.players.get(playerId); if(player){ player.score+=response.correct ? response.wager : -response.wager; response.scored=true } } game.reveal=true; schedule(game,'finalEnd',15000,()=>afterFinal(game)); emitGame(game) }
 const allFinalResponsesRevealed = (game) => [...game.finalResponses.values()].every((response)=>response.revealed)
 function resumeBuzzersAfterIncorrect(game) { const remaining=game.cluePausedRemaining ?? 45000; game.clueDeadline=Date.now()+remaining; game.cluePausedRemaining=null; game.buzzerOpen=true; game.buzzerOpenedAt=Date.now(); game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; schedule(game,'clue',remaining,()=>timeoutClue(game)) }
-function resolveHostlessAnswer(game, playerId, response) { const player=game.players.get(playerId), active=game.activeQuestion; if(!player || !active || game.answeringPlayerId!==playerId) return; clearTimeout((gameTimers.get(game.code)||{}).answer); clearHolds(game); const value=active.dailyDouble ? active.dailyWager : active.question.value; const correct=answersMatch(response,active.question.answer); game.answeringPlayerId=null; game.answerDeadline=null; game.buzzedPlayer=null; if(correct){ player.score+=value; game.turnPlayerId=playerId; revealThenReturn(game,'correct'); return } player.score-=value; if(!game.incorrectPlayerIds.includes(playerId)) game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; if(active.dailyDouble || game.incorrectPlayerIds.length>=connectedPlayers(game).length) revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } }
+function resolveHostlessAnswer(game, playerId, response) { const player=game.players.get(playerId), active=game.activeQuestion; if(!player || !active || active.final || game.reveal || game.answeringPlayerId!==playerId || !judgeOnce(game, playerId)) return; clearTimeout((gameTimers.get(game.code)||{}).answer); clearHolds(game); const value=active.dailyDouble ? active.dailyWager : active.question.value; const correct=answersMatch(response,active.question.answer); game.answeringPlayerId=null; game.answerDeadline=null; game.buzzedPlayer=null; if(correct){ player.score+=value; game.turnPlayerId=playerId; revealThenReturn(game,'correct'); return } player.score-=value; if(!game.incorrectPlayerIds.includes(playerId)) game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; if(active.dailyDouble || game.incorrectPlayerIds.length>=connectedPlayers(game).length) revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } }
 function openAnswerWindow(game, playerId) { game.buzzedPlayer=playerId; game.answeringPlayerId=playerId; game.buzzerOpen=false; game.cluePausedRemaining=game.clueDeadline ? Math.max(0,game.clueDeadline-Date.now()) : game.cluePausedRemaining; game.clueDeadline=null; game.answerDeadline=Date.now()+10000; clearTimeout((gameTimers.get(game.code)||{}).clue); game.holdCounts=new Map(); emitGame(game); schedule(game,'answer',10000,()=>answerTimedOut(game,playerId)) }
-function answerTimedOut(game, playerId) { if(game.answeringPlayerId!==playerId) return; if(game.hostless) resolveHostlessAnswer(game,playerId,''); else { const p=game.players.get(playerId); if(p&&game.activeQuestion){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) revealThenReturn(game,'reveal',true); else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } } } }
+function answerTimedOut(game, playerId) { if(game.answeringPlayerId!==playerId) return; if(game.hostless) resolveHostlessAnswer(game,playerId,''); else { const p=game.players.get(playerId); if(p&&game.activeQuestion&&!game.reveal&&judgeOnce(game, playerId)){const penalty=game.activeQuestion.dailyDouble ? game.activeQuestion.dailyWager : game.activeQuestion.question.value; p.score-=penalty; if(!game.incorrectPlayerIds.includes(playerId))game.incorrectPlayerIds.push(playerId); game.lastEvent={type:'incorrect',playerId,at:Date.now()}; game.buzzedPlayer=null;game.answeringPlayerId=null;game.answerDeadline=null; if(game.activeQuestion.dailyDouble) revealThenReturn(game,'reveal',true); else if(game.incorrectPlayerIds.length>=connectedPlayers(game).length)revealThenReturn(game,'reveal',true); else { resumeBuzzersAfterIncorrect(game); if(!checkSkip(game)) emitGame(game) } } } }
 // ---------- Confirm-before-submit clock holds ----------
 // The clock being held is the answering player's 10-second window, or the shared Final Jeopardy clock.
 function holdClock(game, playerId) {
@@ -317,9 +324,16 @@ io.on('connection', (socket) => {
     }
     if (action === 'buzzer') { if(game.activeQuestion && !game.reveal && !game.answeringPlayerId && (!payload.open || !game.activeQuestion.dailyDouble || game.activeQuestion.dailyReady)) { game.buzzerOpen = !!payload.open; if (payload.open) { game.buzzedPlayer = null; game.buzzedAtMs=null; game.buzzTimes={}; game.buzzInputDeadline=null; game.buzzerOpenedAt=Date.now(); const remaining=game.cluePausedRemaining ?? 45000; game.clueDeadline=Date.now()+remaining; game.cluePausedRemaining=null; schedule(game,'clue',remaining,()=>timeoutClue(game)) } } }
     if (action === 'score') {
-      const p = game.players.get(payload.playerId); let amount = Number(payload.amount) || 0
-      if (game.activeQuestion?.dailyDouble && game.activeQuestion.dailyWager) amount = Math.sign(amount || 1) * game.activeQuestion.dailyWager
-      if (p) p.score += amount
+      // The host's Correct / Incorrect. It counts once per player per clue (a double tap, or a tap during the reveal, is
+      // ignored), only for the player who is answering (or, in Final Jeoparty, a submitted response once time is up),
+      // and the amount is the clue's value, the locked Daily Double wager or the Final wager, never what the tap sent.
+      const p = game.players.get(payload.playerId), active = game.activeQuestion, sign = Math.sign(Number(payload.amount) || 0)
+      const finalResponse = active?.final ? game.finalResponses.get(payload.playerId) : null
+      const judgeable = p && sign && active && (active.final ? game.status === 'final' && game.finalTimeUp && finalResponse : game.status === 'playing' && !game.reveal && (game.answeringPlayerId === p.id || game.buzzedPlayer === p.id) && (!active.dailyDouble || (active.dailyReady && active.dailyPlayerId === p.id)))
+      if (!judgeable || !judgeOnce(game, p.id)) return emitGame(game)
+      clearTimeout((gameTimers.get(game.code)||{}).answer)
+      const amount = sign * (active.final ? finalResponse.wager : active.dailyDouble ? active.dailyWager : (active.question.value || 1000))
+      p.score += amount
       // A correct regular-clue ruling immediately awards control and returns to the board.
       if (p && amount > 0 && game.status === 'playing' && game.activeQuestion && !game.activeQuestion.final) {
         game.turnPlayerId = p.id; revealThenReturn(game,'correct'); return
@@ -362,28 +376,32 @@ io.on('connection', (socket) => {
     }
     emitGame(game)
   })
+  // A player's events count only from that player's own phone, and only for a clue that's open to them.
+  const own = (game, playerId) => { const player=game?.players.get(playerId); return player?.socketId && player.socketId === socket.id ? player : null }
   socket.on('player:buzz', ({ code, playerId }) => {
-    const game = jGame(code), player=jGame(code)?.players.get(playerId), active=game?.activeQuestion, daily=active?.dailyDouble
-    if (!game || !player?.socketId || game.incorrectPlayerIds.includes(playerId)) return
+    const game = jGame(code), player=own(game, playerId), active=game?.activeQuestion, daily=active?.dailyDouble
+    if (!game || !player || !active || active.final || game.reveal || game.incorrectPlayerIds.includes(playerId) || alreadyJudged(game, playerId)) return
     const reactionTime=Math.max(0,Date.now()-(game.buzzerOpenedAt||Date.now()))
     if (game.buzzedPlayer) { if(!daily && game.buzzInputDeadline && Date.now()<=game.buzzInputDeadline && game.buzzTimes[playerId] == null) { game.buzzTimes[playerId]=reactionTime; emitGame(game) }; return }
     if (!game.buzzerOpen || (daily && (!active.dailyReady || active.dailyPlayerId!==playerId))) return
     game.buzzedAtMs=daily ? null : reactionTime; game.buzzTimes=daily ? {} : { [playerId]: reactionTime }; game.buzzInputDeadline=daily ? null : Date.now()+2000; game.lastEvent={type:'buzz',playerId,at:Date.now()}; openAnswerWindow(game, playerId)
   })
   socket.on('player:dailyWager', ({ code, playerId, wager }) => {
-    const game=jGame(code), active=game?.activeQuestion, player=game?.players.get(playerId)
-    if(!game||!active?.dailyDouble||active.dailyPlayerId!==playerId||active.dailyReady||!player)return
+    const game=jGame(code), active=game?.activeQuestion, player=own(game, playerId)
+    if(!game||!active?.dailyDouble||active.dailyPlayerId!==playerId||active.dailyReady||game.reveal||!player)return
+    // A whole number of dollars from $5 up to the larger of their score and the board's top value; anything else
+    // (text, negative, NaN, Infinity) is clamped into that range.
     const top=Math.max(0, ...game.boards[game.boardIndex].flatMap((category)=>category.questions.map((question)=>question.value)))
-    const max=Math.max(player.score, top, 5); const value=Math.max(5,Math.min(Number(wager)||5,max))
+    const max=Math.max(player.score, top, 5), asked=Math.trunc(Number(wager)); const value=Math.max(5,Math.min(Number.isFinite(asked) ? asked : 5,max))
     active.dailyWager=value; active.dailyReady=true; game.answeringPlayerId=null; game.buzzerOpenedAt=null; game.buzzedAtMs=null; game.clueDeadline=null
     if(game.hostless){ game.preBuzzDeadline=Date.now()+10000; schedule(game,'preBuzz',10000,()=>openHostlessBuzzers(game)) }
     emitGame(game)
   })
   socket.on('player:finalSubmit', ({ code, playerId, wager, response }, ack) => {
-    const game = jGame(code); const player = game?.players.get(playerId)
+    const game = jGame(code); const player = own(game, playerId)
     if (!game || !player || player.score < 1 || game.status !== 'final' || game.finalResponses.has(playerId)) return ack?.({ ok: false, error: 'Final response is not available.' })
     if (game.finalTimeUp || game.reveal) return ack?.({ ok: false, error: 'Time is up. Responses are locked.' })
-    const amount = Math.max(0, Math.min(Number(wager) || 0, Math.max(0, player.score)))
+    const asked = Math.trunc(Number(wager)), amount = Math.max(0, Math.min(Number.isFinite(asked) ? asked : 0, player.score))
     const text = String(response || '').trim().slice(0, 500)
     if (!text) return ack?.({ ok: false, error: 'Enter your response.' })
     releaseClock(game, playerId, true)
@@ -391,23 +409,25 @@ io.on('connection', (socket) => {
     ack?.({ ok: true }); const eligible=connectedPlayers(game).filter((p)=>p.score>=1); if(eligible.length && eligible.every((p)=>game.finalResponses.has(p.id))) revealFinal(game); else emitGame(game)
   })
   socket.on('player:select', ({ code, playerId, categoryIndex, questionIndex }) => {
-    const game=jGame(code); if(!game?.hostless || game.status!=='playing' || game.turnPlayerId!==playerId || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game?.hostless || game.status!=='playing' || game.turnPlayerId!==playerId || !own(game, playerId)) return
     beginClue(game,categoryIndex,questionIndex)
   })
   socket.on('player:holdClock', ({ code, playerId, hold }) => {
-    const game=jGame(code); if(!game || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !own(game, playerId)) return
     if(hold) holdClock(game, playerId); else releaseClock(game, playerId)
   })
   socket.on('player:answer', ({ code, playerId, response }) => {
-    const game=jGame(code); if(!game?.hostless) return
+    const game=jGame(code); if(!game?.hostless || !own(game, playerId)) return
+    // After the answer clock runs out the timer rules on it; a late submit doesn't get in first.
+    if(game.answerDeadline && Date.now() > game.answerDeadline + 250) return
     resolveHostlessAnswer(game,playerId,String(response || '').slice(0,500))
   })
   socket.on('player:fastMoney', ({ code, playerId, response, pass }) => {
-    const game=jGame(code); if(!game || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !own(game, playerId)) return
     answerFastMoney(game, playerId, response, pass)
   })
   socket.on('player:skip', ({ code, playerId }) => {
-    const game=jGame(code); if(!game || !canSkip(game) || !game.players.get(playerId)?.socketId) return
+    const game=jGame(code); if(!game || !canSkip(game) || !own(game, playerId)) return
     game.skipVotes=game.skipVotes.includes(playerId) ? game.skipVotes.filter((id)=>id!==playerId) : [...game.skipVotes, playerId]
     if(!checkSkip(game)) emitGame(game)
   })
