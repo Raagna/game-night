@@ -1111,9 +1111,12 @@ function App() {
       document.removeEventListener("resume", wake);
     };
   }, []);
-  const action = (action, payload = {}) =>
-    // A double tap on a ruling sends it once (the server ignores repeats too); see server/taps.js.
-    !repeatHostTap(hostTaps.current, action, payload, Date.now()) && socket.emit("host:action", { code: game.code, action, payload });
+  const action = (action, payload = {}) => {
+    // A double tap on a ruling sends it once (the server ignores repeats too; see server/taps.js), and each ruling
+    // carries the turn it was meant for, so the server can ignore one sent from an out-of-date screen.
+    if (repeatHostTap(hostTaps.current, action, payload, Date.now())) return;
+    socket.emit("host:action", { code: game.code, action, payload: game.rulingTurn != null ? { ...payload, turn: game.rulingTurn } : payload });
+  };
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   const create = (config, fail) => {
     lastFail.current = fail;

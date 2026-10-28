@@ -97,4 +97,43 @@ describe('on the server', { concurrency: true }, () => {
     assert.equal(host.state.round.lastGuess.result, 'hit')
     assert.equal(host.state.round.faceoff.misses, 0)
   })
+  // The app tags each ruling with the turn on screen (`rulingTurn`), as these do.
+  test('50 Strike taps for the same turn are one strike, even spread over two seconds', async () => {
+    const { host, code } = await faceoff()
+    const turn = host.state.rulingTurn
+    assert.ok(turn, 'the server says which turn a ruling is for')
+    for (let i = 0; i < 25; i++) host.emit('host:action', { code, action: 'strike', payload: { turn } })
+    await sleep(TAP_MS + 300) // past the double-tap window: only the turn tag can stop these
+    for (let i = 0; i < 25; i++) { host.emit('host:action', { code, action: 'strike', payload: { turn } }); await sleep(40) }
+    await sleep(300)
+    assert.equal(host.state.round.faceoff.misses, 1)
+  })
+  test('a ruling for the previous turn is ignored, and one for the current turn counts', async () => {
+    const { host, code, ids } = await faceoff()
+    const before = host.state.rulingTurn
+    host.emit('host:action', { code, action: 'strike', payload: { turn: before } })
+    await until(host, (s) => s.round.faceoff.misses === 1)
+    const now = host.state.rulingTurn
+    assert.notEqual(now, before)
+    await sleep(TAP_MS + 100)
+    host.emit('host:action', { code, action: 'reveal', payload: { index: 0, turn: before } }) // from an out-of-date screen
+    await sleep(300)
+    assert.equal(host.state.round.answers[0].revealed, false, 'nothing revealed')
+    host.emit('host:action', { code, action: 'reveal', payload: { index: 0, turn: now } })
+    await until(host, (s) => s.round.answers[0].revealed)
+    assert.equal(host.state.round.lastGuess.playerId, ids[1], 'credited to Ben, who was answering')
+  })
+  test('Spin & Solve: Skip turn tapped twice skips one player', async () => {
+    const host = await connect()
+    const { code } = await ask(host, 'host:create', { game: 'wheel', hostless: false, puzzles: [{ category: 'Phrase', text: 'Hello world' }] })
+    for (const name of ['Ana', 'Ben', 'Cy']) await ask(await connect(), 'player:join', { code, name })
+    host.emit('host:action', { code, action: 'start' })
+    const first = await until(host, (s) => s.status === 'playing' && s.rulingTurn && s.round?.actorId)
+    for (let i = 0; i < 2; i++) host.emit('host:action', { code, action: 'skipTurn', payload: { turn: first.rulingTurn } })
+    await sleep(TAP_MS + 200)
+    host.emit('host:action', { code, action: 'skipTurn', payload: { turn: first.rulingTurn } }) // stale
+    await sleep(300)
+    assert.notEqual(host.state.round.actorId, first.round.actorId, 'the turn moved on')
+    assert.equal(host.state.round.control, (first.round.control + 1) % 3, 'one skip, not two or three')
+  })
 })

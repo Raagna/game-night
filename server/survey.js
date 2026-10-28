@@ -123,6 +123,16 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     return player
   }
 
+  // The turn a host ruling is meant for. It changes with every ruling and whenever the turn moves on, so a ruling the
+  // controller sent for a turn that's already over (a double tap, or a tap on an out-of-date screen) is ignored.
+  const RULINGS = new Set(['reveal', 'strike', 'buzz', 'choose'])
+  function rulingTurn(game) {
+    const round = game.round
+    if (game.status !== 'playing' || !round) return null
+    const responder = { faceoffAnswer: round.faceoff.answeringId, guessing: round.guesserId, steal: round.stealTeam, choose: round.chooserId }[round.phase] ?? null
+    return JSON.stringify([game.roundIndex, round.phase, responder, round.strikes, round.revealed.filter(Boolean).length, round.faceoff.misses])
+  }
+
   function publicGame(game) {
     const round = game.round, survey = current(game)
     const showAll = !game.hostless || round?.phase === 'roundEnd' || game.status === 'complete'
@@ -431,5 +441,5 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register }
+  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register, RULINGS, rulingTurn }
 }
