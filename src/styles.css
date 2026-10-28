@@ -418,6 +418,8 @@ select { background-color: var(--well); }
 .departures li .flap .flap-cells { gap: 0.06em; }
 .departures li .flap-c { width: 0.68em; }
 .departures.is-many .dep-status .flap { font-size: 0.86em; }
+.departures.is-many li .flap-c { width: 0.62em; }
+.departures.is-many li .flap .flap-cells { gap: 0.04em; }
 .departures .dep-status { color: var(--table); }
 .departures .dep-status::before { content: ""; flex-shrink: 0; width: 0.36em; height: 0.36em; background: var(--table); }
 .departures .dep-status .flap-c { color: var(--table); }

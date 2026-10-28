@@ -258,7 +258,7 @@ function Scoreboard({ game }) {
           <li key={player.id} className={`${player.connected ? "" : "is-away"}${waiting?.includes(player.id) ? " is-done" : ""}`}>
             <span className="fib-sb-name">{player.name}{!player.connected && <small> · reconnecting</small>}</span>
             {waiting && <span className="fib-sb-check" aria-label={waiting.includes(player.id) ? "locked in" : "still going"}>{waiting.includes(player.id) && <CheckIcon />}</span>}
-            {awards[player.id] && <Flap className="pc-gain" text={`+${points(awards[player.id].points)}`} intro />}
+            {awards[player.id] && <span className="pc-gain"><span aria-hidden="true">+</span><Flap text={points(awards[player.id].points)} label={`plus ${points(awards[player.id].points)}`} intro /></span>}
             <Money value={points(player.score)} />
           </li>
         ))}

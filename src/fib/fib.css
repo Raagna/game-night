@@ -39,7 +39,7 @@
 }
 .fib-scoreboard li.is-turn::before { content: ""; flex-shrink: 0; width: 10px; height: 10px; background: var(--table); }
 .fib-scoreboard li.is-turn .fib-sb-name { color: var(--table); }
-.fib-sb-name { flex: 1; min-width: 0; font: 600 1.08rem/1.15 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.fib-sb-name { flex: 1; min-width: 4.5em; font: 600 1.08rem/1.15 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fib-sb-name small { font: 500 0.78rem var(--flap-font); letter-spacing: 0.1em; color: var(--steel); }
 .fib-sb-check { flex-shrink: 0; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 2px; border: 2px solid var(--steel-mid); }
 .fib-sb-check svg { width: 16px; height: 16px; }

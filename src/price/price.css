@@ -127,8 +127,10 @@
 .pc-win { font-size: 1.5rem; }
 .pc-win .flap-c { color: var(--table); }
 .pc-win.is-none { font: 600 1.2rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
-.pc-gain { font-size: 0.95rem; }
-.display .pc-gain { font-size: 1.45rem; }
+.pc-gain { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.12em; font: 700 0.95rem var(--flap-font); color: var(--table); }
+/* On the TV the delta gets its own line under the name, at couch size, so the score keeps its room. */
+.display .fib-scoreboard li:has(.pc-gain) { flex-wrap: wrap; row-gap: 4px; }
+.display .pc-gain { order: 3; flex-basis: 100%; justify-content: flex-end; font-size: 1.45rem; }
 .pc-gain .flap-c { color: var(--table); }
 
 /* In a hosted game, Next round is the one lit cell in the middle of the rail. */
