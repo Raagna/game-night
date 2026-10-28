@@ -141,7 +141,7 @@ export default function Hub() {
           <dl>
             {GAMES.map((game) => (
               <div key={game.id} className={`row--${game.id}`}>
-                <dt>{game.name} <small>{game.tag}</small></dt>
+                <dt>{game.name}</dt>
                 <dd>{game.blurb}</dd>
               </div>
             ))}

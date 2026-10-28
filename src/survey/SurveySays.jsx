@@ -244,7 +244,7 @@ function AnswerBoard({ round, showAll = false, onReveal, disabled }) {
         const inner = (
           <>
             <span className="sv-slot-num"><Flap text={String(i + 1)} /></span>
-            <span className="sv-slot-text"><Flap text={shown ? answer.text : ""} cells={shown ? 0 : 12} wrap={!!shown} label={shown ? answer.text : `Answer ${i + 1}, hidden`} /></span>
+            <span className="sv-slot-text"><Flap text={shown ? answer.text : ""} cells={14} label={shown ? answer.text : `Answer ${i + 1}, hidden`} /></span>
             <span className="sv-slot-points"><Flap text={shown ? String(answer.points) : ""} cells={2} align="right" label={shown ? `${answer.points} points` : ""} /></span>
             {answer.revealed && answer.team != null && <span className="sv-slot-team" aria-label={`found by team ${answer.team + 1}`}>{answer.team + 1}</span>}
           </>
@@ -335,7 +335,7 @@ function FinalCount({ round, serverNow, hidden }) {
 }
 
 // Sound on/off for the TV (remembered in this browser). Until someone clicks the page, browsers keep it silent.
-function SoundToggle() {
+export function SoundToggle() {
   const [muted, toggle, waiting] = useSound();
   return (
     <button className="sv-sound" aria-pressed={!muted} onClick={toggle}>
@@ -405,7 +405,7 @@ function Lobby({ game, onAction }) {
       <LobbyJoin code={game.code} />
       <Departures
         head={["Player", "Team", "Status"]}
-        cols="1fr 0.75fr 0.5fr"
+        cols="1fr 0.75fr 0.62fr"
         rows={game.players.map((player) => ({
           key: player.id,
           state: player.connected ? "ready" : "away",

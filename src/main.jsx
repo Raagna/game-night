@@ -25,7 +25,7 @@ import Hub, { Arrow, BackToHub, CodeEntry } from "./Hub";
 import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
 import { LobbyJoin, JoinCorner, Departures } from "./JoinQR";
-import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd } from "./survey/SurveySays";
+import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd, SoundToggle } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
 import { PriceSetup, PriceDisplay, PricePlayer, PriceController, PriceEnd } from "./price/PriceCheck";
@@ -436,6 +436,7 @@ function Display({ game, host = false, onAction }) {
   }, [game.lastEvent?.at]);
   return (
     <main className="display table-jeopardy">
+      <SoundToggle />
       <header className="display-bar">
         <Brand text="JEOPARTY!" />
         {game.status !== "lobby" && <JoinCorner code={game.code} />}
@@ -954,10 +955,11 @@ function Join({ onJoined, initialError, presetCode = "" }) {
     </main>
   );
 }
-function EndGame({ game, host }) {
+function EndGame({ game, host, display = false }) {
   const ranked=[...game.players].sort((a,b)=>b.score-a.score), top=ranked.slice(0,3), rest=ranked.slice(3);
   return (
     <main className="end table-jeopardy">
+      {display && <SoundToggle />}
       <Brand text="JEOPARTY!" />
       <h1><Flap text={game.players.length ? `${[...game.players].sort((a, b) => b.score - a.score)[0].name} wins!` : "Final standings"} wrap intro /></h1>
       <ol className="podium">{top.map((p,i)=><li className={`place place-${i+1}`} key={p.id}><span className="rank">{i+1}</span><b>{p.name}</b><Flap className="money" text={dollars(p.score)} intro /></li>)}</ol>
@@ -1191,7 +1193,7 @@ function App() {
     return <>{banner}<BudgetPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
-    return <>{banner}<EndGame game={game} host={host || controller} /></>;
+    return <>{banner}<EndGame game={game} host={host || controller} display={host} /></>;
   if (controller) return <>{banner}<Controller game={game} onAction={action} /></>;
   if (host)
     return (

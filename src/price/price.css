@@ -128,6 +128,7 @@
 .pc-win .flap-c { color: var(--table); }
 .pc-win.is-none { font: 600 1.2rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
 .pc-gain { font-size: 0.95rem; }
+.display .pc-gain { font-size: 1.45rem; }
 .pc-gain .flap-c { color: var(--table); }
 
 /* In a hosted game, Next round is the one lit cell in the middle of the rail. */

@@ -92,7 +92,7 @@ export function Departures({ head, rows, openCells, many = 4, cols }) {
       <ol className={"departures" + (isMany ? " is-many" : "")}>
         {all.map((row) => (
           <li key={row.key} className={`is-${row.state}`} aria-label={row.label}>
-            {row.cells.map((cell, i) => (cell?.type === "button" ? <React.Fragment key={i}>{cell}</React.Fragment> : <span key={i} className={i === row.cells.length - 1 ? "dep-status" : undefined}>{cell}</span>))}
+            {row.cells.map((cell, i) => (cell?.type === "button" ? <React.Fragment key={i}>{cell}</React.Fragment> : <span key={i} className={i === row.cells.length - 1 ? "dep-status" : undefined}>{typeof cell === "string" ? <Flap text={cell} /> : cell}</span>))}
           </li>
         ))}
       </ol>

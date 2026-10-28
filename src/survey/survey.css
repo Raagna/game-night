@@ -59,8 +59,8 @@
 /* One slot: rank, answer, points, each on its own flaps. The cells size themselves to the slot's width. */
 .sv-slot { --side: 6.4rem; position: relative; container-type: inline-size; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.4rem; min-height: clamp(48px, 6.8vh, 72px); padding: 4px 8px; font-size: clamp(1.15rem, 1.9vw, 1.7rem); }
 .sv-slot .sv-slot-text { min-width: 0; display: flex; justify-content: flex-start; text-align: left; }
-/* The answer's letters are as big as the slot allows, down to a floor; past that the words wrap onto a second line. */
-.sv-slot .sv-slot-text .flap { font-size: clamp(1.45rem, calc((100cqi - var(--side)) / (var(--n) * 0.72)), 1.9rem); }
+/* Every answer sits on one fixed strip of cells; a long answer gets more, smaller cells so it never wraps. */
+.sv-slot .sv-slot-text .flap { font-size: min(1.9rem, calc((100cqi - var(--side)) / (var(--n) * 0.72))); }
 .sv-slot .sv-slot-text .flap-c { width: 0.64em; }
 .sv-slot .sv-slot-text .flap-cells, .sv-slot .sv-slot-text .flap-w { gap: 0.06em; }
 .sv-slot .sv-slot-text .flap-wrap .flap-cells { gap: 0.1em 0.32em; }
