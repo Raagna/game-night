@@ -191,7 +191,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     }
     event(game, 'round', { roundIndex: game.roundIndex })
     if (first && second) setPhase(game, 'faceoffRead')
-    else if (first || second) { game.round.control = first ? 0 : 1; startGuessing(game) }
+    else if (first || second) { game.round.control = first ? 0 : 1; startGuessing(game, { faceoffHappened: false }) }
     else setPhase(game, 'faceoffRead')
   }
   function nextRound(game) {
@@ -226,11 +226,28 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     event(game, play ? 'play' : 'pass', { team: round.control })
     startGuessing(game)
   }
-  function startGuessing(game) {
+  // As on the show, the team's turns start with the teammate after its face-off player and go round the whole team,
+  // so the face-off player answers last (on a team of one, every time). With no face-off (only one team was here
+  // when the round started), the player picked for it leads off.
+  function startGuessing(game, { faceoffHappened = true } = {}) {
     const round = game.round
     round.strikes = 0
     round.chooserId = null
+    const start = guessStart(game, round.control, round.faceoff.playerIds[round.control], faceoffHappened ? 1 : 0)
+    if (start != null) game.rotation.guess[round.control] = start
     nextGuesser(game)
+  }
+  // Where the team's guessing rotation starts: `step` players on from the face-off player, in team order, skipping
+  // anyone who has dropped out (the face-off player included). Null keeps the rotation as it was.
+  function guessStart(game, team, faceoffId, step) {
+    const roster = [...game.players.values()].filter((player) => player.team === team), members = teamMembers(game, team)
+    const at = roster.findIndex((player) => player.id === faceoffId)
+    if (at < 0 || !members.length) return null
+    for (let i = 0; i < roster.length; i++) {
+      const player = roster[(at + step + i) % roster.length]
+      if (player.socketId) return members.indexOf(player)
+    }
+    return null
   }
   function nextGuesser(game) {
     const round = game.round, player = nextFrom(game, 'guess', round.control)
