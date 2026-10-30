@@ -33,12 +33,17 @@ colors:
   on-lamp-tongue: "#172005"
   lamp-budget: "#a993e3"
   on-lamp-budget: "#170c2e"
+  lamp-herring: "#8fa0ee"
+  on-lamp-herring: "#0b1030"
   show-blue: "#1b2a7a"
   show-blue-lo: "#172468"
   show-blue-used: "#0f1641"
   tile-face: "#e9e8e2"
   tile-face-lo: "#dcdbd4"
   tile-ink: "#131417"
+  case-paper: "#e9e6dc"
+  case-paper-lo: "#dcd8cb"
+  case-ink: "#17181b"
   team-1: "#74a9d8"
   team-2: "#93c48b"
   contestant-3: "#d6bf72"
@@ -202,11 +207,12 @@ A near-black charcoal board with lighter matte flap faces, steel greys for the f
 
 ### Primary
 - **House Lamp Amber** (`lamp-house`): the default `--table`. Lights the screen's one main action, the turn marker, the timer's last seconds, ready status cells, selection and the caret. Ink on it is `on-lamp-house`.
-- **Per-Game Lamps** (each game root re-sets `--table` / `--on-table`): Jeoparty Gold (`lamp-jeopardy`), Survey Orange (`lamp-survey`), Spin & Solve Magenta (`lamp-wheel`), Fib Mint (`lamp-fib`), Price Sky (`lamp-price`), Tongue Lime (`lamp-tongue`), Word Budget Lilac (`lamp-budget`), each with its own dark `on-lamp-*` ink. The same classes (`.row--survey` and so on) light the hub's departure rows. Components always read `--table`, never a game's literal hex.
+- **Per-Game Lamps** (each game root re-sets `--table` / `--on-table`): Jeoparty Gold (`lamp-jeopardy`), Survey Orange (`lamp-survey`), Spin & Solve Magenta (`lamp-wheel`), Fib Mint (`lamp-fib`), Price Sky (`lamp-price`), Tongue Lime (`lamp-tongue`), Word Budget Lilac (`lamp-budget`), Red Herring Moonlight (`lamp-herring`), each with its own dark `on-lamp-*` ink. The same classes (`.row--survey` and so on) light the hub's departure rows. Components always read `--table`, never a game's literal hex.
 
 ### Secondary
 - **Show Blue** (`show-blue` / `show-blue-lo`): the Jeoparty board only, a flap module in two halves of show blue with gold values; a played clue goes to blank `show-blue-used` cells. It is a game-specific module, not a house colour.
 - **Puzzle Tile Pale** (`tile-face` / `tile-face-lo`, ink `tile-ink`): Spin & Solve's puzzle board only, the show's lit-but-blank tile.
+- **Case Paper** (`case-paper` / `case-paper-lo`, ink `case-ink`): Red Herring only. The case-file card: alibi cards, the morning report, pinned clues, the face of the role card and the storyteller's read-aloud script, as a pale card in two halves inside a steel ring. Rubber stamps on it (Deceased in red, Jailed in steel) and a LIED tag are the game's marks for bad news.
 
 ### Tertiary
 - **Team and Contestant Colours** (`team-1` steel blue, `team-2` sage; contestants add `contestant-3` straw, `contestant-4` lavender, `contestant-5` teal, `contestant-6` tan): quiet, desaturated and never red. They appear as a 3px top edge on a team's panel or podium and as the fill of a small number cell (ink `number-ink`). A team or contestant is always also carried by its number and name.
@@ -293,6 +299,9 @@ The board's one moving part (`src/Flap.jsx`). One cell per character, two matte 
 - **Reduced motion:** a single 240ms crossfade, no cascade.
 - **Sound:** a synthesized clack (`playClack` in `src/survey/sounds.js`) only on the TV, through the TV's own mute; phones and setup flip silently.
 - **Modules:** the Jeoparty board (show-blue cells, gold values), the Survey Says! answer board and the Spin & Solve puzzle board (pale tiles) are literal flap modules.
+
+### Pictograms (Red Herring)
+Station-sign pictograms (`src/herring/icons.jsx`) for the rooms, items, marks and roles: single-weight line drawings in `currentColor` on a 48 grid, 2.6 stroke, round caps. They sit beside the fact's name, never instead of it. Big moments draw them in (the chalk outline traces itself on the morning report); under reduced motion they simply appear.
 
 ### Brand
 The game's lamp dot followed by its name on flaps; the header row of every board.

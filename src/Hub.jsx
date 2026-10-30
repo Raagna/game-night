@@ -47,6 +47,12 @@ const GAMES = [
     tag: "Two teams · 4–16 players",
     blurb: "Five words, one budget. Bid down to the fewest clue words you need, then get your team to say all five while the other side counts every word. Blow it and they can steal.",
   },
+  {
+    id: "herring",
+    name: "Red Herring",
+    tag: "5–12 players",
+    blurb: "A body at the manor, and one of the detectives did it. Everyone holds a secret alibi card; the killer has to lie, and the ledger on the TV counts every guest. Investigate, run the lab, and put a suspect on trial.",
+  },
 ];
 
 // The arrow, drawn in the same stroke as the table glyphs.

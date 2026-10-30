@@ -950,6 +950,7 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 .pc, .pc-setup, .row--price { --table: #63ade0; --on-table: #041827; }
 .tt, .tt-setup, .row--tongue { --table: #a9c94d; --on-table: #172005; }
 .wb, .wb-setup, .row--budget { --table: #a993e3; --on-table: #170c2e; }
+.rh, .rh-setup, .row--herring { --table: #8fa0ee; --on-table: #0b1030; }
 
 /* ---------- Game Night hub ---------- */
 .back-to-hub { display: flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 16px; font: 600 0.92rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; color: var(--steel-hi); }

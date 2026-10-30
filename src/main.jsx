@@ -31,6 +31,7 @@ import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/Fi
 import { PriceSetup, PriceDisplay, PricePlayer, PriceController, PriceEnd } from "./price/PriceCheck";
 import { TongueSetup, TongueDisplay, TonguePlayer, TongueController, TongueEnd } from "./tongue/TipOfTheTongue";
 import { BudgetSetup, BudgetDisplay, BudgetPlayer, BudgetController, BudgetEnd } from "./budget/WordBudget";
+import { HerringSetup, HerringDisplay, HerringPlayer, HerringController, HerringEnd } from "./herring/RedHerring";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -950,7 +951,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Survey Says! and Tip of the Tongue 12, and Word Budget 16. You can join after a game starts.</p>
+      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Survey Says!, Tip of the Tongue and Red Herring 12, and Word Budget 16. You can join after a game starts, except in Red Herring, where every guest is dealt in at the start.</p>
       <a className="back-link" href="./"><Arrow back /> Game Night</a>
     </main>
   );
@@ -1009,7 +1010,7 @@ function BackToSettings({ game, place, onClosed }) {
     </>
   );
 }
-const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup };
+const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup };
 
 function App() {
   const params = new URLSearchParams(location.search),
@@ -1191,6 +1192,12 @@ function App() {
     if (controller) return <>{banner}<BudgetController game={game} onAction={action} /></>;
     if (host) return <>{banner}<BudgetDisplay game={game} onAction={action} /></>;
     return <>{banner}<BudgetPlayer game={game} playerId={playerId} /></>;
+  }
+  if (game.kind === "herring") {
+    if (game.status === "complete") return <>{banner}<HerringEnd game={game} host={host || controller} display={host} onAction={action} /></>;
+    if (controller) return <>{banner}<HerringController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<HerringDisplay game={game} onAction={action} /></>;
+    return <>{banner}<HerringPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} display={host} /></>;
