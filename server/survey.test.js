@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { createSurveyGames } from './survey.js'
+import { createSurveyGames, PRACTICE_STEPS, PRACTICE_SURVEY } from './survey.js'
+import { registerTutorial } from './tutorial.js'
 
 // Survey Says! without sockets or real timers: the read-the-question pause runs when a test calls fire().
 function harness() {
@@ -151,5 +152,151 @@ describe('edge cases', () => {
     host(h, game, 'reveal', { index: 0 })
     host(h, game, 'choose', { play: true })
     assert.deepEqual(guessOrder(h, game, 3, { hit: true }), ['b1', 'b2', 'b0'])
+  })
+})
+
+describe('the practice round', () => {
+  // The step the coach shows, as the screens get it (publicGame keeps it in step with the round).
+  const step = (h, game) => { h.api.publicGame(game); return game.tutorial?.step ?? null }
+  // A player's phone: its Survey Says! events, sent on that player's own connection.
+  function phone(h, game, playerId) {
+    const handlers = new Map()
+    h.api.register({ id: game.players.get(playerId).socketId, on: (name, fn) => handlers.set(name, fn) })
+    return (name, payload = {}) => handlers.get(`survey:${name}`)({ code: game.code, playerId, ...payload })
+  }
+  // The skip events as server/index.js wires them, on a connection: the TV's or controller's skip, or a phone's vote.
+  function skipEvents(h, socketId, data = {}) {
+    const handlers = new Map()
+    registerTutorial({ id: socketId, data, on: (name, fn) => handlers.set(name, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+    return { skip: (game) => handlers.get('tutorial:skip')({ code: game.code }), vote: (game, playerId) => handlers.get('tutorial:vote')({ code: game.code, playerId }) }
+  }
+  const practiceGame = (h, config = {}) => newGame(h, TEAMS, { tutorial: true, ...config })
+  // Round one, fresh: the first real question, scores at 0, and each team's first player facing off.
+  function assertRoundOne(h, game) {
+    assert.equal(game.tutorial, null)
+    assert.equal(game.practice, null)
+    assert.equal(game.status, 'playing')
+    assert.equal(game.roundIndex, 0)
+    assert.equal(game.round.phase, 'faceoffRead')
+    assert.equal(game.round.bank, 0)
+    assert.deepEqual(game.teams.map((team) => team.score), [0, 0])
+    assert.deepEqual(game.round.faceoff.playerIds, ['a0', 'b0'])
+    assert.equal(h.api.publicGame(game).round.question, SURVEY.question)
+  }
+
+  test('without the option, the game starts straight into round one', () => {
+    const h = harness(), game = newGame(h, TEAMS)
+    assert.equal(game.tutorial, undefined)
+    assert.equal(h.api.publicGame(game).round.question, SURVEY.question)
+  })
+  test('with it, the game starts on the practice question at the face-off step', () => {
+    const h = harness(), game = practiceGame(h)
+    assert.deepEqual(game.tutorial.steps, PRACTICE_STEPS)
+    assert.equal(step(h, game), 'faceoff')
+    const pub = h.api.publicGame(game)
+    assert.equal(pub.round.question, PRACTICE_SURVEY.question)
+    assert.equal(pub.multiplier, 1)
+    assert.equal(pub.strikesToSteal, 1)
+  })
+  test('without a host: buzz, face-off answers, play, a guess, a strike and a steal, scoring nothing; then round one', () => {
+    const h = harness(), game = practiceGame(h, { hostless: true })
+    const [a0, b0, a1, a2, b1] = ['a0', 'b0', 'a1', 'a2', 'b1'].map((id) => phone(h, game, id))
+    h.fire() // the question has been read
+    assert.equal(step(h, game), 'faceoff')
+    a0('buzz')
+    assert.equal(step(h, game), 'answer')
+    a0('guess', { guess: 'pigs' }) // on the board, but not the top answer: the rival gets a go
+    assert.equal(game.round.faceoff.answeringId, 'b0')
+    assert.equal(step(h, game), 'answer')
+    b0('guess', { guess: 'a dinosaur' })
+    assert.equal(step(h, game), 'choose')
+    assert.equal(game.round.chooserId, 'a0')
+    a0('choose', { play: true })
+    assert.equal(step(h, game), 'guess')
+    assert.equal(game.round.guesserId, 'a1')
+    a1('guess', { guess: 'cows' })
+    assert.equal(step(h, game), 'guess')
+    assert.equal(game.round.bank, 21 + 34)
+    a2('guess', { guess: 'tractor' }) // one strike is enough in practice
+    assert.equal(game.round.strikes, 1)
+    assert.equal(step(h, game), 'steal')
+    assert.equal(game.round.stealTeam, 1)
+    b1('guess', { guess: 'horse' })
+    assert.equal(step(h, game), 'done')
+    assert.equal(game.round.winner, 1)
+    assert.equal(game.round.awarded, 21 + 34 + 14)
+    assert.deepEqual(game.teams.map((team) => team.score), [0, 0], 'nothing scores')
+    h.fire() // the pause after the round
+    assertRoundOne(h, game)
+  })
+  test('in practice, two face-off misses go to the coin toss', () => {
+    const h = harness(), game = practiceGame(h)
+    h.fire()
+    host(h, game, 'buzz', { playerId: 'a0' })
+    host(h, game, 'strike')
+    assert.equal(step(h, game), 'answer')
+    host(h, game, 'strike')
+    assert.equal(step(h, game), 'choose')
+  })
+  test('with a host: the host rules, can’t end the game from the practice, and Next question starts round one', () => {
+    const h = harness(), game = practiceGame(h)
+    h.fire()
+    host(h, game, 'buzz', { playerId: 'b0' })
+    host(h, game, 'reveal', { index: 0 })
+    assert.equal(step(h, game), 'choose')
+    host(h, game, 'choose', { play: false })
+    assert.equal(game.round.control, 0, 'passed to the other team')
+    host(h, game, 'reveal', { index: 1 })
+    host(h, game, 'strike')
+    assert.equal(step(h, game), 'steal')
+    host(h, game, 'strike') // the steal misses: the team in control wins the round, for nothing
+    assert.equal(step(h, game), 'done')
+    assert.equal(game.round.winner, 0)
+    assert.deepEqual(game.teams.map((team) => team.score), [0, 0])
+    host(h, game, 'endGame')
+    assert.equal(game.status, 'playing', 'End game is refused in the practice')
+    assert.ok(game.tutorial)
+    host(h, game, 'nextRound')
+    assertRoundOne(h, game)
+  })
+  test('with a host: only the TV or the host controller can skip, and a second skip does nothing', () => {
+    const h = harness(), game = practiceGame(h)
+    game.hostSocketId = 'tv'
+    host(h, game, 'adjustScore', { team: 0, amount: 50 })
+    h.fire()
+    host(h, game, 'buzz', { playerId: 'a0' })
+    skipEvents(h, 's-a1').skip(game)
+    skipEvents(h, 's-a1').vote(game, 'a1')
+    assert.equal(step(h, game), 'answer', 'a phone can’t skip a hosted practice')
+    skipEvents(h, 'controller', { controllerGame: game.code }).skip(game)
+    assertRoundOne(h, game)
+    const round = game.round
+    skipEvents(h, 'tv').skip(game)
+    assert.equal(game.round, round, 'already in round one')
+  })
+  test('without a host: a strict majority of connected players skips, and only their own phones can vote', () => {
+    const h = harness(), game = practiceGame(h, { hostless: true })
+    host(h, game, 'adjustScore', { team: 1, amount: 30 })
+    game.hostSocketId = 'tv'
+    skipEvents(h, 'tv').skip(game)
+    assert.ok(game.tutorial, 'no host to skip')
+    skipEvents(h, 's-a0').vote(game, 'a1')
+    assert.deepEqual(game.tutorial.votes, [], 'a vote from someone else’s phone')
+    for (const id of ['a0', 'a1', 'b0']) skipEvents(h, `s-${id}`).vote(game, id)
+    assert.ok(game.tutorial, '3 of 6 is not a majority')
+    skipEvents(h, 's-b1').vote(game, 'b1')
+    assertRoundOne(h, game)
+  })
+  test('a replay skips the practice', () => {
+    const h = harness(), game = practiceGame(h)
+    h.fire(); host(h, game, 'buzz', { playerId: 'a0' }); host(h, game, 'reveal', { index: 0 }); host(h, game, 'choose', { play: true })
+    for (let i = 0; i < 7; i++) host(h, game, 'reveal', { index: game.round.revealed.indexOf(false) })
+    assert.equal(step(h, game), 'done', 'the board cleared, so no steal')
+    host(h, game, 'nextRound')
+    host(h, game, 'replay', {})
+    assert.equal(game.status, 'lobby')
+    host(h, game, 'start')
+    assert.equal(game.tutorial, null)
+    assert.equal(h.api.publicGame(game).round.question, SURVEY.question)
   })
 })

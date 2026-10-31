@@ -7,6 +7,7 @@ import SURVEYS from "../surveys.json";
 import { useSound, useEventSounds, playWinnersTune, playTick } from "./sounds";
 import "./survey.css";
 import Flap from "../Flap";
+import { Coach } from "../Tutorial";
 
 // ---------- Picking questions ----------
 const PLAYED_KEY = "gameNight.survey.played.v1";
@@ -115,17 +116,61 @@ function phaseText(game) {
     }
     case "choose":
       return { title: `${teamName(game, round.control)} won the face-off`, detail: `${nameOf(game, round.chooserId)} decides: play or pass?` };
+    // "Up: The Smiths", not "The Smiths is playing": a team name can be singular or plural.
     case "guessing":
-      return { title: `${teamName(game, round.control)} is playing`, detail: `${nameOf(game, round.guesserId)}’s turn to guess` };
+      return { title: `Up: ${teamName(game, round.control)}`, detail: `${nameOf(game, round.guesserId)}’s turn to guess` };
     case "steal":
       return { title: `${teamName(game, round.stealTeam)} can steal!`, detail: `One answer takes all ${points(round.bank)} points` };
     case "roundEnd":
       if (round.winner == null) return { title: "Question skipped", detail: "No points this round" };
+      if (game.tutorial) return { title: `${teamName(game, round.winner)} ${round.winner === round.stealTeam ? "stole" : "won"} the practice round`, detail: `${points(round.awarded)} points in a real round. Practice scores stay at 0.` };
       return { title: `${teamName(game, round.winner)} ${round.winner === round.stealTeam ? "stole" : "won"} ${points(round.awarded)} points`, detail: "" };
     default:
       return { title: "", detail: "" };
   }
 }
+
+// "Round 2 of 5", or "Practice round" before round one.
+const roundLabel = (game) => (game.tutorial ? "Practice round" : `Round ${game.roundIndex + 1} of ${game.roundCount}`);
+
+// ---------- Practice round ----------
+// The coach for the practice round (see docs/tutorial.md): what to do at each step, on the TV, the host controller and
+// the phones. The steps come from the server (PRACTICE_STEPS in server/survey.js), read off the round's phase.
+const facing = (game, me) => game.round?.faceoff.playerIds.includes(me);
+const teamOf = (game, me) => game.players.find((player) => player.id === me)?.team;
+const SURVEY_COACH = {
+  faceoff: {
+    tv: ({ game }) => `Face-off! One player from each team steps up. ${game.hostless ? "When the buzzers light up" : "Once the host has read the question"}, the first to buzz in answers.`,
+    controller: "Read the question out loud. Phones buzz in by themselves; if someone slaps the table instead, tap their name.",
+    phone: ({ game, me, name }) => facing(game, me) ? (game.round.phase === "faceoffRead" ? "You’re in the face-off! Read the question; your buzzer lights up in a moment." : "You’re in the face-off! Buzz in as soon as you think of an answer.") : `${name(game.round.faceoff.playerIds[0])} and ${name(game.round.faceoff.playerIds[1])} face off. Watch the TV.`,
+  },
+  answer: {
+    tv: ({ game }) => `${game.hostless ? "Type" : "Say"} an answer. The number one answer wins control outright; anything else, and the other player gets a chance to beat it.`,
+    controller: "Tap the answer they said, or Strike if it isn’t on the board. The number one answer wins outright; otherwise their rival tries to beat it.",
+    phone: ({ game, me }) => game.round.faceoff.answeringId === me ? (game.hostless ? "Type an answer. The number one answer wins control outright." : "Say your answer out loud. The number one answer wins control outright.") : "A higher answer on the board wins control for that team.",
+  },
+  choose: {
+    tv: ({ game }) => `${teamName(game, game.round.control)} won the face-off. They can play the question, or pass it to the other team.`,
+    controller: "Tap Play or Pass for the team, or let the face-off winner choose on their phone.",
+    phone: ({ game, me }) => game.round.chooserId === me ? "Play means your team guesses the rest of the board. Pass hands it to the other team." : "The face-off winner chooses: play the question, or pass it.",
+  },
+  guess: {
+    tv: ({ game }) => `The team in control takes turns guessing, one player at a time. A wrong answer${game.hostless ? " or running out of time" : ""} is a strike: three strikes and the other team can steal. In practice, one strike is enough.`,
+    controller: "Tap each answer they give, or Strike if it isn’t on the board. In practice, one strike goes to the steal.",
+    phone: ({ game, me }) => game.round.guesserId === me ? (game.hostless ? "Your turn: type an answer you think is on the board." : "Your turn: say an answer out loud.") : teamOf(game, me) === game.round.control ? "Your team is guessing. Help out, but only the player whose turn it is answers." : "The other team is guessing. Think of an answer to steal with!",
+  },
+  steal: {
+    tv: ({ game }) => `That was a strike, so ${teamName(game, game.round.stealTeam)} can steal: one answer on the board takes the whole bank. (A real round takes three strikes.)`,
+    controller: "The stealing team agrees on one answer. Tap it if it’s on the board, or Strike if not.",
+    phone: ({ game, me }) => teamOf(game, me) === game.round.stealTeam ? (game.hostless ? "Steal! Agree on one answer with your team: the first one sent counts." : "Steal! Huddle up and tell the host one answer.") : "The other team gets one answer to steal your bank.",
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! A right steal takes the bank; a miss leaves it with the team in control. ${game.hostless ? "Round one starts in a few seconds." : "The host starts round one."}`,
+    controller: "That’s the practice. Tap Start the game for round one, with the scores at 0.",
+    phone: "That’s the practice! Scores stay at 0. Round one is next.",
+    skip: "Start the game",
+  },
+};
 
 // ---------- Setup ----------
 export function SurveySetup({ onCreate }) {
@@ -135,6 +180,7 @@ export function SurveySetup({ onCreate }) {
     [packsReady, setPacksReady] = useState(packsLoaded),
     [picks, setPicks] = useState(() => pickSurveys(5, [], pack)),
     [hostless, setHostless] = useState(false),
+    [practice, setPractice] = useState(true),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   // Once the packs arrive, deal a fresh set, unless the host has already started swapping questions.
@@ -164,7 +210,7 @@ export function SurveySetup({ onCreate }) {
     setNotice(""); setBusy(true);
     rememberPlayed(picks.map((survey) => survey.id));
     onCreate(
-      { game: "survey", surveys: picks, teamNames: teamNames.map((name, i) => name.trim() || `Team ${i + 1}`), hostless },
+      { game: "survey", surveys: picks, teamNames: teamNames.map((name, i) => name.trim() || `Team ${i + 1}`), hostless, tutorial: practice },
       (error) => { setBusy(false); setNotice(error); },
     );
   };
@@ -247,6 +293,10 @@ export function SurveySetup({ onCreate }) {
           <label className="game-mode">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a host</b><small>Players type their guesses and the game checks them against the survey. Answers have to come fast, like on the show: 8 seconds for a face-off answer, 10 per guess, and 20 for the other team to confer on a steal. With a host, players say answers out loud and the host reveals them from their phone, and can give a stalling player a 3-second count.</small></span>
+          </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>One practice question before round one, with tips on the TV and every phone: the face-off buzz, play or pass, guessing, a strike and a steal. Nothing scores. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
           </label>
         </section>
         <div className="final-row">
@@ -429,7 +479,8 @@ function RoundControls({ game, onAction }) {
     <div className="sv-round-controls">
       <button className="chip-btn" disabled={!game.canUndo} onClick={() => onAction("undo")}>Undo last ruling</button>
       {round.phase !== "roundEnd" && <button className="chip-btn" onClick={() => onAction("skipRound")}>Skip this question</button>}
-      <button className="chip-btn danger" onClick={() => onAction("endGame")}>{last ? "End game" : "End game early"}</button>
+      {/* The practice round is left with its skip control instead. */}
+      {!game.tutorial && <button className="chip-btn danger" onClick={() => onAction("endGame")}>{last ? "End game" : "End game early"}</button>}
     </div>
   );
 }
@@ -482,6 +533,7 @@ export function SurveyDisplay({ game, onAction }) {
         ) : <span />}
         <ClueTimer deadline={timed ? round.deadline : null} serverNow={game.serverNow} />
       </header>
+      <Coach game={game} coach={SURVEY_COACH} place="tv" />
       {game.status === "lobby" || !round ? (
         <Lobby game={game} onAction={onAction} />
       ) : (
@@ -492,7 +544,7 @@ export function SurveyDisplay({ game, onAction }) {
             {/* The scoreboard row over the board: the round, the bank, and the strikes. */}
             <div className="sv-scoreline">
               <p className="sv-round-tag">
-                <span>Round {game.roundIndex + 1} of {game.roundCount}</span>
+                <span>{roundLabel(game)}</span>
                 {MULTIPLIER_NAME[game.multiplier] && <span className="sv-mult-tag">{MULTIPLIER_NAME[game.multiplier]} points</span>}
               </p>
               <div className="sv-bank" aria-label={`${points(round.bank)} points in the bank`}><span className="sv-bank-label">Bank</span><Score value={round.bank} /></div>
@@ -508,10 +560,11 @@ export function SurveyDisplay({ game, onAction }) {
               {detail && <p>{detail}</p>}
               <LastGuess game={game} />
             </div>
-            {round.phase === "roundEnd" && (
+            {/* After the practice question, the coach's button starts round one. */}
+            {round.phase === "roundEnd" && !game.tutorial && (
               <button className="primary sv-next" onClick={() => onAction("nextRound")}>{last ? "See final scores" : "Next question"}</button>
             )}
-            {round.phase === "roundEnd" && game.hostless && <p className="muted">{last ? "Final scores" : "The next question"} will appear in a few seconds.</p>}
+            {round.phase === "roundEnd" && game.hostless && !game.tutorial && <p className="muted">{last ? "Final scores" : "The next question"} will appear in a few seconds.</p>}
           </div>
           <TeamPanel game={game} team={1} />
         </div>
@@ -596,13 +649,13 @@ function PlayerAction({ game, player }) {
     case "guessing":
       if (round.guesserId === me) return game.hostless ? <GuessBox key={`g-${round.answers.filter((a) => a.revealed).length}-${round.strikes}`} game={game} playerId={me} label="Your turn to guess" /> : sayIt;
       if (myTeam === round.control) return status(`${nameOf(game, round.guesserId)} is guessing — help them out!`);
-      return status(`${teamName(game, round.control)} is guessing. Think of a steal answer!`);
+      return status(`Up: ${teamName(game, round.control)}. Think of a steal answer!`);
     case "steal":
       if (myTeam === round.stealTeam)
         return game.hostless
           ? <GuessBox game={game} playerId={me} label="Steal! Agree on one answer — the first one your team sends counts" />
           : status("Steal! Huddle up and tell the host your team’s answer.", true);
-      return status(`${teamName(game, round.stealTeam)} is trying to steal`);
+      return status(`${teamName(game, round.stealTeam)} can steal your bank`);
     case "roundEnd": {
       const { title } = phaseText(game);
       return status(title, round.winner === myTeam);
@@ -643,6 +696,7 @@ export function SurveyPlayer({ game, playerId }) {
         <span className="sv-my-name"><span className="sv-team-num" aria-hidden="true">{player.team + 1}</span>{myTeam.name}</span>
         <Score value={myTeam.score} />
       </div>
+      <Coach game={game} coach={SURVEY_COACH} place="phone" playerId={playerId} />
       {game.status === "lobby" || !round ? (
         <div className="sv-team-pick">
           <p className="player-status">Pick your team, then wait for the game to start.</p>
@@ -657,7 +711,7 @@ export function SurveyPlayer({ game, playerId }) {
         </div>
       ) : (
         <>
-          <p className="player-clue-meta">Round {game.roundIndex + 1} of {game.roundCount}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]} points` : ""}</p>
+          <p className="player-clue-meta">{roundLabel(game)}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]} points` : ""}</p>
           <p className="sv-phone-question">{round.question}</p>
           <div className="sv-phone-meta">
             <span>{round.answers.filter((a) => a.revealed).length} of {round.answers.length} found · bank {points(round.bank)}</span>
@@ -700,7 +754,8 @@ export function SurveyController({ game, onAction }) {
   return (
     <main className="controller survey">
       {header}
-      <p className="player-clue-meta">Round {game.roundIndex + 1} of {game.roundCount}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]} points` : ""} · bank {points(round.bank)}</p>
+      <Coach game={game} coach={SURVEY_COACH} place="controller" />
+      <p className="player-clue-meta">{roundLabel(game)}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]} points` : ""} · bank {points(round.bank)}</p>
       <h1 className="sv-ctrl-question">{round.question}</h1>
       <div className="sv-ctrl-status" role="status"><b>{title}</b>{detail && <span>{detail}</span>}</div>
       {(round.phase === "faceoffRead" || round.phase === "faceoff") && (
@@ -731,7 +786,7 @@ export function SurveyController({ game, onAction }) {
           {round.deadline ? <>Counting down <ClueTimer deadline={round.deadline} serverNow={game.serverNow} /></> : "Time! — give them 3 seconds"}
         </button>
       )}
-      {round.phase === "roundEnd" && <button className="wide on" onClick={() => onAction("nextRound")}>{last ? "See final scores" : "Next question"}</button>}
+      {round.phase === "roundEnd" && !game.tutorial && <button className="wide on" onClick={() => onAction("nextRound")}>{last ? "See final scores" : "Next question"}</button>}
       <RoundControls game={game} onAction={onAction} />
       <section className="controller-players">
         <h2>Teams</h2>
