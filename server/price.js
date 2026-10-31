@@ -14,8 +14,24 @@
 //
 // Hosted and hostless games play the same way on the phones. With a host, the controller sees the real prices
 // and moves the reveals along; without one, the reveals move on by themselves.
+//
+// A game is set in one country (US or Canada): its products and prices come from that country's pack, and every
+// price is shown in that country's dollars. Prices are never converted between the two.
 
-export const PRICE_TIMES = { bidMs: 25000, higherLowerMs: 40000, priciestMs: 15000, priciestRevealMs: 5000, orderMs: 40000, groceryMs: 50000, showcaseMs: 60000, revealMs: 9000, showcaseRevealMs: 14000 }
+// Answer clocks are sized for a phone: reading the products, thinking, then tapping or typing. Higher or Lower
+// has five products to call; the reveals leave time to read who got what before moving on.
+export const PRICE_TIMES = { bidMs: 35000, higherLowerMs: 70000, priciestMs: 20000, priciestRevealMs: 9000, orderMs: 55000, groceryMs: 70000, showcaseMs: 75000, revealMs: 16000, showcaseRevealMs: 20000 }
+export const PRICE_COUNTRIES = {
+  US: { name: 'United States', currency: 'USD', symbol: 'US$', locale: 'en-US' },
+  CA: { name: 'Canada', currency: 'CAD', symbol: 'CA$', locale: 'en-CA' },
+}
+const countryOf = (value) => (Object.hasOwn(PRICE_COUNTRIES, value) ? value : 'US')
+// "US$4.99", "CA$1,299": whole dollars from $100 up, cents below.
+export function formatPrice(cents, country = 'US') {
+  if (cents == null) return ''
+  const { symbol, locale } = PRICE_COUNTRIES[countryOf(country)], whole = cents >= 10000
+  return `${symbol}${(cents / 100).toLocaleString(locale, { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 })}`
+}
 export const POINTS = { bid: 500, exact: 500, higherLower: 100, higherLowerSweep: 200, priciest: 200, order: 100, orderSweep: 200, grocery: 400, showcase: 1500, showcaseBoth: 1500, prediction: 300 }
 // Within this much of your own showcase's price (without going over) wins both showcases.
 export const SHOWCASE_BOTH = 25000
@@ -58,7 +74,7 @@ function cleanConfig(config) {
   const segments = (Array.isArray(config?.segments) ? config.segments : []).slice(0, MAX_SEGMENTS).map(cleanSegment).filter(Boolean)
   if (!segments.length) throw new Error('A game needs at least one round.')
   const showcases = (Array.isArray(config?.showcases) ? config.showcases : []).slice(0, 2).map((bundle) => goodItems(bundle, 4)).filter((bundle) => bundle.length)
-  return { segments, showcases: showcases.length === 2 ? showcases : null, hostless: !!config?.hostless }
+  return { segments, showcases: showcases.length === 2 ? showcases : null, hostless: !!config?.hostless, country: countryOf(config?.country) }
 }
 const total = (items) => items.reduce((sum, item) => sum + item.cents, 0)
 // Closest without going over: the ids whose value is highest but not above the target (ties share it).
@@ -81,7 +97,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
 
   function makeGame(code, rawConfig) {
     const config = cleanConfig(rawConfig)
-    return { kind: 'price', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null }
+    return { kind: 'price', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, country: config.country, players: new Map(), config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null }
   }
   function playerJoined() {}
 
@@ -91,7 +107,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
   function publicRound(game) {
     const round = game.round, reveal = round.phase === 'reveal' || game.status === 'complete'
     const base = { type: round.type, phase: round.phase, deadline: round.deadline, answered: Object.keys(round.answers), awards: reveal ? round.awards : null, results: reveal ? round.results : null }
-    if (round.type === 'bid') return { ...base, item: shown(round.item, reveal), rebids: round.rebids, below: round.below, bids: reveal ? round.answers : null }
+    if (round.type === 'bid') return { ...base, item: shown(round.item, reveal), rebids: round.rebids, below: round.below, overBids: round.overBids, bids: reveal ? round.answers : null }
     if (round.type === 'higherLower') return { ...base, items: round.items.map((item, i) => ({ ...shown(item, reveal), shownCents: round.shownCents[i] })) }
     if (round.type === 'priciest') {
       const setRevealed = round.phase === 'reveal'
@@ -106,7 +122,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
   }
   function publicGame(game) {
     return {
-      kind: 'price', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
+      kind: 'price', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId, country: game.country,
       index: game.index, segmentCount: game.segments.length, hasShowcase: !!game.showcases, segmentTypes: game.segments.map((segment) => segment.type),
       players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId })),
       round: game.round && publicRound(game), serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
@@ -147,7 +163,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     const segment = game.segments[game.index]
     game.round = { type: segment.type, phase: 'answer', deadline: null, answers: {}, awards: null, results: null }
     const round = game.round
-    if (segment.type === 'bid') Object.assign(round, { item: segment.item, rebids: 0, below: null })
+    if (segment.type === 'bid') Object.assign(round, { item: segment.item, rebids: 0, below: null, overBids: null })
     if (segment.type === 'higherLower') {
       // Each wrong price is 15–45% off the real one, randomly above or below.
       round.items = segment.items
@@ -204,7 +220,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     if (round.type === 'bid') {
       const bid = cents(payload.cents)
       if (!(bid > 0)) return { ok: false, error: 'Enter a bid.' }
-      if (round.below != null && bid >= round.below) return { ok: false, error: `Everyone went over last time — bid under $${(round.below / 100).toFixed(2)}.` }
+      if (round.below != null && bid >= round.below) return { ok: false, error: `Everyone went over last time — bid under ${formatPrice(round.below, game.country)}.` }
       round.answers[playerId] = bid
     } else if (round.type === 'higherLower') {
       const calls = (Array.isArray(payload.calls) ? payload.calls : []).slice(0, round.items.length)
@@ -254,6 +270,8 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
       // Everybody over: bid again, lower than the lowest bid so far (a couple of times at most).
       if (bids.length && bids.every(([, bid]) => bid > price) && round.rebids < MAX_REBIDS) {
         round.below = Math.min(...bids.map(([, bid]) => bid))
+        // The bids that went over stay on the TV while everyone bids again.
+        round.overBids = Object.fromEntries(bids)
         round.rebids++
         round.answers = {}
         event(game, 'allOver', { below: round.below })
@@ -336,7 +354,8 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     }
     if (action === 'replay') {
       let config = game.config
-      try { if (payload.segments) config = cleanConfig({ ...payload, hostless: game.hostless }) } catch {}
+      // A replay stays in the game's country: the new products come from the same pack.
+      try { if (payload.segments) config = cleanConfig({ ...payload, hostless: game.hostless, country: game.country }) } catch {}
       clearGameTimers(game)
       Object.assign(game, { status: 'lobby', config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null })
       for (const player of game.players.values()) player.score = 0

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPriceGames, POINTS, SHOWCASE_BOTH, PRICE_TIMES } from './price.js'
+import { createPriceGames, POINTS, SHOWCASE_BOTH, PRICE_TIMES, formatPrice } from './price.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire().
 function harness(randoms = []) {
@@ -73,6 +73,47 @@ test('when everyone goes over, everyone bids again under the lowest bid', () => 
   assert.equal(game.round.below, 350)
   h.act(game, 'p0', { cents: 299 }); h.act(game, 'p1', { cents: 200 })
   assert.deepEqual(game.round.results.winners, ['p0'])
+})
+
+test('the bids that all went over stay on show while everyone bids again', () => {
+  const h = harness(), game = newGame(h, [{ type: 'bid', item: item('a', 3) }], { players: 2 })
+  h.act(game, 'p0', { cents: 500 }); h.act(game, 'p1', { cents: 400 })
+  assert.deepEqual(h.api.publicGame(game).round.overBids, { p0: 500, p1: 400 })
+  assert.equal(h.api.publicGame(game).round.bids, null, 'the new bids stay secret')
+})
+
+test('answer clocks leave time to play on a phone, Higher or Lower most of all', () => {
+  for (const key of ['bidMs', 'priciestMs', 'orderMs', 'groceryMs', 'showcaseMs']) assert.ok(PRICE_TIMES[key] >= 20000, key)
+  assert.ok(PRICE_TIMES.higherLowerMs >= 60000, 'five calls need at least a minute')
+  assert.ok(PRICE_TIMES.revealMs >= 12000, 'time to read who got what')
+  const h = harness(), items = [1, 2, 3, 4, 5].map((n) => item(`h${n}`, n))
+  const game = newGame(h, [{ type: 'higherLower', items }], { players: 2, hostless: true })
+  assert.equal(h.timers.price.ms, PRICE_TIMES.higherLowerMs)
+  const left = game.round.deadline - Date.now()
+  assert.ok(left > PRICE_TIMES.higherLowerMs - 1000 && left <= PRICE_TIMES.higherLowerMs)
+  h.act(game, 'p0', { calls: Array(5).fill('higher') }); h.act(game, 'p1', { calls: Array(5).fill('lower') })
+  assert.equal(h.timers.price.ms, PRICE_TIMES.revealMs)
+})
+
+test('a game is set in the US or Canada, and prices show in that country’s dollars', () => {
+  const h = harness()
+  assert.equal(newGame(h, [{ type: 'bid', item: item('a', 3) }], { start: false }).country, 'US', 'the US by default')
+  assert.equal(newGame(h, [{ type: 'bid', item: item('a', 3) }], { start: false, country: 'XX' }).country, 'US')
+  const game = newGame(h, [{ type: 'bid', item: item('a', 3) }], { players: 2, country: 'CA' })
+  assert.equal(h.api.publicGame(game).country, 'CA')
+  h.act(game, 'p0', { cents: 500 }); h.act(game, 'p1', { cents: 400 })
+  assert.match(h.act(game, 'p0', { cents: 450 }).error, /CA\$4\.00/)
+  h.api.hostAction(game, 'endGame', {})
+  h.api.hostAction(game, 'replay', { segments: [{ type: 'bid', item: item('b', 2) }], showcases: SHOWCASES, country: 'US' })
+  assert.equal(game.country, 'CA', 'a replay stays in the same country')
+  assert.equal(game.segments[0].item.id, 'b')
+})
+
+test('prices are formatted in the game’s dollars', () => {
+  assert.equal(formatPrice(499), 'US$4.99')
+  assert.equal(formatPrice(499, 'CA'), 'CA$4.99')
+  assert.equal(formatPrice(129900, 'CA'), 'CA$1,299')
+  assert.equal(formatPrice(null), '')
 })
 
 test('higher or lower scores each right call, plus a bonus for all five', () => {

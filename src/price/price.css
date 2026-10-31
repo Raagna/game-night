@@ -1,256 +1,734 @@
-/* Price Check — the board with a sky lamp (--table, from styles.css). Products sit on the shelf in a plain light
-   frame with their names in set type; every price (tags, bids, budgets, cart totals, the showcase) is on flaps,
-   blank until the reveal and then clacking in. A winning row gets a lit check cell; anyone over gets a red X. */
+/* Price Check — a bright '70s pricing-game showroom, not the split-flap board the rest of Game Night uses.
+   Candy stripes round the frame, a deep plum stage ringed with chasing marquee bulbs, the name on a lit sign in heavy
+   italic capitals, products on white showroom cards with yellow price tags, and every price that matters (bids,
+   budgets, totals) in a big readout box: sun-yellow figures on a dark display, like a contestant's podium.
+   Right is green with a check, wrong is red with an X, partly right is orange; colour is never the only cue.
+   Everything is scoped to Price Check's own screens (.pc, .pc-setup); the hub keeps the house board. */
+
+/* ---------- Palette ---------- */
+body:has(.pc), body:has(.pc-setup), .pc, .pc-setup {
+  --pc-night: #2c0a2a;
+  --pc-night-2: #43103f;
+  --pc-night-3: #5c1655;
+  --pc-sun: #ffd23a;
+  --pc-sun-lo: #f2b705;
+  --pc-tangerine: #ff8a1e;
+  --pc-pink: #ff5fa8;
+  --pc-hot: #ff2e7e;
+  --pc-berry: #b8125a;
+  --pc-cream: #fff4d8;
+  --pc-cream-lo: #f6e3b6;
+  --pc-ink: #2a0a24;
+  --pc-ink-soft: #6b3a5f;
+  --pc-ok: #138a48;
+  --pc-ok-hi: #4fd98a;
+  --pc-no: #d42a33;
+  --pc-no-hi: #ff8087;
+  --pc-part: #ff8a1e;
+  --pc-bulb: #fff6c2;
+  --pc-sign-font: "Barlow Condensed", "Arial Narrow", sans-serif;
+  /* The house variables, re-lit for the showroom, so shared pieces (host tools, dialogs, the TV rail) match. */
+  --board: var(--pc-night);
+  --well: #1f061d;
+  --flap-face: var(--pc-night-3);
+  --flap-face-lo: #521450;
+  --flap-gap: #14030f;
+  --rule: #6e2a64;
+  --rule-strong: #8f3d82;
+  --paint: var(--pc-cream);
+  --paint-dim: #c79cbd;
+  --steel-hi: #f6d3e9;
+  --steel: #e7b2d4;
+  --steel-mid: #b07aa4;
+  --steel-lo: #3a0d36;
+  --table: var(--pc-sun);
+  --on-table: var(--pc-ink);
+  --red: var(--pc-no);
+  --red-text: var(--pc-no-hi);
+}
+/* The frame: '70s candy stripes in sun, tangerine and pink. */
+body:has(.pc), body:has(.pc-setup) {
+  background: repeating-linear-gradient(135deg, var(--pc-sun) 0 22px, var(--pc-tangerine) 22px 44px, var(--pc-pink) 44px 66px, var(--pc-hot) 66px 88px) fixed;
+  background-color: var(--pc-tangerine);
+}
+.pc, .pc-setup {
+  background: radial-gradient(120% 70% at 50% 0%, var(--pc-night-3) 0%, var(--pc-night) 62%);
+  box-shadow: 0 0 0 4px var(--pc-ink), 0 0 0 9px var(--pc-sun), 0 0 0 12px var(--pc-ink);
+  border-radius: 18px;
+  color: var(--pc-cream);
+}
+.pc ::selection, .pc-setup ::selection { background: var(--pc-sun); color: var(--pc-ink); }
+
+/* ---------- Marquee bulbs ---------- */
+/* Two rings of bulbs a half-step apart, taking turns to light: the chase. It quickens at a reveal. */
+.pc-bulbs { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; }
+.pc-bulbs::before, .pc-bulbs::after {
+  content: ""; position: absolute; inset: 5px; border-radius: 14px;
+  --bulb: radial-gradient(circle, #fffdf0 0 2.5px, var(--pc-bulb) 3.5px, var(--pc-sun) 5px, transparent 6.5px);
+  background:
+    var(--bulb) 0 0 / 28px 14px repeat-x,
+    var(--bulb) 0 100% / 28px 14px repeat-x,
+    var(--bulb) 0 0 / 14px 28px repeat-y,
+    var(--bulb) 100% 0 / 14px 28px repeat-y;
+  filter: drop-shadow(0 0 4px rgb(255 210 58 / 0.85));
+}
+.pc-bulbs::after { background-position: 14px 0, 14px 100%, 0 14px, 100% 14px; opacity: 0.25; filter: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .pc-bulbs::before { animation: pc-chase 1.4s steps(1) infinite; }
+  .pc-bulbs::after { animation: pc-chase 1.4s steps(1) infinite reverse; }
+  .pc.is-reveal .pc-bulbs::before, .pc.is-reveal .pc-bulbs::after { animation-duration: 0.7s; }
+}
+@keyframes pc-chase { 0% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ---------- The sign ---------- */
+.pc-sign {
+  position: relative; z-index: 1; display: inline-grid; place-items: center; justify-self: start;
+  padding: 0.28em 0.55em 0.34em;
+  border-radius: 0.5em;
+  background: linear-gradient(180deg, var(--pc-hot), var(--pc-berry));
+  box-shadow: 0 0 0 0.09em var(--pc-sun), 0 0 0 0.16em var(--pc-ink), 0 0.22em 0 0.16em var(--pc-ink);
+  outline: 0.075em dotted var(--pc-bulb); outline-offset: -0.2em;
+  font-size: clamp(1.5rem, 2.3vw, 2.3rem);
+  transform: rotate(-2deg);
+}
+.pc-sign-text {
+  font: italic 800 1em/0.84 var(--pc-sign-font); letter-spacing: 0.02em; text-transform: uppercase; text-align: center;
+  color: var(--pc-sun);
+  text-shadow: 0.05em 0.05em 0 var(--pc-tangerine), 0.1em 0.1em 0 var(--pc-ink);
+}
+.pc-sign.is-small { font-size: 1.05rem; }
+.pc-setup .pc-sign { font-size: 2rem; margin-bottom: 4px; }
+
+/* ---------- Readouts and price tags ---------- */
+.pc-readout {
+  display: inline-flex; align-items: baseline; gap: 0.1em; white-space: nowrap;
+  font: 800 1em/1 var(--pc-sign-font); font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+}
+.pc-readout small { font-size: 0.5em; font-weight: 700; letter-spacing: 0.04em; }
+.pc-readout.is-hidden b { letter-spacing: 0.06em; opacity: 0.75; }
+/* A big price display: sun figures on the dark box of a contestant's podium. */
+.pc-res-answer .pc-readout, .pc-callout .pc-readout, .pc-showcase dd .pc-readout, .pc-over .pc-readout,
+.pc-hl-truth .pc-readout, .pc-cart-answer .pc-readout, .pc-ctrl-prices .pc-readout, .pc-my-line .pc-readout, .pc-form-label .pc-readout {
+  padding: 0.12em 0.38em 0.1em; border-radius: 0.22em;
+  background: var(--pc-ink); color: var(--pc-sun);
+  box-shadow: inset 0 0 0 2px #000, 0 0 0 2px var(--pc-tangerine);
+}
+/* A hanging price tag: a yellow card with a punched hole on its point. */
+.pc-tag {
+  position: relative; display: inline-flex; align-items: center; margin-top: 8px;
+  padding: 0.16em 0.5em 0.14em 0.95em;
+  background: var(--pc-sun); color: var(--pc-ink);
+  clip-path: polygon(0.55em 0, 100% 0, 100% 100%, 0.55em 100%, 0 50%);
+  font-size: 1.75rem;
+  transform: rotate(-3deg);
+  filter: drop-shadow(0 3px 0 var(--pc-tangerine));
+}
+.pc-tag::before { content: ""; position: absolute; left: 0.42em; top: calc(50% - 0.11em); width: 0.22em; height: 0.22em; border-radius: 50%; background: var(--pc-night); }
+.pc-tag .pc-readout.is-hidden b { opacity: 0.6; }
 
 /* ---------- Products ---------- */
 .pc-product { margin: 0; display: grid; grid-template-rows: auto 1fr; gap: 10px; min-width: 0; text-align: center; }
 .pc-photo {
-  display: grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 250px; min-width: 0; justify-self: center; overflow: hidden;
-  padding: 8px; border-radius: 2px; background: var(--paint);
-  box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--steel-lo);
-  transition: box-shadow 200ms ease-out;
+  display: grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 240px; min-width: 0; justify-self: center; overflow: hidden;
+  padding: 10px; border-radius: 16px; background: #fff;
+  box-shadow: 0 0 0 4px var(--pc-sun), 0 8px 0 4px var(--pc-tangerine);
 }
 .pc-photo img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
-.pc-photo span { font: 600 2.4rem var(--flap-font); color: var(--steel); }
-.pc-product figcaption { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
-.pc-brandname { font: 600 0.82rem/1.2 var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); overflow-wrap: anywhere; }
-.pc-name { font: 600 1.35rem/1.2 var(--set); text-wrap: balance; overflow-wrap: anywhere; }
-.pc-size { font: 500 0.95rem/1.2 var(--set); color: var(--steel-hi); }
-.pc-tag { margin-top: 6px; font-size: 1.6rem; }
-.pc-tag .flap-c { color: var(--table); }
-.pc-hl-shelf .pc-tag .flap-c { color: var(--paint); }
-.pc-tag.is-blank .flap-c { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
-.pc-product.is-small .pc-photo { max-width: 170px; padding: 6px; }
+.pc-photo > span { font: 800 2.4rem var(--pc-sign-font); color: var(--pc-ink-soft); }
+.pc-product figcaption { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding-top: 4px; }
+.pc-brandname { font: 700 0.85rem/1.2 var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--pc-pink); overflow-wrap: anywhere; }
+.pc-name { font: 600 1.3rem/1.2 var(--set); text-wrap: balance; overflow-wrap: anywhere; color: var(--pc-cream); }
+.pc-size { font: 500 0.95rem/1.2 var(--set); color: var(--steel); }
+.pc-product.is-small .pc-photo { max-width: 160px; padding: 7px; border-radius: 12px; }
 .pc-product.is-small .pc-name { font-size: 1.05rem; }
-.pc-product.is-small .pc-tag { font-size: 1.4rem; }
+.pc-product.is-small .pc-tag { font-size: 1.45rem; }
+.pc-thumb { position: relative; flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 3px; border-radius: 8px; background: #fff; box-shadow: 0 0 0 2px var(--pc-sun); }
+.pc-thumb img { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); object-fit: contain; }
+.pc-thumb > span:not(.pc-mark) { font: 800 1rem var(--pc-sign-font); color: var(--pc-ink-soft); }
+.pc-thumb .pc-mark { position: absolute; right: -7px; bottom: -7px; width: 20px; height: 20px; }
+.pc-thumb .pc-mark svg { width: 12px; height: 12px; }
+.pc-thumb.is-right { box-shadow: 0 0 0 3px var(--pc-ok); }
+.pc-thumb.is-wrong { box-shadow: 0 0 0 3px var(--pc-no); }
 
-/* A result cell: hollow while waiting, a lit check for a winner, red with an X for anyone over. */
-.pc-mark {
-  flex-shrink: 0; display: inline-grid; place-items: center; width: 30px; height: 30px;
-  border-radius: 2px; border: 2px solid var(--steel-mid);
+/* ---------- Marks and stamps ---------- */
+.pc-mark { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid currentColor; }
+.pc-mark svg { width: 15px; height: 15px; }
+.pc-mark.is-right { background: var(--pc-ok); border-color: var(--pc-ok); color: #fff; }
+.pc-mark.is-part { background: var(--pc-part); border-color: var(--pc-part); color: var(--pc-ink); }
+.pc-mark.is-wrong { background: var(--pc-no); border-color: var(--pc-no); color: #fff; }
+.pc-mark.is-miss, .pc-mark.is-none { color: var(--pc-ink-soft); }
+.pc-dash { width: 10px; height: 3px; border-radius: 2px; background: currentColor; }
+.pc-stamp {
+  display: inline-flex; align-items: center; gap: 7px; width: fit-content; min-height: 34px; padding: 3px 12px 3px 4px;
+  border-radius: 999px; font: 800 1.05rem/1 var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
 }
-.pc-mark svg { width: 18px; height: 18px; }
-.pc-mark.is-won { background: var(--table); border-color: var(--table); color: var(--on-table); }
-.pc-mark.is-over { background: var(--red); border-color: var(--red); color: #fff; }
+.pc-stamp.is-right { background: var(--pc-ok); color: #fff; }
+.pc-stamp.is-right .pc-mark { background: #fff; color: var(--pc-ok); border-color: #fff; }
+.pc-stamp.is-part { background: var(--pc-part); color: var(--pc-ink); }
+.pc-stamp.is-part .pc-mark { background: var(--pc-ink); color: var(--pc-part); border-color: var(--pc-ink); }
+.pc-stamp.is-wrong { background: var(--pc-no); color: #fff; }
+.pc-stamp.is-wrong .pc-mark { background: #fff; color: var(--pc-no); border-color: #fff; }
+.pc-stamp.is-miss, .pc-stamp.is-none { background: transparent; color: var(--pc-ink-soft); box-shadow: inset 0 0 0 2px currentColor; }
 
 /* ---------- TV ---------- */
-.pc-round-label { font-size: 1.4rem; }
-.pc-rule { font: 500 clamp(1.15rem, 1.9vw, 1.6rem)/1.3 var(--set); color: var(--steel-hi); text-wrap: balance; max-width: 56ch; }
-.pc-callout { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; font-size: 1.6rem; }
-.pc-callout .label { font-size: 0.95rem; color: var(--steel-hi); }
-.pc-callout.is-over .label { color: var(--red-text); }
-.pc-callout.is-over .flap-c { color: var(--red-text); }
+.display.pc { position: relative; padding: 26px 36px 84px; isolation: isolate; }
+.pc-tv-bar {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 22px;
+  margin-bottom: 18px; padding: 4px 6px 16px;
+  border-bottom: 4px solid var(--pc-sun);
+  box-shadow: 0 6px 0 var(--pc-tangerine), 0 10px 0 var(--pc-hot);
+}
+.pc-round-banner { display: grid; justify-items: center; gap: 4px; min-width: 0; }
+.pc-round-num { padding: 4px 16px 3px; border-radius: 999px; background: var(--pc-tangerine); color: var(--pc-ink); font: 800 0.95rem/1.1 var(--pc-sign-font); letter-spacing: 0.18em; text-transform: uppercase; }
+.pc-round-name {
+  font: italic 800 clamp(2rem, 4vw, 3.6rem)/1 var(--pc-sign-font); letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--pc-sun); text-shadow: 0.05em 0.05em 0 var(--pc-hot), 0.09em 0.09em 0 var(--pc-ink);
+}
+.pc-rule { font: 500 clamp(1.1rem, 1.7vw, 1.45rem)/1.3 var(--set); color: var(--pc-cream); text-wrap: balance; max-width: 56ch; }
+.pc-lobby-title { justify-self: center; font: italic 800 clamp(2rem, 4vw, 3.4rem)/1 var(--pc-sign-font); text-transform: uppercase; color: var(--pc-sun); text-shadow: 0.05em 0.05em 0 var(--pc-hot), 0.09em 0.09em 0 var(--pc-ink); }
 
-.pc-bid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 36px; align-items: center; width: 100%; max-width: 1000px; }
-.pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 270px) minmax(0, 1fr); }
-.pc-bid:not(:has(.pc-bids)) { grid-template-columns: minmax(0, 340px); justify-content: center; }
-.pc-bid .pc-callout { grid-column: 1 / -1; justify-self: center; }
+/* The clock: the seconds in a ring that empties as time runs out; pink for the last ten. */
+.pc-clock {
+  --ring: var(--pc-sun);
+  position: relative; display: grid; place-items: center; flex: none;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: conic-gradient(var(--ring) calc(var(--left) * 360deg), rgb(255 255 255 / 0.14) 0);
+}
+.pc-clock::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--pc-ink); box-shadow: inset 0 0 0 2px #000; }
+.pc-clock b { position: relative; font: 800 2.5rem/1 var(--pc-sign-font); font-variant-numeric: tabular-nums; color: var(--pc-sun); }
+.pc-clock.is-low { --ring: var(--pc-hot); }
+.pc-clock.is-low b { color: var(--pc-pink); }
+@media (prefers-reduced-motion: no-preference) { .pc-clock.is-low b { animation: pc-pulse 1s ease-in-out infinite; } }
+@keyframes pc-pulse { 50% { transform: scale(1.12); } }
 
-.pc-shelf { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1100px; display: grid; gap: clamp(12px, 1.6vw, 24px); }
+.pc-join-corner { display: flex; align-items: center; gap: 10px; text-align: left; }
+.pc-join-corner .qr { width: 70px; border-radius: 6px; box-shadow: 0 0 0 3px var(--pc-sun); }
+.pc-join-corner span { display: grid; gap: 2px; }
+.pc-join-corner small { font: 600 0.85rem var(--set); color: var(--steel-hi); }
+.pc-join-corner b { font: 800 1.6rem/1 var(--pc-sign-font); letter-spacing: 0.12em; color: var(--pc-sun); }
+
+.pc-stage { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 300px); gap: 26px; align-items: start; }
+.pc-center { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; }
+
+.pc-callout {
+  display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px;
+  padding: 6px 18px; border-radius: 999px; background: var(--pc-night-2); box-shadow: inset 0 0 0 2px var(--pc-pink);
+  font: 800 1.35rem/1.1 var(--pc-sign-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--pc-cream);
+}
+.pc-callout .pc-readout { font-size: 1.5em; letter-spacing: 0; }
+.pc-callout.is-over { box-shadow: inset 0 0 0 2px var(--pc-no); color: var(--pc-no-hi); }
+
+/* Closest Bid: the product on its card, then (at the reveal) everyone's bids beside it. */
+.pc-bid { display: grid; grid-template-columns: minmax(0, 360px); justify-content: center; gap: 30px; align-items: center; width: 100%; max-width: 1220px; }
+.pc-bid .pc-photo { max-width: 300px; }
+.pc-bid .pc-tag { font-size: 2.5rem; }
+.pc-bid.is-reveal { grid-template-columns: minmax(0, 280px) minmax(0, 1fr); align-items: start; }
+.pc-bid.is-reveal .pc-photo { max-width: 240px; }
+/* A rebid: the product on the left, everyone's over bids beside it, so the whole thing fits a TV. */
+.pc-bid.is-rebid { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+.pc-bid.is-rebid .pc-photo { max-width: 240px; }
+.pc-bid.is-rebid .pc-over { gap: 18px; }
+.pc-bid.is-rebid .pc-over li { font-size: 1.45rem; padding: 6px 8px 6px 18px; }
+.pc-bid.is-rebid .pc-over li .pc-readout { font-size: 1.6rem; }
+.pc-over { display: grid; justify-items: center; gap: 12px; }
+.pc-over ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 12px; }
+.pc-over li { display: inline-flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px; border-radius: 999px; background: var(--pc-night-2); font: 700 1.15rem var(--pc-sign-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pc-over li .pc-readout { font-size: 1.3rem; box-shadow: inset 0 0 0 2px #000, 0 0 0 2px var(--pc-no); color: var(--pc-no-hi); }
+
+/* Shelves of products. */
+.pc-shelf { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 1180px; display: grid; gap: clamp(14px, 1.8vw, 28px); }
 .pc-shelf.count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 900px; }
 .pc-shelf.count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .pc-shelf.count-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .pc-shelf.count-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.pc-shelf > li { position: relative; transition: opacity 240ms ease-out; }
-/* The priciest of the set: a lamp-coloured frame and its name tag; the other two step back. */
-.pc-shelf > li.is-lit .pc-photo { box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--table); }
-.pc-shelf > li.is-dim { opacity: 0.5; }
-.pc-pickers { display: grid; justify-items: center; gap: 3px; margin-top: 4px; font: 500 0.95rem/1.3 var(--set); color: var(--steel-hi); }
-.pc-pickers b { display: inline-flex; align-items: center; gap: 8px; font: 700 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--table); }
-.pc-pickers b::before { content: ""; width: 9px; height: 9px; background: currentColor; }
-/* Higher or lower: which way the real price went, with an arrow, then the real price on flaps. */
-.pc-verdict { display: grid; justify-items: center; gap: 4px; margin-top: 6px; font-size: 1.4rem; }
-.pc-verdict-call { display: inline-flex; align-items: center; gap: 6px; font: 600 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
-.pc-verdict .pc-arrow { width: 18px; height: 18px; color: var(--paint); }
-.pc-verdict .flap-c { color: var(--table); }
-/* Price order: each spot's number on a lit cell over the photo. */
-.pc-rank { position: absolute; z-index: 1; top: -10px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; }
-.pc-rank .flap-c { background: var(--table); color: var(--on-table); }
-.pc-rank .flap-c::after { background: rgb(0 0 0 / 0.25); }
-.pc-placed { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; }
-.pc-placed li { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 8px 4px 14px; border-radius: 2px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); font-size: 1.35rem; }
-.pc-placed li.is-won { box-shadow: inset 0 0 0 2px var(--table); }
-.pc-placed li.is-won .flap-c { color: var(--table); }
-.pc-placed li.muted { font: 500 1rem var(--set); background: none; }
-.pc-row-name { min-width: 0; font: 600 1.35rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
-.pc-placed .pc-row-name { font-size: 1.1rem; }
-
-/* Bids and cart totals, highest first, as departure rows: result cell, name, the amount on flaps, and the call. */
-.pc-bids { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; width: 100%; max-width: 600px; text-align: left; }
-.pc-bids li {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto 5.6em; align-items: center; gap: 14px;
-  min-height: 58px; padding: 6px 12px; border-radius: 2px;
-  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule);
-  font-size: 1.6rem;
+.pc-shelf > li { position: relative; min-width: 0; transition: opacity 240ms ease-out; }
+.pc-shelf.is-compact .pc-photo { max-width: 120px; }
+.pc-shelf.is-compact .pc-name { font-size: 0.98rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pc-shelf.is-compact .pc-size, .pc-shelf.is-compact .pc-brandname { display: none; }
+.pc-shelf.is-compact .pc-tag { font-size: 1.4rem; }
+.pc-shelf > li.is-lit .pc-photo { box-shadow: 0 0 0 5px var(--pc-ok-hi), 0 8px 0 5px var(--pc-ok); }
+.pc-shelf > li.is-dim { opacity: 0.55; }
+.pc-banner {
+  position: absolute; z-index: 2; top: -12px; left: 50%; transform: translateX(-50%) rotate(-4deg);
+  padding: 3px 12px; border-radius: 6px; background: var(--pc-ok); color: #fff;
+  font: italic 800 1.05rem/1.1 var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  box-shadow: 0 3px 0 var(--pc-ink);
 }
-.pc-bids em { font: 600 0.95rem var(--flap-font); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; text-align: right; color: var(--steel-hi); }
-.pc-bids .is-won { box-shadow: inset 0 0 0 2px var(--table); }
-.pc-bids .is-won em, .pc-bids .is-won .flap-c { color: var(--table); }
-.pc-bids .is-over .pc-row-name, .pc-bids .is-over .flap-c { color: var(--paint-dim); }
-.pc-bids .is-over em { color: var(--red-text); }
-/* Grocery Run's carts sit under a full shelf, so they take two columns. */
-.pc-bids.is-carts { max-width: 1040px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); column-gap: 10px; }
-/* Five or more carts: three across, the result cell alone saying who won and who went over. */
-@media (min-width: 1000px) {
-  .pc-bids.is-carts.is-many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .pc-bids.is-carts.is-many li { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; font-size: 1.3rem; }
-  .pc-bids.is-carts.is-many em { display: none; }
-  .pc-bids.is-carts.is-many .pc-row-name { font-size: 1.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-rank {
+  position: absolute; z-index: 2; top: -12px; left: 50%; transform: translateX(-50%);
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--pc-sun); color: var(--pc-ink); font: 800 1.5rem/1 var(--pc-sign-font);
+  box-shadow: 0 0 0 3px var(--pc-ink), 0 0 0 6px var(--pc-tangerine);
 }
-.pc-bids li.muted { display: block; font: 500 1rem var(--set); background: none; }
 
-/* The showcase: each contestant's bundle on its own board, numbered, with the bids and the real totals on flaps. */
+/* ---------- Who got what ---------- */
+/* One cream card per player: name and answer on top, how close underneath, the round's points big on the right. */
+.pc-results { width: 100%; max-width: 980px; }
+.pc-results ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pc-res {
+  display: grid; align-items: center; column-gap: 14px; row-gap: 2px;
+  grid-template-columns: minmax(0, 1fr) auto auto 4.6em;
+  grid-template-areas: "name answer stamp points" "detail detail detail points";
+  padding: 8px 14px 8px 16px; border-radius: 12px;
+  background: var(--pc-cream); color: var(--pc-ink); text-align: left;
+  box-shadow: inset 8px 0 0 var(--pc-ink-soft), 0 4px 0 rgb(0 0 0 / 0.35);
+}
+.pc-res.is-right { box-shadow: inset 8px 0 0 var(--pc-ok), 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-res.is-part { box-shadow: inset 8px 0 0 var(--pc-part), 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-res.is-wrong { box-shadow: inset 8px 0 0 var(--pc-no), 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-res.is-none { background: var(--pc-cream-lo); }
+.pc-res-name { grid-area: name; min-width: 0; padding-left: 4px; font: 800 1.45rem/1.1 var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-res-answer { grid-area: answer; display: inline-flex; align-items: center; justify-self: end; min-width: 0; font-size: 1.55rem; }
+.pc-res .pc-stamp { grid-area: stamp; min-width: 7.4em; }
+.pc-res-detail { grid-area: detail; padding-left: 4px; font: 600 1.05rem/1.25 var(--set); color: var(--pc-ink-soft); }
+.pc-res-points { grid-area: points; justify-self: end; font: 800 2rem/1 var(--pc-sign-font); font-variant-numeric: tabular-nums; color: var(--pc-berry); }
+.pc-res-points.is-zero { color: var(--pc-ink-soft); opacity: 0.6; }
+.pc-res-none { font: 700 1rem var(--pc-sign-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--pc-ink-soft); }
+.pc-pick { display: inline-flex; align-items: center; gap: 10px; max-width: 18em; font: 600 1.05rem/1.2 var(--set); }
+.pc-pick > span:last-child { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pc-pick-name { font: 800 1.3rem var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.pc-order-answer { display: inline-flex; gap: 10px; padding: 0 6px 6px 0; }
+.pc-cart-answer { display: inline-flex; align-items: center; gap: 12px; }
+.pc-cart-thumbs { display: inline-flex; gap: 4px; }
+.pc-cart-thumbs .pc-thumb { width: 32px; height: 32px; padding: 2px; border-radius: 6px; }
+.pc-cart-count { display: none; font: 700 0.95rem var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pc-ink-soft); white-space: nowrap; }
+.pc-results.is-many .pc-cart-thumbs .pc-thumb { width: 26px; height: 26px; }
+/* Five or more players: two columns, so eight still fit under a shelf. */
+@media (min-width: 1280px) {
+  .pc-results.is-many { max-width: 1240px; }
+  .pc-results.is-many ol { grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .pc-results.is-many .pc-res { grid-template-columns: minmax(6em, 1fr) auto auto 3.6em; column-gap: 10px; }
+  .pc-results.is-many .pc-res-name { font-size: 1.3rem; }
+  .pc-results.is-many .pc-res-answer { font-size: 1.35rem; }
+  .pc-results.is-many .pc-res .pc-stamp { min-width: 6.4em; }
+  .pc-results.is-many .pc-pick { max-width: 12em; font-size: 0.95rem; }
+}
+.pc-bid .pc-results.is-many ol { grid-template-columns: 1fr; }
+@media (min-width: 1700px) { .pc-bid .pc-results.is-many ol { grid-template-columns: 1fr 1fr; } }
+/* Below that, Closest Bid with five or more players keeps one column: one line per player, how close beside the verdict. */
+@media (min-width: 761px) and (max-width: 1699px) {
+  .pc-bid .pc-results.is-many .pc-res { grid-template-columns: minmax(7.5em, 1fr) auto auto minmax(0, 8.5em) 3.4em; grid-template-areas: "name answer stamp detail points"; padding-block: 4px; }
+  .pc-bid .pc-results.is-many .pc-res-detail { font-size: 0.9rem; line-height: 1.15; }
+}
+
+/* Higher or Lower: every call, product by product. */
+.pc-hl-table { --hl-cols: minmax(6.5em, 1.1fr) repeat(5, minmax(0, 1fr)) minmax(5.6em, auto); display: grid; gap: 6px; width: 100%; max-width: 1240px; }
+.pc-hl-head, .pc-hl-row { display: grid; grid-template-columns: var(--hl-cols); gap: 6px; align-items: stretch; }
+.pc-hl-row { min-height: 50px; }
+.pc-hl-head > span { display: grid; justify-items: center; align-content: end; gap: 4px; min-width: 0; padding: 6px 4px; }
+.pc-hl-corner, .pc-hl-total { font: 700 0.9rem var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.pc-hl-product .pc-thumb { width: 64px; height: 64px; }
+.pc-hl-name { max-width: 100%; font: 600 0.95rem/1.2 var(--set); text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pc-hl-shown { font: 600 0.9rem var(--set); color: var(--steel); }
+.pc-hl-shown s { text-decoration-thickness: 2px; text-decoration-color: var(--pc-pink); }
+.pc-hl-truth { display: inline-flex; align-items: center; gap: 4px; font-size: 1.5rem; }
+.pc-hl-truth .pc-arrow { width: 26px; height: 26px; color: var(--pc-sun); }
+.pc-hl-row > span { display: flex; align-items: center; min-width: 0; border-radius: 10px; }
+.pc-hl-row .pc-res-name { grid-area: auto; padding: 6px 12px; background: var(--pc-cream); color: var(--pc-ink); font-size: 1.3rem; }
+.pc-hl-call { justify-content: center; gap: 6px; padding: 6px 4px; font: 800 1.15rem var(--pc-sign-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pc-hl-call .pc-arrow { width: 20px; height: 20px; }
+.pc-hl-call.is-right { background: color-mix(in srgb, var(--pc-ok) 32%, var(--pc-night-2)); box-shadow: inset 0 0 0 2px var(--pc-ok); color: #e6ffef; }
+.pc-hl-call.is-wrong { background: color-mix(in srgb, var(--pc-no) 26%, var(--pc-night-2)); box-shadow: inset 0 0 0 2px var(--pc-no); color: #ffe3e5; }
+.pc-hl-call .pc-mark { width: 22px; height: 22px; }
+.pc-hl-call .pc-mark svg { width: 13px; height: 13px; }
+.pc-hl-none { grid-column: 2 / -2; justify-content: center; background: var(--pc-night-2); color: var(--steel); font: 700 1rem var(--pc-sign-font); letter-spacing: 0.14em; text-transform: uppercase; }
+.pc-hl-score { justify-content: space-between; gap: 8px; padding: 4px 10px; background: var(--pc-cream); color: var(--pc-ink); }
+.pc-hl-score b { font: 800 1.05rem var(--pc-sign-font); letter-spacing: 0.04em; white-space: nowrap; }
+.pc-hl-score .pc-res-points { grid-area: auto; font-size: 1.6rem; }
+
+/* The showcase: each contestant's bundle on its own cream card, with the bid and the actual total in readouts. */
 .pc-showcases { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; width: 100%; max-width: 1100px; }
 .pc-showcase {
-  display: grid; gap: 12px; align-content: start; padding: 18px 20px; text-align: left;
-  border-radius: 3px; background: var(--well);
-  box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
-  transition: box-shadow 200ms ease-out;
+  display: grid; gap: 10px; align-content: start; padding: 16px 20px; text-align: left;
+  border-radius: 16px; background: var(--pc-cream); color: var(--pc-ink);
+  box-shadow: 0 0 0 4px var(--pc-sun), 0 8px 0 4px var(--pc-tangerine);
 }
-.pc-showcase.is-won { box-shadow: inset 0 0 0 2px var(--table), 0 0 0 1px #000, 0 0 0 5px var(--steel-lo); }
-.pc-showcase h2 { display: flex; align-items: center; gap: 10px; font: 600 1.35rem/1.15 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
-.pc-showcase-num { flex-shrink: 0; display: inline-grid; place-items: center; width: 1.3em; height: 1.4em; border-radius: 2px; background: var(--paint); color: #121316; font: 700 0.9em/1 var(--flap-font); }
+.pc-showcase.is-right { box-shadow: 0 0 0 6px var(--pc-ok), 0 8px 0 6px var(--pc-ink); }
+.pc-showcase.is-wrong { box-shadow: 0 0 0 4px var(--pc-no), 0 8px 0 4px var(--pc-ink); }
+.pc-showcase h2 { display: flex; align-items: center; gap: 10px; font: italic 800 1.45rem/1.1 var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.pc-showcase-num { flex: none; display: inline-grid; place-items: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--pc-hot); color: #fff; font-style: normal; }
 .pc-showcase ul { list-style: none; margin: 0; padding: 0; display: grid; }
-.pc-showcase li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--rule); font: 500 1.08rem/1.3 var(--set); }
-.pc-showcase li .money { flex-shrink: 0; font-size: 1.2rem; }
-.pc-showcase li .flap-c.is-blank { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
-.pc-showcase dl { margin: 4px 0 0; display: grid; gap: 6px; }
-.pc-showcase dl div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.pc-showcase dt { display: inline-flex; align-items: center; gap: 10px; font: 600 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
-.pc-showcase dd { margin: 0; font-size: 1.75rem; }
-.pc-showcase.is-over .pc-diff .flap-c { color: var(--red-text); }
-.pc-showcase.is-won .pc-diff .flap-c { color: var(--table); }
-.pc-no-bid { font: 600 1rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paint-dim); }
-.pc-status-line { display: inline-flex; align-items: center; gap: 10px; font: 600 1.05rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paint-dim); }
-.pc-status-line .pc-mark { width: 24px; height: 24px; }
-.pc-status-line.is-in { color: var(--paint); }
-.pc-win { font-size: 1.5rem; }
-.pc-win .flap-c { color: var(--table); }
-.pc-win.is-none { font: 600 1.2rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
-.pc-gain { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.12em; font: 700 0.95rem var(--flap-font); color: var(--table); }
-/* On the TV the delta gets its own line under the name, at couch size, so the score keeps its room. */
-.display .fib-scoreboard li:has(.pc-gain) { flex-wrap: wrap; row-gap: 4px; }
-.display .pc-gain { order: 3; flex-basis: 100%; justify-content: flex-end; font-size: 1.45rem; }
-.pc-gain .flap-c { color: var(--table); }
-
-/* In a hosted game, Next round is the one lit cell in the middle of the rail. */
-@media (min-width: 721px) {
-  .pc .fib-center > .sv-next { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 8px); transform: translateX(-50%); margin: 0; min-height: 52px; }
-  .pc .fib-center > .sv-next:active:not(:disabled) { transform: translate(-50%, 1px); }
+.pc-showcase li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; padding: 5px 0; border-bottom: 2px dotted var(--pc-cream-lo); font: 600 1.1rem/1.25 var(--set); }
+.pc-showcase li .pc-readout { flex: none; font-size: 1.3rem; color: var(--pc-berry); }
+.pc-showcase dl { margin: 2px 0 0; display: grid; gap: 6px; }
+.pc-showcase dl > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pc-showcase dt { font: 800 1rem var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--pc-ink-soft); }
+.pc-showcase dd { margin: 0; font-size: 1.7rem; }
+.pc-showcase-result { flex-wrap: wrap; padding-top: 6px; border-top: 2px solid var(--pc-cream-lo); }
+.pc-showcase-result .pc-res-detail { flex: 1; padding: 0; }
+.pc-status-line { display: inline-flex; align-items: center; gap: 10px; font: 800 1.1rem var(--pc-sign-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--pc-ink-soft); }
+.pc-status-line.is-in { color: var(--pc-ok); }
+.pc-results.is-watchers { margin-top: 4px; }
+/* Who called the winner: the cards above already say who won, so each row is one line, two to a row on a TV. */
+.pc-results.is-watchers .pc-res { grid-template-areas: "name answer stamp points"; }
+.pc-results.is-watchers .pc-res-detail { display: none; }
+@media (min-width: 1100px) {
+  .pc-results.is-watchers { max-width: 1240px; }
+  .pc-results.is-watchers ol { grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .pc-results.is-watchers .pc-res { grid-template-columns: minmax(5em, 1fr) auto auto 3.6em; column-gap: 10px; }
 }
+
+/* The scores down the side: a name plate and a score readout for each contestant. */
+.pc-scores { display: grid; gap: 10px; text-align: left; }
+.pc-scores h2 { justify-self: start; padding: 4px 16px 3px; border-radius: 999px; background: var(--pc-hot); color: #fff; font: 800 1rem var(--pc-sign-font); letter-spacing: 0.2em; text-transform: uppercase; }
+.pc-scores ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pc-scores li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 3px;
+  padding: 8px 10px 8px 12px; border-radius: 12px; background: var(--pc-night-2); box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+.pc-scores li.is-in { box-shadow: inset 0 0 0 3px var(--pc-ok); }
+.pc-scores li.is-away { opacity: 0.6; box-shadow: none; outline: 2px dashed var(--rule-strong); outline-offset: -2px; }
+.pc-score-name { min-width: 0; font: 800 1.3rem/1.1 var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-score-name small { font: 600 0.85rem var(--set); text-transform: none; letter-spacing: 0; color: var(--steel); }
+.pc-score-points { padding: 3px 10px 2px; border-radius: 8px; background: var(--pc-ink); color: var(--pc-sun); font: 800 1.6rem/1 var(--pc-sign-font); font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 2px #000, 0 0 0 2px var(--pc-tangerine); }
+.pc-score-status { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; font: 700 0.9rem var(--pc-sign-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+.pc-scores li.is-in .pc-score-status { color: var(--pc-ok-hi); }
+.pc-score-status .pc-mark { width: 18px; height: 18px; }
+.pc-score-status .pc-mark svg { width: 11px; height: 11px; }
+.pc-score-gain { grid-column: 1 / -1; justify-self: end; font: 800 1.45rem/1 var(--pc-sign-font); color: var(--pc-sun); }
+/* Seven or eight players: slimmer plates, the status beside the name, so the column still fits a 1080p screen. */
+.pc-scores ol:has(> li:nth-child(7)) { gap: 6px; }
+.pc-scores ol:has(> li:nth-child(7)) li { grid-template-columns: minmax(0, 1fr) auto auto; padding-block: 5px; }
+.pc-scores ol:has(> li:nth-child(7)) .pc-score-name { grid-column: 1; grid-row: 1; }
+.pc-scores ol:has(> li:nth-child(7)) .pc-score-status { grid-column: 2; grid-row: 1; justify-self: end; font-size: 0; gap: 0; }
+.pc-scores ol:has(> li:nth-child(7)) .pc-score-points { grid-column: 3; grid-row: 1; font-size: 1.4rem; }
+.pc-scores ol:has(> li:nth-child(7)) .pc-score-gain { grid-column: 2; grid-row: 1; font-size: 1.2rem; }
+
+/* In a hosted game, Next round is the lit key in the middle of the rail. */
+.pc-next { min-width: 240px; }
+@media (min-width: 721px) {
+  .pc .pc-center > .pc-next { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 10px); transform: translateX(-50%); margin: 0; min-height: 54px; }
+  .pc .pc-center > .pc-next:active:not(:disabled) { transform: translate(-50%, 2px); }
+}
+
+/* ---------- Lobby ---------- */
+.pc-lobby { position: relative; z-index: 1; display: grid; justify-items: center; gap: 18px; max-width: 1320px; margin: 0 auto; }
+.pc-lobby-join { display: flex; align-items: center; justify-content: center; gap: clamp(20px, 4vw, 60px); width: 100%; }
+.pc-code-board { display: grid; justify-items: center; gap: 12px; }
+.pc-code-label { font: 800 1.1rem var(--pc-sign-font); letter-spacing: 0.3em; text-transform: uppercase; color: var(--pc-pink); }
+.pc-code {
+  padding: 0.08em 0.32em 0.04em; border-radius: 0.14em;
+  background: var(--pc-ink); color: var(--pc-sun);
+  box-shadow: inset 0 0 0 4px #000, 0 0 0 6px var(--pc-tangerine), 0 0 0 10px var(--pc-ink);
+  font: 800 clamp(64px, 15vh, 150px)/1 var(--pc-sign-font); letter-spacing: 0.12em;
+}
+.pc-lobby-url { max-width: 30ch; margin-top: 6px; font: 500 1.15rem/1.35 var(--set); color: var(--steel-hi); text-align: center; }
+.pc-lobby-url b { color: var(--pc-cream); }
+.pc-qr-card { margin: 0; display: grid; gap: 8px; justify-items: center; padding: 14px 14px 10px; border-radius: 16px; background: #fff; color: var(--pc-ink); box-shadow: 0 0 0 5px var(--pc-hot), 0 8px 0 5px var(--pc-ink); transform: rotate(2deg); }
+.pc-qr-card .qr { width: clamp(150px, 19vw, 230px); }
+.pc-qr-card figcaption { font: 800 0.95rem var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; }
+.pc-edition { padding: 4px 16px 3px; border-radius: 999px; background: var(--pc-night-2); box-shadow: inset 0 0 0 2px var(--pc-sun); font: 800 1rem var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--pc-sun); }
+/* Players as price-tag name tags. */
+.pc-name-tags { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 18px; max-width: 1200px; }
+.pc-name-tags li {
+  position: relative; display: grid; gap: 2px; min-width: 190px; padding: 10px 22px 10px 34px;
+  background: var(--pc-sun); color: var(--pc-ink); text-align: left;
+  clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%);
+  filter: drop-shadow(0 4px 0 var(--pc-tangerine));
+}
+.pc-name-tags li:nth-child(even) { transform: rotate(2deg); background: var(--pc-pink); }
+.pc-name-tags li:nth-child(odd) { transform: rotate(-2deg); }
+.pc-name-tags li::before { content: ""; position: absolute; left: 12px; top: calc(50% - 5px); width: 10px; height: 10px; border-radius: 50%; background: var(--pc-night); }
+.pc-name-tags span { font: 800 clamp(1.4rem, 2.4vw, 2rem)/1.05 var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12em; }
+.pc-name-tags small { font: 700 0.85rem var(--pc-sign-font); letter-spacing: 0.16em; text-transform: uppercase; }
+.pc-name-tags li.is-away { opacity: 0.6; }
+.pc-name-tags li.is-open { background: transparent; color: var(--steel); filter: none; clip-path: none; border: 3px dashed var(--steel-mid); border-radius: 10px; transform: none; padding-left: 22px; }
+.pc-name-tags li.is-open::before { display: none; }
+.pc-lobby-note { font: 500 1.15rem var(--set); color: var(--steel-hi); }
+.pc-start { min-width: 280px; min-height: 64px; font-size: 1.4rem; }
+@media (min-width: 721px) {
+  .pc-lobby > .pc-start { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 8px); transform: translateX(-50%); margin: 0; }
+  .pc-lobby > .pc-start:active:not(:disabled) { transform: translate(-50%, 2px); }
+}
+
+/* ---------- Buttons and shared pieces in the showroom ---------- */
+.pc .primary, .pc-setup .primary {
+  border-radius: 999px; padding: 0 32px;
+  background: var(--pc-sun); color: var(--pc-ink);
+  font: 800 1.15rem/1 var(--pc-sign-font); letter-spacing: 0.12em;
+  box-shadow: inset 0 -4px 0 var(--pc-sun-lo), 0 4px 0 var(--pc-ink), 0 0 0 3px var(--pc-ink);
+}
+.pc .primary:disabled, .pc-setup .primary:disabled { background: var(--pc-night-3); color: var(--paint-dim); box-shadow: 0 0 0 3px var(--rule-strong); }
+.pc .secondary { border-radius: 999px; border: 2px solid var(--pc-cream); color: var(--pc-cream); }
+.pc .chip-btn, .pc-setup .chip-btn { border-radius: 999px; border-width: 2px; }
+body:has(.pc) .sv-sound, body:has(.pc) .controller-link, body:has(.pc) .back-to-settings.is-tv { border-radius: 999px; background: var(--pc-night); color: var(--pc-cream); box-shadow: inset 0 0 0 2px var(--pc-pink); }
+body:has(.pc) .sv-sound:hover, body:has(.pc) .controller-link:hover, body:has(.pc) .back-to-settings.is-tv:hover { background: var(--pc-night-3); }
+body:has(.pc) .back-to-settings.is-controller { color: var(--pc-ink); }
+.pc-host-tools { position: relative; z-index: 1; border-radius: 14px; }
+/* On a TV the closed tools sit at the right of the bottom row (where a hosted game's controller link goes), and open upwards. */
+@media (min-width: 761px) {
+  .display.pc .pc-host-tools { position: fixed; right: 36px; bottom: 18px; width: min(420px, 30vw); z-index: 5; max-height: calc(100vh - 140px); overflow: auto; }
+}
+.pc-tool-score { min-width: 4.5em; text-align: right; font: 800 1.2rem var(--pc-sign-font); color: var(--pc-sun); }
+.pc-player-tools li input { min-width: 0; flex: 1; }
+.pc-round-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; }
 
 /* ---------- Phone ---------- */
-.player.pc { text-align: center; }
-.player.pc > .pc-product { margin-top: 14px; }
-.player.pc > .pc-product .pc-photo { max-width: 190px; }
-.pc-form, .pc-bid-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 16px; text-align: left; }
-.pc-bid-form { margin-top: 16px; }
-.sv-guess-label.is-over { color: var(--red-text); }
-/* Keying in a bid: a dollar sign and the amount in board letters, in a dark well. */
+.player.pc, .controller.pc { padding-top: calc(16px + env(safe-area-inset-top)); }
+.pc-phone-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px 14px; border-bottom: 4px solid var(--pc-sun); box-shadow: 0 5px 0 var(--pc-hot); margin-bottom: 14px; }
+.pc-phone-name { display: grid; justify-items: end; gap: 3px; min-width: 0; font: 800 1rem var(--pc-sign-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-phone-name b { padding: 3px 10px 2px; border-radius: 8px; background: var(--pc-ink); color: var(--pc-sun); font-size: 1.7rem; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--pc-tangerine); }
+.pc-ctrl-code { padding: 3px 10px 2px; border-radius: 8px; background: var(--pc-ink); color: var(--pc-sun); font: 800 1.5rem var(--pc-sign-font); letter-spacing: 0.12em; box-shadow: 0 0 0 2px var(--pc-tangerine); }
+.pc-phone-round { margin: 4px 0 12px; font: 700 0.98rem/1.3 var(--pc-sign-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-phone-round b { color: var(--pc-sun); }
+.pc-status { margin: 22px 0 8px; font: 800 1.4rem/1.25 var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; text-wrap: balance; }
+.pc-phone > .pc-product .pc-photo { max-width: 180px; }
+.pc-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 14px; text-align: left; }
+.pc-form-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pc-form-label { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: 800 1.15rem/1.2 var(--pc-sign-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pc-form-label.is-over { color: var(--pc-no-hi); }
+.pc-form-label .pc-readout { font-size: 1.3rem; }
+.pc-phone .pc-clock { width: 64px; height: 64px; }
+.pc-phone .pc-clock::before { inset: 6px; }
+.pc-phone .pc-clock b { font-size: 1.7rem; }
+/* Keying in a bid: the currency and the amount in a podium readout. */
 .pc-money-input {
-  display: flex; align-items: center; gap: 4px; padding: 0 0 0 14px;
-  border-radius: 3px; background: var(--well); border: 1px solid var(--rule-strong);
-  transition: border-color 160ms ease-out;
+  display: flex; align-items: center; gap: 6px; padding: 0 0 0 16px;
+  border-radius: 14px; background: var(--pc-ink); box-shadow: inset 0 0 0 3px #000, 0 0 0 3px var(--pc-tangerine);
 }
-.pc-dollar { font: 600 2rem/1 var(--flap-font); color: var(--steel-hi); }
+.pc-dollar { font: 800 1.5rem/1 var(--pc-sign-font); color: var(--pc-sun); opacity: 0.8; }
 .pc-money-input input {
-  flex: 1; width: 0; min-width: 0; min-height: 64px; padding: 0 12px 0 2px; border: 0; background: transparent;
-  font: 600 2rem/1 var(--flap-font); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; outline: none;
+  flex: 1; width: 0; min-width: 0; min-height: 72px; padding: 0 14px 0 2px; border: 0; background: transparent;
+  font: 800 2.6rem/1 var(--pc-sign-font); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; color: var(--pc-sun); caret-color: var(--pc-pink); outline: none;
 }
-.pc-money-input input::placeholder { color: var(--paint-dim); }
-.pc-money-input:focus-within { border-color: var(--table); box-shadow: 0 0 0 1px var(--table); }
-.pc-budget-label { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.pc-budget-label .money { font-size: 1.35rem; }
-.pc-budget-label .flap-c { color: var(--table); }
+.pc-money-input input::placeholder { color: rgb(255 210 58 / 0.3); }
+.pc-money-input:focus-within { box-shadow: inset 0 0 0 3px #000, 0 0 0 4px var(--pc-sun); }
+.pc-form .primary { min-height: 60px; font-size: 1.2rem; }
+.pc-sticky { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 3; }
 
-.pc-hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pc-hl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border-radius: 3px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); }
-.pc-hl .pc-product { grid-template-columns: 60px minmax(0, 1fr); grid-template-rows: none; align-items: center; text-align: left; gap: 12px; }
-.pc-hl .pc-photo { width: 60px; padding: 3px; box-shadow: 0 0 0 1px #000; }
-.pc-hl figcaption { align-items: flex-start; }
-.pc-hl .pc-name { font-size: 1rem; }
-.pc-hl .pc-brandname { font-size: 0.72rem; }
-.pc-hl .pc-tag { font-size: 1.25rem; margin-top: 4px; }
-/* Higher or lower, and the showcase prediction: choice cells, a hollow marker off and a filled one on. */
-.pc-calls { display: grid; gap: 6px; }
-.pc-calls.is-big { grid-template-columns: 1fr 1fr; gap: 8px; }
+/* Higher or Lower on the phone: a cream card per product, then two big keys. */
+.pc-hl { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pc-hl li { display: grid; gap: 10px; padding: 10px; border-radius: 14px; background: var(--pc-cream); color: var(--pc-ink); box-shadow: 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-hl li.is-called { box-shadow: inset 0 0 0 3px var(--pc-ok), 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-hl .pc-product { grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: none; align-items: center; text-align: left; gap: 12px; }
+.pc-hl .pc-photo { width: 72px; padding: 4px; border-radius: 10px; box-shadow: 0 0 0 2px var(--pc-cream-lo); }
+.pc-hl figcaption { align-items: flex-start; padding: 0; }
+.pc-hl .pc-name { font-size: 1.05rem; color: var(--pc-ink); }
+.pc-hl .pc-brandname { font-size: 0.75rem; color: var(--pc-berry); }
+.pc-hl .pc-size { color: var(--pc-ink-soft); }
+.pc-hl .pc-tag { font-size: 1.45rem; }
+.pc-hl .pc-tag::before { background: var(--pc-cream); }
+.pc-calls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pc-calls button {
-  display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px;
-  min-height: 46px; padding: 0 12px; border-radius: var(--radius-sm);
-  background: var(--flap-face); border: 1px solid transparent; color: var(--steel-hi);
-  font: 600 0.98rem/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase;
-  transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 10px;
+  border-radius: 999px; background: #fff; color: var(--pc-ink); box-shadow: inset 0 0 0 2px var(--pc-ink-soft);
+  font: 800 1.2rem/1 var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background-color 140ms ease-out, box-shadow 140ms ease-out, transform 80ms ease-out;
 }
-.pc-calls button::before { content: ""; flex-shrink: 0; width: 9px; height: 9px; border: 2px solid currentColor; }
-.pc-calls button .pc-arrow { width: 16px; height: 16px; margin-left: auto; }
-.pc-calls button:hover:not(:disabled):not([aria-checked="true"]) { color: var(--paint); border-color: var(--rule-strong); }
-.pc-calls button[aria-checked="true"] { color: var(--table); border-color: var(--table); background: color-mix(in srgb, var(--table) 9%, var(--flap-face)); }
-.pc-calls button[aria-checked="true"]::before { background: currentColor; }
-.pc-calls.is-big button { justify-content: center; min-height: 72px; font-size: 1.3rem; color: var(--paint); border-color: var(--steel-mid); background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); overflow-wrap: anywhere; }
-.pc-calls.is-big button:active:not(:disabled) { background: var(--table); color: var(--on-table); border-color: var(--table); }
+.pc-calls button .pc-arrow { width: 20px; height: 20px; }
+.pc-calls button:active:not(:disabled) { transform: translateY(2px); }
+.pc-calls button[aria-checked="true"] { background: var(--pc-hot); color: #fff; box-shadow: inset 0 0 0 2px var(--pc-ink), 0 3px 0 var(--pc-ink); }
+.pc-calls.is-big { gap: 10px; }
+.pc-calls.is-big button { min-height: 84px; font-size: 1.4rem; background: var(--pc-sun); box-shadow: inset 0 -4px 0 var(--pc-sun-lo), 0 4px 0 var(--pc-ink), 0 0 0 3px var(--pc-ink); overflow-wrap: anywhere; }
 
-/* Tapping products: a key each, framed in the lamp colour once it's in your order or cart. */
-.pc-picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-.pc-picks > li, .pc-shelf > li { min-width: 0; }
+/* Tapping products: a cream card each, framed in green and numbered once it's in your order or cart. */
+.pc-picks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pc-picks > li { min-width: 0; }
 .pc-picks button {
-  position: relative; width: 100%; padding: 12px 8px 10px; border-radius: 3px;
-  border: 1px solid var(--steel-mid);
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  text-align: center;
-  transition: border-color 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out;
+  position: relative; width: 100%; height: 100%; padding: 12px 8px 10px; border-radius: 14px;
+  background: var(--pc-cream); color: var(--pc-ink); text-align: center;
+  box-shadow: 0 4px 0 rgb(0 0 0 / 0.35);
+  transition: box-shadow 140ms ease-out, transform 80ms ease-out;
 }
-.pc-picks button:hover:not(:disabled) { border-color: var(--steel); }
-.pc-picks button[aria-pressed="true"] { border-color: var(--table); box-shadow: inset 0 0 0 1px var(--table); background: color-mix(in srgb, var(--table) 10%, var(--flap-face)); }
-.pc-picks .pc-photo { max-width: 130px; }
+.pc-picks button:active:not(:disabled) { transform: translateY(2px); }
+.pc-picks button[aria-pressed="true"] { box-shadow: inset 0 0 0 4px var(--pc-ok), 0 4px 0 rgb(0 0 0 / 0.35); }
+.pc-picks .pc-photo { max-width: 120px; box-shadow: 0 0 0 2px var(--pc-cream-lo); }
+.pc-picks .pc-name { color: var(--pc-ink); }
+.pc-picks .pc-brandname { color: var(--pc-berry); }
+.pc-picks .pc-size { color: var(--pc-ink-soft); }
 .pc-place {
   position: absolute; z-index: 1; top: 6px; left: 6px;
-  display: grid; place-items: center; width: 32px; height: 34px; border-radius: 2px;
-  background: var(--table); color: var(--on-table); font: 700 1.25rem/1 var(--flap-font);
-  box-shadow: 0 0 0 2px var(--flap-gap);
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--pc-ok); color: #fff; font: 800 1.35rem/1 var(--pc-sign-font);
+  box-shadow: 0 0 0 3px var(--pc-cream);
 }
 .pc-place svg { width: 18px; height: 18px; }
 .pc-form-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
-.pc-form-row > * { min-height: 54px; }
-.pc-form .primary { min-height: 56px; font-size: 1.05rem; }
-.pc-showcase-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.pc-showcase-list li { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 2px; background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); font: 500 1.05rem/1.3 var(--set); }
-.pc-showcase-list li::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; background: var(--table); }
+.pc-form-row > * { min-height: 58px; }
+.pc-showcase-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pc-showcase-list li { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-radius: 12px; background: var(--pc-cream); color: var(--pc-ink); font: 600 1.05rem/1.3 var(--set); }
+.pc-showcase-list li::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--pc-hot); }
+
+/* Your own result at the reveal. */
+.pc-my-result { display: grid; justify-items: center; gap: 10px; margin-top: 16px; padding: 18px 16px; border-radius: 16px; background: var(--pc-cream); color: var(--pc-ink); box-shadow: 0 0 0 4px var(--pc-ink-soft), 0 6px 0 4px var(--pc-ink); }
+.pc-my-result.is-right { box-shadow: 0 0 0 5px var(--pc-ok), 0 6px 0 5px var(--pc-ink); }
+.pc-my-result.is-part { box-shadow: 0 0 0 5px var(--pc-part), 0 6px 0 5px var(--pc-ink); }
+.pc-my-result.is-wrong { box-shadow: 0 0 0 5px var(--pc-no), 0 6px 0 5px var(--pc-ink); }
+.pc-my-points { display: grid; justify-items: center; font: 800 3.2rem/1 var(--pc-sign-font); color: var(--pc-berry); }
+.pc-my-points small { font: 700 0.85rem var(--pc-sign-font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--pc-ink-soft); }
+.pc-my-line { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; font: 600 1.05rem/1.35 var(--set); text-align: center; }
+.pc-my-line .pc-readout { font-size: 1.3rem; }
+.pc-my-calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; text-align: left; }
+.pc-my-calls li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; padding: 6px 8px; border-radius: 10px; background: #fff; font: 500 0.95rem/1.3 var(--set); }
+.pc-my-calls li .pc-mark { grid-row: 1 / 3; }
+.pc-my-calls li span:nth-child(2) { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-my-calls li span:nth-child(3) { grid-column: 2; color: var(--pc-ink-soft); }
+.pc-my-place { font: 700 0.95rem var(--pc-sign-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--pc-ink-soft); }
 
 /* ---------- Host controller ---------- */
+.controller.pc h1 { font: italic 800 1.8rem/1.1 var(--pc-sign-font); color: var(--pc-sun); }
+.controller.pc h2 { font: 800 1.1rem var(--pc-sign-font); letter-spacing: 0.14em; color: var(--pc-pink); }
+.pc-ctrl-status { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 12px 14px; border-radius: 14px; background: var(--pc-night-2); }
+.pc-ctrl-status b { font: 800 1.3rem var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--pc-sun); }
+.pc-ctrl-status span { grid-column: 1; font: 500 1rem/1.35 var(--set); color: var(--steel-hi); }
+.pc-ctrl-status .pc-clock { grid-column: 2; grid-row: 1 / 3; }
 .pc-ctrl-prices { margin: 14px 0; }
-.pc-ctrl-prices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
-.pc-ctrl-prices li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 50px; padding: 6px 8px 6px 12px; border-radius: 2px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); font: 500 1rem/1.3 var(--set); }
-.pc-ctrl-prices li .money { flex-shrink: 0; font-size: 1.35rem; }
-.pc-ctrl-prices li .flap-c { color: var(--table); }
+.pc-ctrl-prices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.pc-ctrl-prices li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 6px 8px 6px 14px; border-radius: 12px; background: var(--pc-cream); color: var(--pc-ink); font: 600 1rem/1.3 var(--set); }
+.pc-ctrl-prices li .pc-readout { flex: none; font-size: 1.35rem; }
+.controller.pc .wide.on { border-radius: 999px; background: var(--pc-sun); color: var(--pc-ink); box-shadow: inset 0 -4px 0 var(--pc-sun-lo), 0 4px 0 var(--pc-ink), 0 0 0 3px var(--pc-ink); }
 
+/* ---------- End of game ---------- */
+.end.pc { position: relative; isolation: isolate; gap: 14px; }
+.end.pc > :not(.sv-sound):not(.pc-bulbs) { position: relative; z-index: 1; }
+.end.pc > .pc-bulbs { position: absolute; z-index: 0; }
+.end.pc .pc-sign { justify-self: center; }
+.end .pc-winner {
+  display: block; margin-top: 0; font: italic 800 clamp(2.4rem, 6.4vw, 5.6rem)/1.05 var(--pc-sign-font); letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  color: var(--pc-cream); text-shadow: 0.05em 0.05em 0 var(--pc-hot), 0.09em 0.09em 0 var(--pc-ink);
+}
+.pc-winner span { color: var(--pc-sun); }
+.pc-podium { list-style: none; display: grid; gap: 10px; width: 100%; max-width: 640px; margin: 8px 0 0; padding: 0; }
+.pc-podium li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 62px; padding: 6px 14px; border-radius: 14px; background: var(--pc-cream); color: var(--pc-ink); text-align: left; box-shadow: 0 5px 0 var(--pc-ink); }
+.pc-podium li.is-place-1 { background: var(--pc-sun); box-shadow: 0 0 0 4px var(--pc-hot), 0 8px 0 4px var(--pc-ink); }
+.pc-podium-rank { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--pc-hot); color: #fff; font: 800 1.6rem var(--pc-sign-font); }
+.pc-podium b { font: 800 1.7rem var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.pc-podium-score { padding: 4px 12px 3px; border-radius: 8px; background: var(--pc-ink); color: var(--pc-sun); font: 800 2rem/1 var(--pc-sign-font); font-variant-numeric: tabular-nums; }
+.pc-rest { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; max-width: 640px; }
+.pc-rest li { display: flex; justify-content: space-between; padding: 8px 14px; border-radius: 10px; background: var(--pc-night-2); font: 800 1.25rem var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.pc-rest b { color: var(--pc-sun); }
+/* On a TV the rest of the field sits two to a row, so eight players still fit with the buttons. */
+@media (min-width: 761px) { .pc-end.pc-tv .pc-rest { grid-template-columns: 1fr 1fr; column-gap: 10px; } }
+.pc-end-buttons { display: grid; justify-items: center; gap: 14px; margin-top: 10px; }
+.pc-end-buttons a { color: var(--pc-cream); font-weight: 600; }
+.pc-end-buttons p { font: 600 1.15rem var(--set); }
+
+/* ---------- Setup ---------- */
+.pc-setup { position: relative; }
+.pc-setup .back-to-hub { color: var(--steel-hi); }
+.pc-setup-card { margin-top: 22px; padding: 26px 0 0; border-top: 4px solid var(--pc-sun); box-shadow: 0 -10px 0 -6px var(--pc-hot); }
+.pc-setup h1 { font: italic 800 2.3rem/1.05 var(--pc-sign-font); letter-spacing: 0.02em; text-transform: uppercase; color: var(--pc-sun); margin-bottom: 10px; }
+.pc-setup h2 { font: 800 1.35rem var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pc-pink); }
+.pc-setup-intro { max-width: 68ch; font-size: 1.08rem; line-height: 1.45; color: var(--steel-hi); }
+.pc-fieldset { margin: 22px 0 0; padding: 0; border: 0; }
+.pc-fieldset legend { margin-bottom: 10px; padding: 0; font: 800 1rem var(--pc-sign-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pc-pink); }
+.pc-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.pc-choices button {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 22px;
+  border-radius: 999px; background: var(--pc-night-2); color: var(--pc-cream); box-shadow: inset 0 0 0 2px var(--steel-mid);
+  font: 800 1.15rem/1 var(--pc-sign-font); letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+.pc-choices button::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 2px currentColor; }
+.pc-choices button small { font: 700 0.9rem var(--pc-sign-font); letter-spacing: 0.06em; opacity: 0.8; }
+.pc-choices button:hover:not([aria-checked="true"]) { box-shadow: inset 0 0 0 2px var(--pc-cream); }
+.pc-choices button[aria-checked="true"] { background: var(--pc-sun); color: var(--pc-ink); box-shadow: 0 0 0 3px var(--pc-ink), 0 4px 0 3px var(--pc-tangerine); }
+.pc-choices button[aria-checked="true"]::before { background: currentColor; }
+.pc-hint { margin-top: 10px; max-width: 76ch; font-size: 1rem; line-height: 1.45; color: var(--steel-hi); }
+.pc-credit a { color: var(--pc-sun); }
+.pc-rounds-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 26px; }
+.pc-round-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.pc-round-list li { display: grid; grid-template-columns: 7.5em minmax(10em, 0.6fr) minmax(0, 1fr); align-items: center; gap: 14px; min-height: 52px; padding: 8px 14px 8px 8px; border-radius: 12px; background: var(--pc-cream); color: var(--pc-ink); }
+.pc-round-list b { font: 800 1.25rem var(--pc-sign-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.pc-round-list span:last-child { font-size: 1rem; color: var(--pc-ink-soft); }
+.pc-round-tag { justify-self: start; padding: 4px 12px 3px; border-radius: 999px; background: var(--pc-tangerine); color: var(--pc-ink); font: 800 0.9rem var(--pc-sign-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.pc-round-tag.is-finale { background: var(--pc-hot); color: #fff; }
+.pc-options { margin-top: 26px; }
+.pc-options .game-mode { border-radius: 14px; background: var(--pc-night-2); }
+.pc-final-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 26px; padding-top: 20px; border-top: 3px dotted var(--pc-sun); }
+.pc-summary { font: 800 1.1rem var(--pc-sign-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
+.pc-setup .primary { min-height: 58px; font-size: 1.25rem; }
+
+/* ---------- Smaller screens ---------- */
 @media (max-width: 1100px) {
   .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pc-shelf.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pc-stage { grid-template-columns: minmax(0, 1fr); }
+  .pc-hl-table { --hl-cols: minmax(5em, 1fr) repeat(5, minmax(0, 1fr)) minmax(4.6em, auto); }
+  .pc-hl-call > span:not(.pc-mark) { display: none; }
 }
 @media (max-width: 760px) {
-  .pc-bid, .pc-bid:has(.pc-bids) { grid-template-columns: minmax(0, 1fr); }
+  .display.pc { padding: 20px 16px 120px; }
+  .pc-tv-bar { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .pc-join-corner { grid-column: 1 / -1; justify-self: center; }
+  .pc-bid.is-reveal, .pc-bid.is-rebid { grid-template-columns: minmax(0, 1fr); }
   .pc-showcases { grid-template-columns: 1fr; }
-  .pc-bids li { grid-template-columns: auto minmax(0, 1fr) auto; font-size: 1.3rem; }
-  .pc-bids em { grid-column: 2 / -1; text-align: left; }
-  .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pc-shelf.count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .pc-product .pc-name { font-size: 1rem; }
-  .pc-tag { font-size: 1.25rem; }
-  .pc-shelf.count-3 .pc-tag { font-size: 1rem; }
+  .pc-shelf.count-5, .pc-shelf.count-6, .pc-shelf.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pc-shelf.count-3 { gap: 8px; }
+  .pc-res { grid-template-columns: minmax(0, 1fr) auto 3.6em; grid-template-areas: "name stamp points" "answer answer points" "detail detail points"; }
+  .pc-res-answer { justify-self: start; }
+  .pc-lobby-join { flex-direction: column; }
+  .pc-round-list li { grid-template-columns: auto minmax(0, 1fr); }
+  .pc-round-list span:last-child { grid-column: 1 / -1; }
+  .pc-final-row { flex-direction: column; align-items: stretch; }
+  .pc-hl-table { overflow-x: auto; }
 }
-/* A 720p TV: smaller photos so a shelf and its prices fit. */
+/* A 720p TV or short laptop: smaller photos and slimmer rows so a shelf and every player's result fit. */
 @media (max-height: 800px) and (min-width: 761px) {
-  .display.pc .pc-photo { max-width: min(250px, 33vh); }
-  .display.pc .pc-bid:has(.pc-bids) .pc-photo { max-width: min(220px, 28vh); }
-  .display.pc .pc-center { gap: 10px; }
-  .display.pc .pc-rule { font-size: 1.2rem; }
-  .display.pc .pc-product.is-small .pc-photo { max-width: min(160px, 21vh); }
-  .display.pc .pc-shelf.count-6 .pc-photo { max-width: min(140px, 16vh); }
+  .display.pc { padding-top: 16px; padding-bottom: 70px; }
+  .pc-tv-bar { margin-bottom: 12px; padding-bottom: 10px; gap: 16px; }
+  .pc-sign { font-size: 1.5rem; }
+  .pc-round-name { font-size: clamp(1.7rem, 3.2vw, 2.6rem); }
+  .pc-rule { font-size: 1.05rem; }
+  .pc-clock { width: 76px; height: 76px; }
+  .pc-clock::before { inset: 7px; }
+  .pc-clock b { font-size: 2rem; }
+  .pc-join-corner .qr { width: 56px; }
+  .pc-center { gap: 10px; }
+  .display.pc .pc-photo { max-width: min(240px, 30vh); }
+  .display.pc .pc-product.is-small .pc-photo { max-width: min(150px, 19vh); }
   .display.pc .pc-shelf.count-6 .pc-brandname { display: none; }
-  .display.pc .pc-bids.is-carts li { min-height: 46px; font-size: 1.4rem; }
-  .display.pc .pc-shelf.count-3 .pc-photo { max-width: min(200px, 26vh); }
-  .display.pc .pc-bids li { min-height: 44px; padding-block: 3px; font-size: 1.45rem; }
-  .display.pc .pc-bids { gap: 4px; }
-  .display.pc .pc-showcase li { min-height: 38px; padding: 4px 0; }
-  .display.pc .pc-showcase { gap: 8px; padding: 14px 18px; }
+  .display.pc .pc-bid.is-reveal .pc-photo, .display.pc .pc-bid.is-rebid .pc-photo { max-width: min(200px, 26vh); }
+  .pc-res { padding-block: 5px; }
+  .pc-res-name { font-size: 1.25rem; }
+  .pc-res-answer { font-size: 1.3rem; }
+  .pc-res-detail { font-size: 0.95rem; }
+  .pc-res-points { font-size: 1.6rem; }
+  .pc-results ol { gap: 6px; }
+  /* Five or more players: each pick shows just its photo (the shelf above names it), so two columns of slim rows fit. */
+  .pc-results.is-many .pc-pick > span:last-child { display: none; }
+  .pc-results.is-many .pc-res { row-gap: 0; padding-block: 3px; }
+  .pc-results.is-many .pc-res .pc-stamp { font-size: 0.8em; }
+  .pc-results.is-many .pc-res-answer .pc-thumb { width: 30px; height: 30px; }
+  .pc-results.is-many .pc-order-answer { gap: 4px; padding: 0 4px 4px 0; }
+  /* A crowded 720p reveal: each cart is its total and how many items, the shelf above shows what was in it. */
+  .pc-results.is-many .pc-cart-thumbs { display: none; }
+  .pc-results.is-many .pc-cart-count { display: inline; }
+  .pc-results.is-many .pc-cart-answer { gap: 6px; }
+  .pc-results.is-many .pc-cart-count { font-size: 0.8rem; letter-spacing: 0.04em; }
+  .display.pc .pc-center.is-grocery.is-reveal .pc-callout, .display.pc .pc-center.is-grocery .pc-shelf.is-compact + .pc-results { margin-top: 0; }
+  .display.pc .pc-shelf.is-compact .pc-photo { max-width: min(80px, 11vh); }
+  .display.pc .pc-shelf.is-compact .pc-name { -webkit-line-clamp: 1; font-size: 0.9rem; }
+  .display.pc .pc-shelf.is-compact .pc-tag { font-size: 1.25rem; }
+  .pc-results.is-many .pc-order-answer .pc-thumb { width: 26px; height: 26px; }
+  .pc-results.is-many .pc-res { column-gap: 8px; }
+  .pc-results.is-many .pc-res .pc-stamp { min-width: 5.8em; }
+  .pc-results.is-many .pc-res-detail { font-size: 0.85rem; line-height: 1.1; }
+  .pc-results.is-many ol { gap: 5px; }
+  .pc-showcase li { min-height: 32px; padding-block: 3px; }
+  .pc-showcase dd { font-size: 1.45rem; }
+  .pc-showcase dl { gap: 3px; }
+  .pc-results.is-watchers .pc-res { padding-block: 3px; }
+  .end.pc.pc-tv { gap: 10px; padding-top: 18px; padding-bottom: 70px; }
+  .end.pc.pc-tv .pc-winner { font-size: 3.4rem; }
+  .pc-tv .pc-podium li { min-height: 52px; }
+  .pc-tv .pc-end-buttons { margin-top: 0; gap: 8px; }
+  .pc-hl-product .pc-thumb { width: 34px; height: 34px; }
+  .pc-hl-head > span { padding: 2px 4px; gap: 2px; }
+  .pc-hl-name { -webkit-line-clamp: 1; font-size: 0.85rem; }
+  .pc-hl-truth { font-size: 1.3rem; }
+  .pc-hl-row { min-height: 34px; }
+  .pc-hl-table, .pc-hl-row, .pc-hl-head { gap: 4px; }
+  .pc-hl-call { font-size: 1.05rem; }
+  .pc-hl-row .pc-res-name { padding-block: 3px; font-size: 1.15rem; }
+  .pc-hl-call { padding-block: 3px; }
+  .pc-hl-score .pc-res-points { font-size: 1.35rem; }
+  .pc-scores li { padding-block: 5px; }
+  .pc-score-points { font-size: 1.35rem; }
+  .pc-showcase li { min-height: 34px; padding: 3px 0; }
+  .pc-showcase { gap: 6px; padding: 12px 16px; }
+  .pc-code { font-size: clamp(56px, 13vh, 132px); }
+  .pc-qr-card .qr { width: clamp(120px, 21vh, 210px); }
+  .pc-name-tags li { padding-block: 6px; }
 }
