@@ -1,23 +1,26 @@
 // Word Budget — a team word game in the style of the bid-and-clue party games, with our own words.
 //
-// Two teams. Each card is five words. Both teams' clue-givers see it on their phones for a few seconds, then bid
-// down from 25 against a 5-second shot clock that resets on every bid: "I can get all five in N words". The lowest
+// Two teams. Each card is five words. Both teams' clue-givers see it on their phones for ten seconds, then bid
+// down from 25 against a 10-second shot clock that resets on every bid: "I can get all five in N words". The lowest
 // bid wins control (no bid at all: the team whose turn it was to start takes it at 25). The two clue-givers can
 // agree to pass on a card and draw another.
 //
-// The bid winner then has a minute to get their team to say all five words, using no more than N spoken clue words.
-// The other team's clue-giver is the judge: they count every word on a big +1 button and can call a no-no (rhymes,
-// sounds-like, gestures, part of an answer), which forfeits the card to the judge's team. The clue-giver taps each
-// word as their team says it. Clearing the card wins it, and the words left over in the budget are banked as bonus
-// words (the tiebreak). Going over budget or running out of time hands the other team a 10-second steal: say every
-// word still left, using only the clues already given, and the card is theirs. Miss, and nobody gets it.
+// The bid winner then has 90 seconds to get their team to say all five words, using no more than N spoken clue
+// words. Someone who isn't on the clue-giver's team keeps track: every clue word is counted (one past the budget
+// ends the turn), each word is checked off as the team says it, and a no-no (rhymes, sounds-like, gestures, part of
+// an answer) forfeits the card to the other team. With a host, the host does all of that from the controller and the
+// phones only bid. Without one, the other team's clue-giver (the judge) does it from their phone.
+// Clearing the card wins it, and the words left over in the budget are banked as bonus words (the tiebreak). Going
+// over budget or running out of time hands the other team a 35-second steal: say every word still left, using only
+// the clues already given, and the card is theirs. Miss, and nobody gets it. In a steal the tracking swaps sides
+// too: without a host, the clue-giver who lost the card checks off the stealing team's words.
 //
 // First team to the target number of cards wins (or, in points mode, a card is 10 and every saved word 1).
-// The words are only ever sent to the two clue-givers' phones and the host controller (budget:card); the TV gets
+// The words are only ever sent to the phones that need them and the host controller (budget:card); the TV gets
 // each word's status, and a word's text only once it has been guessed or the card is over.
 import { repeatHostTap } from './taps.js'
 
-export const BUDGET_TIMES = { peekMs: 5000, bidMs: 5000, playMs: 60000, stealMs: 10000, doneMs: 9000 }
+export const BUDGET_TIMES = { peekMs: 10000, bidMs: 10000, playMs: 90000, stealMs: 35000, doneMs: 18000 }
 export const START_BID = 25
 export const CARD_SIZE = 5
 const MAX_PLAYERS = 16
@@ -208,7 +211,8 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
     turn.lastCount = { at: now(), delta: -1 }
     return true
   }
-  // In play the clue-giver marks their team's words; in a steal, the stealing team's (see register).
+  // In play a word said by the clue-giver's team is 'got'; in a steal, one said by the stealing team is 'stolen'.
+// Who may tap it is decided in register (PHONE): the team not saying the words keeps track, or the host.
   function mark(game, index) {
     const turn = game.turn, word = turn?.words[Math.trunc(Number(index))]
     if (!word || word.status !== 'waiting' || !['play', 'steal'].includes(turn.phase)) return false
@@ -362,25 +366,31 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
 
   // ---------- Phones ----------
   // Who may do what from their own phone. The host controller can do all of it.
+  // With a host, the host keeps track of everything (counting, checking off words, no-nos): phones only bid and pass.
+  // Without one, the team that isn't saying the words keeps track: in play that's the judge (the other team's
+  // clue-giver); in a steal it's the clue-giver who just lost the card, checking off the stealing team's words (the TV
+  // shows the whole card afterwards for the room).
   const isGiver = (game, playerId) => Object.values(game.turn?.givers || {}).includes(playerId)
+  const tracker = (game) => !game.hostless ? null : game.turn.phase === 'play' ? game.turn.judgeId : game.turn.phase === 'steal' ? game.turn.clueGiverId : null
+  const tracks = (game, id) => !!id && tracker(game) === id
   const PHONE = {
     bid: (game, id) => isGiver(game, id),
     pass: (game, id) => isGiver(game, id),
-    countWord: (game, id) => game.turn.judgeId === id,
-    uncount: (game, id) => game.turn.judgeId === id,
-    nono: (game, id) => game.turn.judgeId === id,
-    // In play, the clue-giver marks and the judge can dispute. In a steal without a host, the clue-giver who just
-    // lost the card confirms the other team's words (and the TV shows the whole card afterwards for the room).
-    mark: (game, id) => game.turn.phase === 'play' ? game.turn.clueGiverId === id : game.hostless && game.turn.clueGiverId === id,
-    unmark: (game, id) => game.turn.phase === 'play' ? game.turn.judgeId === id : game.hostless && game.turn.clueGiverId === id,
+    countWord: (game, id) => game.turn.phase === 'play' && tracks(game, id),
+    uncount: (game, id) => game.turn.phase === 'play' && tracks(game, id),
+    nono: (game, id) => game.turn.phase === 'play' && tracks(game, id),
+    mark: (game, id) => tracks(game, id),
+    unmark: (game, id) => tracks(game, id),
   }
-  // Which players' phones are shown the card right now: both clue-givers until bidding closes, then the clue-giver
-  // and the judge.
+  // Which players' phones are shown the card right now: both clue-givers until bidding closes (they bid on it); then
+  // the clue-giver, through the play and the steal (so they can follow the other team's steal); and, without a host,
+  // the judge while the card is played, since they check off the words.
   function maySeeCard(game, playerId) {
     const turn = game.turn
-    if (game.status !== 'playing' || !turn || turn.phase === 'done') return false
+    if (game.status !== 'playing' || !turn || turn.phase === 'done' || !playerId) return false
     if (['peek', 'bid'].includes(turn.phase)) return isGiver(game, playerId)
-    return turn.clueGiverId === playerId || turn.judgeId === playerId
+    if (turn.clueGiverId === playerId) return true
+    return game.hostless && turn.phase === 'play' && turn.judgeId === playerId
   }
 
   function register(socket) {

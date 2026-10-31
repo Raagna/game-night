@@ -1,215 +1,525 @@
-/* Word Budget — the board with a violet lamp. The TV's centrepieces are flap meters: the bid and the shot clock while
-   bidding, then the clock and the words left of the budget while a card is played. The card's five words reach the
-   TV only once they've been said; until then each is a row of blank cells. A blown budget or a no-no is red with an
-   X cell. Shares the tt-* rows, meters and keys (src/tongue/tongue.css) and the team colours of src/survey. */
-.wb, .wb-setup { --team-0: #74a9d8; --team-1: #93c48b; }
-
-/* ---------- TV ---------- */
-.wb-center { gap: 14px; }
-.wb-headline { max-width: 32ch; }
-.wb-howto { max-width: 60ch; font-size: 1.1rem; line-height: 1.45; color: var(--steel-hi); text-wrap: balance; }
-.wb-pass-note { font: 600 1.05rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--table); }
-.wb-pass-note::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 10px; background: currentColor; }
-
-/* The teams down the side: number on its colour, name, cards on flaps, a square per card toward the target. */
-.wb-scores { position: sticky; top: 16px; padding: 14px; border-radius: 3px; background: var(--well); text-align: left; }
-.wb-scores > h2 { margin-bottom: 10px; }
-.wb-scores > ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.wb-scores li {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px;
-  padding: 12px; border-radius: 2px; background: var(--flap-face);
-  box-shadow: inset 0 3px 0 var(--team);
+/* Word Budget — a party card game on a TV set. It has its own look rather than the house departure board: a cobalt
+   stage, paper word cards with thick ink outlines and hard drop shadows, a yellow price tag for the bid, a budget
+   meter of word pips, ring clocks, and two teams in sky and tangerine. Red still means a fail, always with an X.
+   Everything here is scoped to Word Budget's screens (.wb, .wb-setup); the hub and the other games are untouched.
+   The shared tokens (--table, --paint, --well…) are re-set on the roots so the few shared pieces still used (the
+   sound and controller links, host tools, Back to Game Night) take the same colours. */
+.wb, .wb-setup {
+  --wb-blue: #1d3fe0;
+  --wb-blue-hi: #3557ff;
+  --wb-blue-lo: #1530b4;
+  --wb-blue-deep: #0c1d7a;
+  --wb-ink: #0b1033;
+  --wb-paper: #fff8ec;
+  --wb-paper-lo: #f2e8d6;
+  --wb-sun: #ffd23f;
+  --wb-mint: #2ee6a6;
+  --wb-red: #ff4f4f;
+  --wb-red-ink: #fff;
+  --wb-soft: #dbe3ff;
+  --wb-shadow: 0 6px 0 var(--wb-ink);
+  --wb-shadow-sm: 0 4px 0 var(--wb-ink);
+  --wb-font: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --wb-text: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  /* The shared tokens, re-set for the shared pieces Word Budget still uses. */
+  --board: var(--wb-blue);
+  --well: rgb(8 18 90 / 0.45);
+  --flap-face: rgb(255 255 255 / 0.12);
+  --flap-face-lo: rgb(255 255 255 / 0.08);
+  --rule: rgb(255 255 255 / 0.2);
+  --rule-strong: rgb(255 255 255 / 0.4);
+  --paint: #fff;
+  --paint-dim: rgb(255 255 255 / 0.55);
+  --steel: #c7d2ff;
+  --steel-hi: var(--wb-soft);
+  --steel-mid: rgb(255 255 255 / 0.45);
+  --table: var(--wb-sun);
+  --on-table: var(--wb-ink);
+  --red: var(--wb-red);
+  --red-text: #ffc9c4;
+  color: #fff;
+  font-family: var(--wb-text);
 }
-.wb-team-score { grid-column: 2; grid-row: 1; font-size: 1.8rem; }
-.wb-scores li > small { grid-column: 1 / -1; font: 500 0.92rem/1.3 var(--set); color: var(--steel); overflow-wrap: anywhere; }
-.wb-scores li > .wb-saved { margin-top: -4px; font: 600 0.78rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
-.wb-scores li.is-turn { box-shadow: inset 0 3px 0 var(--team), inset 0 0 0 2px var(--table); }
-.wb-lamps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
-.wb-lamps i { width: 12px; height: 12px; border: 2px solid var(--steel-mid); }
-.wb-lamps i.is-lit { background: var(--table); border-color: var(--table); }
+.wb-team-0 { --team: #3ad1ff; }
+.wb-team-1 { --team: #ff9a3c; }
 
-/* Meters: the bid, the shot clock, the clock and the words left. */
-.wb-bidboard { gap: 16px; }
-.wb-bid { font-size: clamp(4.4rem, 15vh, 8.5rem); min-width: 280px; }
-.wb-bid > .flap .flap-c { color: var(--table); }
-.wb-bid.is-idle > .flap .flap-c { color: var(--paint-dim); }
-.wb-bid > .label, .wb-shot > .label { font-size: 0.9rem; }
-.wb-meter-note { font: 600 0.95rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
-.wb-shot { font-size: clamp(3rem, 10vh, 5.6rem); }
-.wb-play { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 18px; width: 100%; max-width: 920px; }
-.wb-meters { display: grid; gap: 14px; }
-.wb-meters .tt-meter { min-width: 200px; }
-.wb-meter-main { display: inline-flex; align-items: center; gap: 0.08em; }
-.wb-meter-main .flap-c { color: var(--table); }
-.wb-meter-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 1.15rem; }
-.wb-meter-sub > .label { font-size: 0.72rem; }
-/* Over budget: red letters and an X cell. */
-.wb-meter.is-over { box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--steel-lo), inset 0 0 0 2px var(--red); }
-.wb-meter.is-over > .label, .wb-meter.is-over .wb-meter-main .flap-c { color: var(--red-text); }
-.wb-x-cell {
-  display: grid; place-items: center; width: 0.74em; height: 1.18em; border-radius: 0.06em;
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  color: var(--red); box-shadow: inset 0 0 0 0.03em var(--red);
+/* The stage: cobalt with soft spotlights and a faint diagonal stripe, edge to edge (no steel frame). */
+body:has(.wb), body:has(.wb-setup) {
+  --frame: 0px;
+  background: #1d3fe0;
 }
-.wb-x-cell > svg { width: 0.5em; height: 0.5em; }
+html:has(.wb), html:has(.wb-setup) { scrollbar-color: #8ea2ff #1530b4; }
+/* The TV reads from across the room: on a big screen everything set in rem grows with the width. */
+html:has(.wb-tv) { font-size: clamp(16px, 1.05vw, 26px); }
+.wb.display, .wb.player, .wb.controller, .wb.end, .wb-setup {
+  min-height: 100vh; min-height: 100dvh;
+  box-shadow: none;
+  background:
+    radial-gradient(60% 50% at 18% 0%, rgb(255 255 255 / 0.16), transparent 70%),
+    radial-gradient(50% 45% at 92% 100%, rgb(255 210 63 / 0.14), transparent 70%),
+    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.035) 0 18px, transparent 18px 36px),
+    linear-gradient(180deg, var(--wb-blue-hi), var(--wb-blue) 45%, var(--wb-blue-lo));
+  background-attachment: fixed;
+}
+.wb-icon { display: block; width: 1em; height: 1em; flex-shrink: 0; }
 
-/* The card on the TV: five rows, one column. */
-.wb-slots { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
-.wb-slots .tt-row { --side: 8em; }
-.wb-center > .wb-slots { max-width: 760px; }
-.tt-row.is-stolen .tt-mark { background: var(--table); color: var(--on-table); }
-.tt-row.is-stolen > em { color: var(--table); }
+/* ---------- The look's pieces ---------- */
+/* The wordmark: WORD in paper letters, BUDGET on a tilted yellow price tag with a punched hole. */
+.wb-logo { display: inline-flex; align-items: center; gap: 0.18em; font: 700 clamp(1.5rem, 2.6vw, 2.4rem)/1 var(--wb-font); text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; }
+.wb-logo-word { color: #fff; text-shadow: 0 0.08em 0 var(--wb-ink); }
+.wb-logo-tag {
+  position: relative; display: inline-block; padding: 0.1em 0.3em 0.08em 0.62em; border: 0.08em solid var(--wb-ink); border-radius: 0.14em 0.22em 0.22em 0.14em;
+  background: var(--wb-sun); color: var(--wb-ink); box-shadow: 0 0.12em 0 var(--wb-ink); transform: rotate(-4deg);
+}
+.wb-logo-tag::before { content: ""; position: absolute; left: 0.2em; top: 50%; width: 0.2em; height: 0.2em; margin-top: -0.1em; border-radius: 50%; background: var(--wb-blue); box-shadow: inset 0 0 0 0.05em var(--wb-ink); }
+.wb-logo.is-small { font-size: 1.15rem; }
+.wb-logo.is-setup { font-size: clamp(2.2rem, 5vw, 3.4rem); margin: 6px 0 18px; }
 
-/* Red and lamp tags: what went wrong on a card, or right. */
-.wb-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.wb-kicker { font: 700 0.9rem/1.2 var(--wb-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-note { font: 500 1.02rem/1.45 var(--wb-text); color: var(--wb-soft); text-wrap: pretty; }
+.wb-teamname { display: inline-block; padding: 0 0.22em; border-radius: 0.16em; background: var(--team, var(--wb-sun)); color: var(--wb-ink); box-shadow: 0 0.06em 0 var(--wb-ink); }
+
+/* A team's number in a sticker dot. */
+.wb-dot {
+  display: inline-grid; place-items: center; flex-shrink: 0; width: 1.5em; height: 1.5em; border-radius: 50%;
+  border: 2px solid var(--wb-ink); background: var(--team); color: var(--wb-ink);
+  font: 700 0.85em/1 var(--wb-font);
+}
+
+/* Buttons: chunky pills with an ink lip; the go button is yellow. */
+.wb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 54px; padding: 0 28px; border-radius: 999px;
+  border: 3px solid var(--wb-ink); background: #fff; color: var(--wb-ink); box-shadow: var(--wb-shadow-sm);
+  font: 700 1.15rem/1 var(--wb-font); letter-spacing: 0.06em; text-transform: uppercase;
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 120ms ease-out;
+}
+.wb-btn .wb-icon { width: 20px; height: 20px; }
+.wb-btn.is-go { background: var(--wb-sun); }
+.wb-btn.is-ghost { background: transparent; color: #fff; border-color: rgb(255 255 255 / 0.85); box-shadow: none; }
+.wb-btn:hover:not(:disabled) { filter: brightness(1.05); }
+.wb-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--wb-ink); }
+.wb-btn.is-ghost:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.wb-btn:disabled { background: rgb(8 18 90 / 0.35); color: rgb(255 255 255 / 0.6); border-color: rgb(255 255 255 / 0.3); box-shadow: none; cursor: default; }
+.wb-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 999px;
+  border: 2px solid rgb(255 255 255 / 0.8); color: #fff; background: rgb(8 18 90 / 0.25);
+  font: 700 0.95rem/1 var(--wb-font); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.wb-chip:hover:not(:disabled) { background: rgb(255 255 255 / 0.14); }
+.wb-chip:disabled { opacity: 0.45; cursor: default; }
+.wb-chip.is-danger { border-color: #ffb0a8; color: #ffd6d1; }
+.wb-tools-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+/* The clock: a ring that empties as the time runs out. Red, with a pulse, in the last five seconds. */
+.wb-clock { --size: 92px; position: relative; display: inline-grid; justify-items: center; gap: 6px; flex-shrink: 0; }
+.wb-clock > svg { width: var(--size); height: var(--size); transform: rotate(-90deg); overflow: visible; }
+.wb-clock-track { fill: rgb(8 18 90 / 0.45); stroke: rgb(255 255 255 / 0.18); stroke-width: 9; }
+.wb-clock-fill { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; transition: stroke-dasharray 260ms linear, stroke 200ms ease-out; }
+.wb-clock > b {
+  position: absolute; top: 0; left: 0; display: grid; place-items: center; width: var(--size); height: var(--size);
+  font: 700 calc(var(--size) * 0.4)/1 var(--wb-font); font-variant-numeric: tabular-nums; color: #fff;
+}
+.wb-clock.is-long > b { font-size: calc(var(--size) * 0.3); }
+.wb-clock > small { font: 700 0.85rem/1 var(--wb-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-clock.is-low .wb-clock-fill { stroke: var(--wb-red); }
+.wb-clock.is-low > b { color: #fff; animation: wb-pulse 1s ease-in-out infinite; }
+.wb-clock.is-steal .wb-clock-fill { stroke: var(--wb-sun); }
+.wb-clock.is-steal.is-low .wb-clock-fill { stroke: var(--wb-red); }
+.wb-clock.is-big { --size: clamp(120px, 21vh, 200px); }
+.wb-clock.is-big > small { font-size: 1rem; }
+.wb-clock.is-huge { --size: clamp(150px, 30vh, 270px); }
+.wb-clock.is-huge > small { font-size: 1.1rem; }
+.wb-clock.is-small { --size: 58px; }
+.wb-clock.is-small > small { display: none; }
+@keyframes wb-pulse { 50% { transform: scale(1.12); } }
+
+/* The bid on a yellow price tag, tilted, with a punched hole. */
+.wb-bidtag {
+  position: relative; display: inline-grid; justify-items: center; gap: 2px; min-width: 240px;
+  padding: 16px 30px 16px 46px; border: 4px solid var(--wb-ink); border-radius: 14px 22px 22px 14px;
+  background: var(--wb-sun); color: var(--wb-ink); box-shadow: 0 8px 0 var(--wb-ink); transform: rotate(-2deg);
+}
+.wb-bidtag::before { content: ""; position: absolute; left: 14px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: var(--wb-blue); border: 3px solid var(--wb-ink); }
+.wb-bidtag > b { font: 700 clamp(4.4rem, 15vh, 9rem)/0.9 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-bidtag-kicker { display: inline-flex; align-items: center; gap: 8px; font: 700 1.05rem/1.1 var(--wb-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.wb-bidtag-unit { font: 700 1rem/1.2 var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-bidtag.is-idle { background: var(--wb-paper); }
+.wb-bidtag.is-idle > b { color: rgb(11 16 51 / 0.35); }
+.wb-bidtag.is-tv > b { font-size: clamp(5rem, 24vh, 12rem); }
+.wb-bidtag.is-tv .wb-bidtag-kicker, .wb-bidtag.is-tv .wb-bidtag-unit { font-size: clamp(1.05rem, 2.4vh, 1.5rem); }
+.wb-bidtag.is-tv { padding: 22px 40px 22px 58px; animation: wb-tag-in 380ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+.wb-bidtag.is-phone { justify-self: center; min-width: 0; padding: 8px 22px 8px 40px; transform: rotate(-1.5deg); box-shadow: var(--wb-shadow-sm); border-width: 3px; }
+.wb-bidtag.is-phone > b { font-size: 3.4rem; }
+.wb-bidtag.is-phone .wb-bidtag-kicker, .wb-bidtag.is-phone .wb-bidtag-unit { font-size: 0.85rem; }
+@keyframes wb-tag-in { from { transform: rotate(-8deg) scale(0.85); } }
+
+/* The budget: words left on a yellow sticker, and a pip per word in the budget, filled ink as words are counted. */
+.wb-budget {
+  display: grid; justify-items: center; gap: 4px; padding: 12px 16px 14px;
+  border: 4px solid var(--wb-ink); border-radius: 18px; background: var(--wb-sun); color: var(--wb-ink); box-shadow: var(--wb-shadow);
+}
+.wb-budget-label, .wb-budget-sub { font: 700 0.95rem/1.1 var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-budget-num { display: inline-flex; align-items: center; gap: 0.06em; font: 700 clamp(3.6rem, 11vh, 6.4rem)/0.95 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-budget-num .wb-icon { width: 0.6em; height: 0.6em; }
+.wb-pips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 240px; margin-top: 4px; }
+.wb-pips > i { width: 14px; height: 18px; border-radius: 3px; border: 2px solid var(--wb-ink); background: #fff; }
+.wb-pips > i.is-used { background: var(--wb-ink); }
+.wb-pips > i.is-over { background: var(--wb-red); }
+.wb-budget.is-last { background: #ffb23f; }
+.wb-budget.is-over { background: var(--wb-red); color: #fff; }
+.wb-budget.is-over .wb-pips > i.is-used { background: rgb(11 16 51 / 0.75); }
+.wb-budget.is-phone { grid-template-columns: auto 1fr; grid-template-areas: "num label" "num sub" "pips pips"; justify-items: start; align-items: center; gap: 0 14px; padding: 8px 14px 10px; border-width: 3px; box-shadow: var(--wb-shadow-sm); }
+.wb-budget.is-phone .wb-budget-num { grid-area: num; font-size: 3.2rem; }
+.wb-budget.is-phone .wb-budget-label { grid-area: label; align-self: end; }
+.wb-budget.is-phone .wb-budget-sub { grid-area: sub; align-self: start; font-size: 0.85rem; opacity: 0.8; }
+.wb-budget.is-phone .wb-pips { grid-area: pips; justify-content: flex-start; max-width: none; }
+.wb-budget.is-phone .wb-pips > i { width: 11px; height: 14px; }
+
+/* The card: five words on paper with an ink outline. Unsaid words on the TV are hatched blanks; a word got turns
+   mint with a check, a stolen one yellow, a missed one fades with an X. */
+.wb-card {
+  list-style: none; margin: 0; width: 100%; display: grid; gap: 8px; padding: 14px;
+  border: 4px solid var(--wb-ink); border-radius: 22px; background: var(--wb-paper); color: var(--wb-ink); box-shadow: 0 8px 0 var(--wb-ink);
+  font-size: 1.4rem;
+}
+.wb-word-row {
+  display: grid; grid-template-columns: 1.5em minmax(0, 1fr) auto; align-items: center; gap: 0.5em;
+  width: 100%; min-height: 2.3em; padding: 0.18em 0.45em 0.18em 0.3em; border-radius: 12px;
+  background: #fff; box-shadow: inset 0 0 0 2px rgb(11 16 51 / 0.14); color: var(--wb-ink); text-align: left;
+}
+.wb-word-badge {
+  display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%; border: 2.5px solid var(--wb-ink);
+  font: 700 0.72em/1 var(--wb-font); background: var(--wb-paper);
+}
+.wb-word-badge .wb-icon { width: 1.05em; height: 1.05em; }
+.wb-word-text { min-width: 0; font: 700 1em/1.05 var(--wb-font); letter-spacing: 0.01em; text-transform: uppercase; overflow-wrap: anywhere; }
+.wb-word-blank {
+  display: block; height: 1.05em; border-radius: 6px; max-width: 70%;
+  background: repeating-linear-gradient(135deg, rgb(11 16 51 / 0.14) 0 6px, rgb(11 16 51 / 0.05) 6px 12px);
+  font: 600 0.6em/1.75 var(--wb-text); text-transform: none; padding-left: 0.6em; color: rgb(11 16 51 / 0.6);
+}
+.wb-word em { font: 700 0.6em/1 var(--wb-font); font-style: normal; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; padding: 0.35em 0.6em; border-radius: 999px; }
+.wb-word.is-got > .wb-word-row { background: var(--wb-mint); box-shadow: inset 0 0 0 2.5px var(--wb-ink); }
+.wb-word.is-stolen > .wb-word-row { background: var(--wb-sun); box-shadow: inset 0 0 0 2.5px var(--wb-ink); }
+.wb-word.is-got .wb-word-badge, .wb-word.is-stolen .wb-word-badge { background: var(--wb-ink); color: #fff; }
+.wb-word.is-got em, .wb-word.is-stolen em { background: var(--wb-ink); color: #fff; }
+.wb-word.is-missed > .wb-word-row { background: transparent; box-shadow: inset 0 0 0 2px rgb(11 16 51 / 0.3); }
+.wb-word.is-missed .wb-word-text { color: rgb(11 16 51 / 0.55); }
+.wb-word.is-missed .wb-word-badge { border-style: dashed; color: rgb(11 16 51 / 0.55); }
+.wb-word.is-missed em { color: rgb(11 16 51 / 0.6); box-shadow: inset 0 0 0 1.5px rgb(11 16 51 / 0.35); }
+.wb-word.is-got, .wb-word.is-stolen { animation: wb-pop 460ms cubic-bezier(0.2, 1.5, 0.4, 1); }
+.wb-word.is-missed { animation: wb-fade 300ms ease-out; }
+@keyframes wb-pop { from { transform: scale(0.86) rotate(-2deg); } }
+@keyframes wb-fade { from { opacity: 0.2; } }
+/* As keys: every word a full-width key. A waiting word says Tap; checked words can be tapped again to take back. */
+.wb-card.is-keys > .wb-word > button { min-height: 60px; border: 0; cursor: pointer; transition: transform 70ms ease-out; touch-action: manipulation; }
+.wb-card.is-keys > .wb-word.is-waiting > button { box-shadow: inset 0 0 0 2.5px var(--wb-ink), 0 3px 0 var(--wb-ink); }
+.wb-card.is-keys > .wb-word.is-waiting > button:active { transform: translateY(3px); box-shadow: inset 0 0 0 2.5px var(--wb-ink); }
+.wb-card.is-keys > .wb-word.is-waiting em { background: var(--wb-blue); color: #fff; }
+.wb-card.is-keys > .wb-word > button:disabled { cursor: default; }
+.wb-card.is-tv { max-width: 780px; padding: clamp(12px, 1.8vh, 18px); gap: clamp(6px, 1vh, 10px); font-size: clamp(1.5rem, 4.2vh, 2.7rem); }
+.wb-card.is-phone { font-size: 1.35rem; padding: 10px; gap: 6px; border-width: 3px; border-radius: 18px; box-shadow: var(--wb-shadow); }
+.wb-card.is-phone .wb-word-row { min-height: 52px; border-radius: 10px; }
+.wb-card.is-phone.is-compact { font-size: 1.2rem; gap: 4px; padding: 8px; }
+.wb-card.is-phone.is-compact .wb-word-row { min-height: 42px; }
+
+/* Tags: what went wrong on a card (red, with an X) or right (mint, with a check). */
+.wb-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; }
 .wb-tags:empty { display: none; }
 .wb-tag {
-  display: inline-flex; align-items: center; gap: 10px;
-  min-height: 38px; padding: 0 14px 0 6px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  font: 700 1rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px 0 10px; border-radius: 999px;
+  border: 3px solid var(--wb-ink); box-shadow: var(--wb-shadow-sm);
+  font: 700 1rem/1 var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase;
 }
-.wb-tag > svg { width: 26px; height: 26px; padding: 5px; border-radius: 2px; }
-.wb-tag.is-bad { color: var(--red-text); box-shadow: inset 0 0 0 2px var(--red); }
-.wb-tag.is-bad > svg { color: var(--red); background: var(--flap-gap); }
-.wb-tag.is-good { color: var(--table); box-shadow: inset 0 0 0 2px var(--table); }
-.wb-tag.is-good > svg { color: var(--on-table); background: var(--table); }
+.wb-tag .wb-icon { width: 20px; height: 20px; }
+.wb-tag.is-bad { background: var(--wb-red); color: #fff; }
+.wb-tag.is-good { background: var(--wb-mint); color: var(--wb-ink); }
 
-/* The result clacks onto the board: lamp letters for a card won, red for a no-no or a card nobody gets. */
-.wb-result { display: flex; justify-content: center; max-width: 100%; font-size: clamp(1.5rem, 2.7vw, 2.5rem); }
-.wb-result .flap-cells { justify-content: center; }
-.wb-result .flap-c { color: var(--table); }
-.wb-result.is-bad .flap-c { color: var(--red-text); }
-
-/* The steal: the stealing team's name and "steal it!" cascade in big lamp letters over a red "over budget". */
-.wb-steal { display: grid; justify-items: center; gap: 12px; animation: wb-steal-in 420ms cubic-bezier(0.16, 1, 0.3, 1); }
-.wb-steal-head { display: flex; justify-content: center; max-width: 100%; font-size: clamp(2rem, 4.4vw, 3.8rem); }
-.wb-steal-head .flap-cells { justify-content: center; }
-.wb-steal-head .flap-c { color: var(--table); }
-.wb-steal-clock .clue-timer .flap-c { color: var(--table); }
-@keyframes wb-steal-in { from { opacity: 0; transform: scale(1.06); } }
-
-.wb-lobby .departures li > button { gap: 12px; }
-.wb-lobby .departures .sv-team-num { font-size: 0.8em; }
-
-/* ---------- Phone ---------- */
-.player.wb { text-align: center; }
-.player.wb .tt-my-team { box-shadow: inset 0 3px 0 var(--team, var(--steel-mid)); }
-.wb-card .tt-row { --side: 5.4em; }
-.wb-card .tt-row > em:empty { display: none; }
-/* Words not yet said: a hollow marker; said ones fill it with the lamp. */
-.wb-card .tt-row.is-waiting .tt-mark { background: transparent; box-shadow: inset 0 0 0 2px var(--steel-mid); }
-/* Tap rows: each is a key the width of the card. */
-.wb-card-tap > li { display: block; }
-.wb-card-tap .tt-row {
-  width: 100%; min-height: 56px; padding: 6px 10px;
-  border-radius: 2px; border: 1px solid var(--steel-mid);
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  text-align: left; color: var(--paint);
-  transition: border-color 160ms ease-out, transform 80ms ease-out;
+/* ---------- TV ---------- */
+.wb.display { padding: clamp(14px, 2.2vh, 24px) clamp(16px, 2.8vw, 44px) 86px; text-align: center; }
+.wb-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; min-height: 58px; margin-bottom: clamp(10px, 2vh, 20px); }
+.wb-bar > .wb-logo { justify-self: start; }
+.wb-bar > .wb-clock { justify-self: end; }
+.wb-bar > .wb-joincorner { justify-self: end; }
+.wb-joincorner { display: flex; align-items: center; gap: 12px; text-align: left; font: 700 0.95rem/1.3 var(--wb-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-joincorner b { color: #fff; margin-right: 10px; letter-spacing: 0.04em; text-transform: none; font-family: var(--wb-text); }
+.wb-qr-small { width: 62px; padding: 4px; border-radius: 8px; background: #fff; border: 3px solid var(--wb-ink); flex-shrink: 0; }
+/* The room code: one paper tile per letter, each tipped a little. */
+.wb-code { display: inline-flex; gap: 0.12em; font: 700 clamp(52px, 11vh, 116px)/1 var(--wb-font); }
+.wb-code > i {
+  display: grid; place-items: center; width: 0.92em; height: 1.16em; font-style: normal; border-radius: 0.14em;
+  border: 0.045em solid var(--wb-ink); background: var(--wb-paper); color: var(--wb-ink); box-shadow: 0 0.07em 0 var(--wb-ink);
+  transform: rotate(-3deg); animation: wb-tile-in 420ms cubic-bezier(0.2, 1.5, 0.4, 1) backwards; animation-delay: calc(var(--i, 0) * 70ms);
 }
-.wb-card-tap .tt-row:hover:not(:disabled) { border-color: var(--table); }
-.wb-card-tap .tt-row:active:not(:disabled) { transform: translateY(1px); }
-.wb-card-tap .tt-row:disabled { cursor: default; border-color: transparent; }
-.wb-card-tap .tt-row.is-waiting > em { color: var(--paint-dim); }
-.wb-rules { font-size: 0.9rem; text-align: center; }
+.wb-code > i:nth-child(even) { transform: rotate(2.5deg); background: var(--wb-sun); }
+.wb-code.is-small { font-size: 1.3rem; vertical-align: middle; }
+.wb-code.is-small > i { border-width: 2px; box-shadow: 0 2px 0 var(--wb-ink); animation: none; }
+@keyframes wb-tile-in { from { transform: translateY(-0.4em) rotate(-12deg); opacity: 0; } }
 
-.wb-phone-bid { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px; font-size: 1.7rem; }
-.wb-phone-bid .flap-c { color: var(--table); }
-.wb-phone-left.is-over .flap-c { color: var(--red-text); }
-/* Bid keys: a dark key per step, the bid it makes in big letters. */
-.wb-bid-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.wb-bid-steps > button {
-  display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 80px; border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  border: 1px solid var(--table); color: var(--paint);
-  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.35);
-  transition: transform 90ms ease-out, background-color 160ms ease-out;
+.wb-lobby { display: grid; justify-items: center; gap: clamp(14px, 2.4vh, 24px); max-width: 1100px; margin: 0 auto; }
+.wb-join { display: flex; align-items: center; justify-content: center; gap: clamp(24px, 4vw, 60px); flex-wrap: wrap; }
+.wb-join-code { display: grid; justify-items: start; gap: 14px; text-align: left; max-width: 640px; }
+.wb-join-code > h1 { font-size: 1.15rem; }
+.wb-join-code > p { font: 500 1.1rem/1.4 var(--wb-text); color: var(--wb-soft); }
+.wb-join-code > p b { color: #fff; }
+.wb-qr { margin: 0; display: grid; justify-items: center; gap: 6px; padding: 12px 12px 10px; border-radius: 18px; border: 4px solid var(--wb-ink); background: #fff; color: var(--wb-ink); box-shadow: 0 8px 0 var(--wb-ink); transform: rotate(2deg); }
+.wb-qr .qr { width: clamp(140px, 21vh, 220px); }
+.wb-qr figcaption { font: 700 0.95rem var(--wb-font); letter-spacing: 0.14em; text-transform: uppercase; }
+.wb-lobby-teams { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 2vw, 26px); width: 100%; }
+.wb-lobby-team { padding: 14px; border-radius: 20px; border: 4px solid var(--wb-ink); background: var(--team); color: var(--wb-ink); box-shadow: var(--wb-shadow); text-align: left; }
+.wb-lobby-team > h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font: 700 1.6rem/1 var(--wb-font); text-transform: uppercase; }
+.wb-lobby-team > h2 .wb-dot { background: #fff; }
+.wb-lobby-team > h2 small { margin-left: auto; font-size: 0.95rem; letter-spacing: 0.12em; }
+.wb-lobby-team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.wb-lobby-team li > button, .wb-lobby-team li.is-open > span {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 999px;
+  border: 3px solid var(--wb-ink); background: #fff; color: var(--wb-ink); box-shadow: 0 3px 0 var(--wb-ink);
+  font: 700 1.25rem/1 var(--wb-font); text-transform: uppercase; letter-spacing: 0.02em; animation: wb-pop 360ms cubic-bezier(0.2, 1.5, 0.4, 1);
 }
-.wb-bid-steps > button > b { font: 700 2.1rem/1 var(--flap-font); font-variant-numeric: tabular-nums; }
-.wb-bid-steps > button > small { font: 600 0.85rem var(--flap-font); letter-spacing: 0.14em; color: var(--table); }
-.wb-bid-steps > button:active:not(:disabled) { transform: translateY(2px); }
-.wb-bid-steps > button:disabled { border-color: var(--rule); color: var(--paint-dim); }
-.wb-bid-steps > button:disabled > small { color: var(--paint-dim); }
-.wb-bid-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-.wb-bid-type input { min-height: 52px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); background: var(--well); font: 600 1.4rem var(--flap-font); letter-spacing: 0.08em; text-align: center; }
-.wb-bid-type input:focus { border-color: var(--table); outline: none; box-shadow: 0 0 0 1px var(--table); }
-.wb-pass-btn { justify-self: center; }
-.wb-switch { justify-self: center; margin: 8px auto 0; }
-.wb-switch > svg { width: 18px; height: 18px; }
+.wb-lobby-team li > button .wb-icon { width: 18px; height: 18px; opacity: 0.45; }
+.wb-lobby-team li > button:hover .wb-icon { opacity: 1; }
+.wb-lobby-team li > button small { font-size: 0.75rem; letter-spacing: 0.12em; padding: 3px 7px; border-radius: 999px; background: var(--wb-ink); color: #fff; }
+.wb-lobby-team li.is-away > button { border-style: dashed; color: rgb(11 16 51 / 0.65); box-shadow: none; }
+.wb-lobby-team li.is-open > span { border-style: dashed; background: transparent; box-shadow: none; color: rgb(11 16 51 / 0.65); font-size: 1rem; letter-spacing: 0.12em; animation: none; }
+.wb-lobby .wb-note { text-align: center; }
+.wb-start { min-width: 260px; min-height: 62px; font-size: 1.4rem; }
 
-/* The judge's +1: the biggest key on the phone, so a thumb finds it without looking. */
-.wb-plus {
-  display: grid; justify-items: center; align-content: center; gap: 10px; width: 100%; min-height: 176px;
-  border-radius: 6px; background: var(--table); color: var(--on-table);
-  box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--steel-mid), inset 0 -6px 0 rgb(0 0 0 / 0.25);
-  touch-action: manipulation; user-select: none; transition: transform 70ms ease-out;
+/* Playing: the stage on the left, the two teams down the right. */
+.wb-stage { display: grid; grid-template-columns: minmax(0, 1fr) clamp(250px, 23vw, 460px); align-items: start; gap: clamp(18px, 2.4vw, 34px); }
+.wb-center { display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.8vh, 18px); min-width: 0; }
+.wb-round { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.wb-round > .wb-tag { min-height: 34px; }
+.wb-round > span:not(.wb-tag) { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; border: 3px solid var(--wb-ink); font: 700 0.95rem/1 var(--wb-font); letter-spacing: 0.14em; text-transform: uppercase; box-shadow: 0 3px 0 var(--wb-ink); }
+.wb-round-card { background: var(--wb-paper); color: var(--wb-ink); }
+.wb-round-phase { background: var(--wb-sun); color: var(--wb-ink); }
+.wb-headline { max-width: 26ch; font: 700 clamp(2rem, 4.4vw, 3.8rem)/1.05 var(--wb-font); text-transform: uppercase; letter-spacing: 0.01em; text-wrap: balance; text-shadow: 0 0.06em 0 var(--wb-ink); }
+.wb-headline em { font-style: normal; color: var(--wb-sun); }
+.wb-headline .wb-teamname { text-shadow: none; }
+.wb-howto { width: 100%; max-width: 40em; font: 500 clamp(1.05rem, 1.5vw, 1.3rem)/1.4 var(--wb-text); color: var(--wb-soft); text-wrap: balance; }
+.wb-pass-note { display: inline-flex; align-items: center; min-height: 38px; padding: 0 16px; border-radius: 999px; background: var(--wb-ink); color: var(--wb-sun); font: 700 1.05rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-play { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: clamp(16px, 2.4vw, 32px); width: 100%; max-width: 1080px; }
+.wb-meters { display: grid; justify-items: center; gap: 16px; }
+.wb-bidboard { display: flex; align-items: center; justify-content: center; gap: clamp(28px, 5vw, 80px); flex-wrap: wrap; margin: clamp(8px, 2vh, 24px) 0; }
+.wb-steal { display: grid; justify-items: center; gap: 10px; animation: wb-steal-in 480ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+.wb-steal-head { font: 700 clamp(2.4rem, 5.4vw, 4.6rem)/1 var(--wb-font); text-transform: uppercase; color: var(--wb-sun); text-shadow: 0 0.07em 0 var(--wb-ink); transform: rotate(-2deg); }
+.wb-steal-head .wb-teamname { text-shadow: none; }
+@keyframes wb-steal-in { from { opacity: 0; transform: scale(1.15) rotate(3deg); } }
+.wb-result {
+  display: inline-block; max-width: 100%; padding: 0.12em 0.5em; border-radius: 0.3em; border: 4px solid var(--wb-ink);
+  background: var(--wb-mint); color: var(--wb-ink); box-shadow: 0 8px 0 var(--wb-ink); transform: rotate(-1.5deg);
+  font: 700 clamp(1.8rem, 3.6vw, 3.2rem)/1.1 var(--wb-font); text-transform: uppercase; text-wrap: balance;
+  animation: wb-tag-in 420ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
-.wb-plus > b { font: 700 4.6rem/1 var(--flap-font); letter-spacing: 0.04em; }
-.wb-plus-count { display: inline-flex; align-items: center; gap: 6px; font-size: 1.5rem; }
-.wb-plus-count > small { font: 700 0.8rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; }
-.wb-plus-warn { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 2px; background: var(--flap-gap); color: var(--red-text); font: 700 0.85rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; }
-.wb-plus-warn > svg { width: 16px; height: 16px; color: var(--red); }
-.wb-plus:active { transform: translateY(3px); }
-.wb-plus.is-last { box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--red), inset 0 -6px 0 rgb(0 0 0 / 0.25); }
-.wb-judge-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
-.wb-judge-row .tt-pass-btn { min-height: 60px; font-size: 1.15rem; }
-/* The no-no: a red key with an X; it asks once before it costs the card. */
-.wb-nono {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  min-height: 60px; padding: 0 16px; border-radius: var(--radius-sm);
-  background: var(--red); color: #fff;
-  font: 700 1.15rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase;
-  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.25);
-}
-.wb-nono > svg { width: 20px; height: 20px; }
-.wb-nono-confirm { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; border-radius: 3px; border: 1px solid var(--red); background: rgb(198 70 60 / 0.1); }
-.wb-nono-confirm p { grid-column: 1 / -1; font-weight: 600; }
-.wb-card .chip-btn { flex-shrink: 0; }
-.wb-phone-steal { justify-items: center; text-align: center; }
-.wb-phone-steal .wb-steal-head { font-size: 2.6rem; }
-.wb-phone-clock { display: grid; justify-items: center; gap: 6px; }
-.wb-phone-clock .clue-timer { font-size: 3rem; }
+.wb-result.is-bad { background: var(--wb-red); color: #fff; }
+.wb-next { min-width: 240px; }
 
-/* ---------- Controller ---------- */
-.controller-bar .wb-brand { font-size: 0.95rem; }
-.controller.wb .wb-card, .controller.wb .wb-plus, .controller.wb .wb-judge-row, .controller.wb .wb-slots, .controller.wb .wb-phone-bid, .controller.wb .wb-tags { margin-bottom: 12px; }
-.controller.wb .wb-plus { min-height: 130px; margin-top: 8px; }
-.controller.wb .wb-tags { justify-content: flex-start; }
-.wb-newcard { margin-bottom: 12px; }
-.wb-award { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
-.wb-tool-cards { display: inline-flex; align-items: center; gap: 6px; }
-.wb-tool-cards > small { font: 600 0.75rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
-.tt-team-tools > li.team-0, .tt-team-tools > li.team-1 { box-shadow: inset 3px 0 0 var(--team); }
+/* The teams: a sticker panel in each team's colour, the score big, a card pip per card toward the target. */
+.wb-teams { position: sticky; top: 16px; display: grid; gap: 16px; text-align: left; }
+.wb-team { display: grid; gap: 6px; padding: 14px 16px; border-radius: 20px; border: 4px solid var(--wb-ink); background: var(--team); color: var(--wb-ink); box-shadow: var(--wb-shadow); transition: transform 200ms ease-out; }
+.wb-team > header { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wb-team > header b { min-width: 0; font: 700 1.5rem/1 var(--wb-font); text-transform: uppercase; overflow-wrap: anywhere; }
+.wb-team > header .wb-dot { background: #fff; }
+.wb-team > header em { margin-left: auto; padding: 5px 10px; border-radius: 999px; background: var(--wb-ink); color: var(--wb-sun); font: 700 0.8rem/1 var(--wb-font); font-style: normal; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+.wb-team-score { display: flex; align-items: baseline; gap: 8px; }
+.wb-team-score > b { font: 700 clamp(3rem, 8vh, 4.6rem)/0.9 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-team-score > span { font: 700 1rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-team > small { font: 600 0.95rem/1.3 var(--wb-text); overflow-wrap: anywhere; }
+.wb-team > .wb-saved { font: 700 0.85rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.wb-team.is-turn { transform: translateY(-4px) rotate(-1deg); outline: 4px solid #fff; outline-offset: 3px; }
+.wb-cardpips { display: flex; flex-wrap: wrap; gap: 5px; }
+.wb-cardpips > i { width: 15px; height: 21px; border-radius: 3px; border: 2px solid rgb(11 16 51 / 0.45); }
+.wb-cardpips > i.is-won { background: var(--wb-ink); border-color: var(--wb-ink); animation: wb-pop 460ms cubic-bezier(0.2, 1.5, 0.4, 1); }
 
-/* ---------- End ---------- */
-.end.wb .place { box-shadow: inset 3px 0 0 var(--team); }
-.end.wb .place-1 { box-shadow: inset 3px 0 0 var(--team), inset 0 0 0 2px var(--table); }
-.end.wb .tt-place-name > b { display: flex; align-items: center; }
-.end.wb .tt-place-name .sv-team-num { font-size: 0.7em; }
-.wb-place-score { display: grid; justify-items: end; gap: 2px; }
-.wb-place-score > small { font: 600 0.75rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+/* The rail and the host tools along the bottom. */
+.wb .wb-rail-btn { border-radius: 999px; background: rgb(8 18 90 / 0.5); color: #fff; font-family: var(--wb-font); }
+.wb .wb-rail-btn:hover { background: rgb(8 18 90 / 0.8); color: #fff; }
+.wb .wb-rail-btn svg { width: 20px; height: 20px; }
+.wb-host-tools { border-radius: 16px; }
+.wb-host-tools .wb-tools-row { padding: 12px 16px 14px; justify-content: flex-start; }
 
-/* A 720p TV: smaller meters so the meters, the card and the rail fit. */
+/* A 720p TV or a short laptop: smaller clocks, card and panels so a whole card fits without scrolling. */
 @media (max-height: 800px) {
-  .wb-bid { font-size: clamp(3.6rem, 14vh, 7rem); }
-  .wb-shot { font-size: clamp(2.6rem, 9vh, 4.6rem); }
-  .wb-meters { gap: 10px; }
-  .wb-meters .tt-meter { font-size: clamp(2rem, 6.6vh, 3.2rem); }
-  .wb-steal { gap: 8px; }
-  .wb-steal-head { font-size: clamp(1.8rem, 3.8vw, 3rem); }
+  .wb.display { padding-top: 10px; padding-bottom: 66px; }
+  .wb-bar { min-height: 0; margin-bottom: 8px; }
+  .wb-center { gap: 8px; }
+  .wb-clock.is-big { --size: clamp(96px, 17vh, 140px); }
+  .wb-card.is-tv { font-size: clamp(1.2rem, 3.3vh, 1.7rem); gap: 5px; padding: 10px; }
+  .wb-card.is-tv .wb-word-row { min-height: 2em; }
+  .wb-headline { font-size: clamp(1.7rem, 3.4vw, 2.7rem); }
+  .wb-steal-head { font-size: clamp(2rem, 4.2vw, 3.2rem); }
+  .wb-result { font-size: clamp(1.5rem, 2.8vw, 2.4rem); box-shadow: var(--wb-shadow); }
   .wb-howto { font-size: 1rem; }
-  .wb-scores { padding: 12px; }
-  .wb-scores li { padding: 10px; }
+  .wb-budget { padding: 8px 12px 10px; }
+  .wb-bidtag.is-tv > b { font-size: clamp(4rem, 21vh, 9rem); }
+  .wb-clock.is-huge { --size: clamp(130px, 27vh, 210px); }
+  .wb-budget-num { font-size: clamp(3rem, 10vh, 4.6rem); }
+  .wb-team { padding: 10px 12px; gap: 4px; }
+  .wb-team-score > b { font-size: clamp(2.4rem, 7vh, 3.4rem); }
+  .wb-code { font-size: clamp(44px, 10vh, 88px); }
+  .wb-qr .qr { width: clamp(110px, 18vh, 170px); }
 }
-@media (max-width: 960px) {
-  .wb-scores { position: static; }
-  .wb-scores > ol { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) {
+  .wb-stage { grid-template-columns: 1fr; }
+  .wb-teams { position: static; grid-template-columns: 1fr 1fr; }
+  .wb-teams > h2 { grid-column: 1 / -1; }
 }
 @media (max-width: 760px) {
   .wb-play { grid-template-columns: 1fr; }
-  .wb-meters { grid-template-columns: 1fr 1fr; }
-  .wb-meters .tt-meter { min-width: 0; font-size: 2.2rem; }
-  .wb-bid { min-width: 0; }
-  .wb-scores > ol { grid-template-columns: 1fr; }
+  .wb-meters { grid-template-columns: auto auto; justify-content: center; align-items: center; }
+  .wb-lobby-teams { grid-template-columns: 1fr; }
+  .wb-joincorner > span { display: none; }
+  .wb-teams { grid-template-columns: 1fr; }
+}
+
+/* ---------- Phone and controller ---------- */
+.wb.player, .wb.controller { max-width: 480px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); text-align: center; }
+.wb.controller { max-width: 560px; }
+.wb-phone-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+.wb-phone-name { min-width: 0; font: 700 1rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--wb-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-myteam {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px;
+  border: 3px solid var(--wb-ink); background: var(--team, rgb(255 255 255 / 0.9)); color: var(--wb-ink); box-shadow: var(--wb-shadow-sm); text-align: left;
+}
+.wb-myteam .wb-dot { background: #fff; font-size: 1.1rem; }
+.wb-myteam-text { display: grid; min-width: 0; }
+.wb-myteam-text b { font: 700 1.3rem/1.1 var(--wb-font); text-transform: uppercase; }
+.wb-myteam-text small { font: 600 0.88rem/1.25 var(--wb-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-myteam-score { display: grid; justify-items: end; }
+.wb-myteam-score b { font: 700 2.2rem/0.95 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-myteam-score small { font: 700 0.72rem var(--wb-font); letter-spacing: 0.14em; text-transform: uppercase; }
+.wb-meta { margin: 14px 0 0; font: 700 0.9rem/1.3 var(--wb-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-pad { display: grid; gap: 14px; margin-top: 12px; }
+.wb-pad > .wb-clock, .wb-pad > .wb-chip, .wb-pad > .wb-btn { justify-self: center; }
+.wb-pad-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; text-align: left; }
+.wb-pad > .wb-pad-top { margin-top: 0; }
+.wb-say { font: 700 1.25rem/1.2 var(--wb-font); text-transform: uppercase; letter-spacing: 0.02em; text-wrap: balance; }
+.wb-say.is-small { font-size: 1.05rem; text-align: left; }
+.wb-status { margin: 6px 0 0; font: 700 1.6rem/1.15 var(--wb-font); text-transform: uppercase; text-wrap: balance; }
+.wb-status.is-you { color: var(--wb-sun); text-shadow: 0 0.06em 0 var(--wb-ink); }
+.wb-wait { display: grid; gap: 6px; }
+.wb-mini { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.wb-mini > p { display: grid; justify-items: center; padding: 8px 14px; border-radius: 16px; border: 3px solid var(--wb-ink); background: var(--wb-paper); color: var(--wb-ink); box-shadow: var(--wb-shadow-sm); }
+.wb-mini > p b { font: 700 3rem/1 var(--wb-font); }
+.wb-mini > p span { font: 700 0.8rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.wb-row2 > .wb-btn { padding: 0 14px; }
+.wb-award { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.wb-wide { width: 100%; margin-top: 18px; }
+.controller .wb-tools-row { margin-top: 14px; }
+
+/* Bid keys: three paper keys, the bid each makes in big numbers. */
+.wb-bid-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.wb-bid-steps > button {
+  display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 84px; border-radius: 16px;
+  border: 3px solid var(--wb-ink); background: var(--wb-paper); color: var(--wb-ink); box-shadow: 0 5px 0 var(--wb-ink);
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out; touch-action: manipulation;
+}
+.wb-bid-steps > button > b { font: 700 2.4rem/1 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-bid-steps > button > small { font: 700 0.85rem var(--wb-font); letter-spacing: 0.12em; padding: 2px 8px; border-radius: 999px; background: var(--wb-blue); color: #fff; }
+.wb-bid-steps > button:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--wb-ink); }
+.wb-bid-steps > button:disabled { opacity: 0.45; box-shadow: none; }
+.wb-bid-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.wb-bid-type input { min-width: 0; min-height: 54px; padding: 0 14px; border-radius: 999px; border: 3px solid var(--wb-ink); background: #fff; color: var(--wb-ink); font: 700 1.5rem var(--wb-font); text-align: center; caret-color: var(--wb-blue); }
+.wb-bid-type input::placeholder { color: rgb(11 16 51 / 0.4); }
+.wb-bid-type input:focus { outline: 3px solid var(--wb-sun); outline-offset: 2px; }
+.wb-bid-type input:disabled { background: rgb(255 255 255 / 0.5); }
+
+/* The +1: a big round yellow key a thumb finds without looking. */
+.wb-plus {
+  justify-self: center; display: grid; place-content: center; justify-items: center; gap: 6px; width: min(56vw, 220px); aspect-ratio: 1;
+  border-radius: 50%; border: 5px solid var(--wb-ink); background: var(--wb-sun); color: var(--wb-ink); box-shadow: 0 10px 0 var(--wb-ink);
+  touch-action: manipulation; user-select: none; transition: transform 60ms ease-out, box-shadow 60ms ease-out;
+}
+.wb-plus > b { font: 700 5.2rem/0.9 var(--wb-font); }
+.wb-plus-count { font: 700 1.05rem var(--wb-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.wb-plus-warn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--wb-red); color: #fff; font: 700 0.8rem var(--wb-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.wb-plus-warn .wb-icon { width: 14px; height: 14px; }
+.wb-plus:active { transform: translateY(7px); box-shadow: 0 3px 0 var(--wb-ink); }
+.wb-plus.is-last { background: #ffb23f; outline: 5px solid var(--wb-red); outline-offset: 3px; }
+/* The no-no: a red key with an X; it asks once before it costs the card. */
+.wb-nono {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 18px; border-radius: 999px;
+  border: 3px solid var(--wb-ink); background: var(--wb-red); color: #fff; box-shadow: var(--wb-shadow-sm);
+  font: 700 1.15rem/1 var(--wb-font); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.wb-nono .wb-icon { width: 20px; height: 20px; }
+.wb-nono:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wb-ink); }
+.wb-nono-confirm { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; border-radius: 16px; border: 3px solid var(--wb-ink); background: #fff; color: var(--wb-ink); }
+.wb-nono-confirm p { grid-column: 1 / -1; font-weight: 600; }
+.wb-nono-confirm .wb-btn.is-ghost { color: var(--wb-ink); border-color: var(--wb-ink); }
+.wb-phone-steal { justify-items: center; }
+.wb-phone-steal .wb-steal-head { font-size: 3.4rem; }
+
+/* The controller's team tools. */
+.wb-ctrl-title { margin: 14px 0 8px; font: 700 1.8rem var(--wb-font); text-transform: uppercase; }
+.wb-ctrl-teams { margin-top: 26px; padding-top: 16px; border-top: 2px solid rgb(255 255 255 / 0.25); text-align: left; }
+.wb-teamtools { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.wb-teamtools > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; border: 3px solid var(--wb-ink); background: var(--team); color: var(--wb-ink); }
+.wb-teamtools .wb-dot { background: #fff; }
+.wb-teamtools input { min-width: 0; min-height: 40px; padding: 0 10px; border-radius: 10px; border: 2px solid var(--wb-ink); background: #fff; color: var(--wb-ink); font: 600 1rem var(--wb-text); }
+.wb-teamtools-cards { display: inline-flex; align-items: baseline; gap: 4px; }
+.wb-teamtools-cards b { font: 700 1.5rem var(--wb-font); }
+.wb-teamtools-cards small { font: 700 0.72rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-teamtools .wb-chip { min-height: 36px; padding: 0 12px; border-color: var(--wb-ink); color: var(--wb-ink); background: #fff; }
+.wb-teamtools .wb-chip.is-danger { color: #b3221a; }
+
+/* ---------- End ---------- */
+.wb.end { display: grid; justify-items: center; align-content: start; gap: 20px; padding: 28px 18px 96px; text-align: center; }
+.wb-winner { margin-top: 4vh; font: 700 clamp(2.6rem, 7vw, 6rem)/1 var(--wb-font); text-transform: uppercase; text-shadow: 0 0.06em 0 var(--wb-ink); text-wrap: balance; animation: wb-steal-in 600ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+.wb-winner .wb-teamname { background: var(--team); text-shadow: none; transform: rotate(-2deg); }
+.wb-podium { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; width: min(100%, 720px); }
+.wb-place { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 18px; border-radius: 20px; border: 4px solid var(--wb-ink); background: var(--team); color: var(--wb-ink); box-shadow: var(--wb-shadow); text-align: left; }
+.wb-place.is-1 { transform: rotate(-1deg) scale(1.03); outline: 4px solid var(--wb-sun); outline-offset: 3px; }
+.wb-place-rank { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--wb-ink); color: #fff; font: 700 1.6rem var(--wb-font); }
+.wb-place-name { display: grid; min-width: 0; }
+.wb-place-name b { display: flex; align-items: center; gap: 8px; font: 700 1.7rem/1.1 var(--wb-font); text-transform: uppercase; }
+.wb-place-name b .wb-dot { background: #fff; font-size: 0.8em; }
+.wb-place-name small { font: 600 0.95rem/1.3 var(--wb-text); overflow-wrap: anywhere; }
+.wb-place-score { display: grid; justify-items: end; }
+.wb-place-score b { font: 700 3rem/0.9 var(--wb-font); font-variant-numeric: tabular-nums; }
+.wb-place-score small { font: 700 0.8rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.wb-end-buttons { display: grid; justify-items: center; gap: 14px; }
+.wb-end-buttons p { font: 600 1.2rem var(--wb-text); }
+.wb-end-buttons a { font: 700 1rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
+
+/* ---------- Setup ---------- */
+.wb-setup { padding: 24px max(20px, calc((100% - 1100px) / 2)) 56px; }
+.wb-setup .back-to-hub { color: var(--wb-soft); }
+.wb-setup .back-to-hub:hover { color: #fff; }
+.wb-setup-card { display: grid; gap: 26px; }
+.wb-setup-card > h1 { font: 700 2rem/1.1 var(--wb-font); text-transform: uppercase; }
+.wb-lede { max-width: 68ch; margin-top: -14px; font: 500 1.12rem/1.45 var(--wb-text); color: var(--wb-soft); }
+.wb-field { margin: 0; padding: 18px; border: 3px solid var(--wb-ink); border-radius: 20px; background: rgb(8 18 90 / 0.35); display: grid; gap: 12px; min-width: 0; }
+.wb-field > legend, .wb-legend { float: left; width: 100%; margin-bottom: 4px; padding: 0; font: 700 1rem var(--wb-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--wb-sun); }
+.wb-hint { font: 500 1rem/1.4 var(--wb-text); color: var(--wb-soft); }
+.wb-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.wb-choices > button, .wb-cats > button {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px;
+  border: 3px solid rgb(255 255 255 / 0.7); color: #fff; font: 700 1.05rem/1 var(--wb-font); letter-spacing: 0.06em; text-transform: uppercase; text-align: left;
+}
+.wb-choices > button::before, .wb-cats > button::before { content: ""; width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; border: 2px solid currentColor; }
+.wb-choices > button:hover, .wb-cats > button:hover { background: rgb(255 255 255 / 0.1); }
+.wb-choices > button[aria-checked="true"], .wb-cats > button[aria-checked="true"] { background: var(--wb-sun); color: var(--wb-ink); border-color: var(--wb-ink); box-shadow: var(--wb-shadow-sm); }
+.wb-choices > button[aria-checked="true"]::before, .wb-cats > button[aria-checked="true"]::before { background: currentColor; }
+.wb-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.wb-cats > button { min-height: 42px; font-size: 0.98rem; border-radius: 14px; }
+.wb-cats > button[aria-checked="true"] { background: var(--wb-paper); }
+.wb-cats-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font: 700 0.9rem var(--wb-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-option { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.wb-option input { flex-shrink: 0; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--wb-sun); }
+.wb-option b { font: 700 1.15rem var(--wb-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.wb-option small { display: block; margin-top: 3px; font: 500 1rem/1.4 var(--wb-text); color: var(--wb-soft); }
+.wb-setup-go { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.wb-setup-go p { font: 700 1rem var(--wb-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--wb-soft); }
+.wb-setup-go .wb-btn { min-width: 220px; }
+.wb-notice { padding: 10px 14px; border-radius: 12px; border: 3px solid var(--wb-ink); background: var(--wb-red); color: #fff; font-weight: 600; }
+
+@media (max-width: 560px) {
+  .wb-setup { padding-inline: 14px; }
+  .wb-field { padding: 14px; }
+  .wb-setup-go .wb-btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb *, .wb-setup * { animation: none !important; transition: none !important; }
 }
