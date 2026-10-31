@@ -7,6 +7,7 @@
 // Hostless games match typed guesses to answers on the server. Hosted games let the host reveal answers and
 // give strikes from the controller; the host can also undo the last ruling in either mode.
 import { numberWordPattern, NUMBER_WORDS, editDistance, stripAccents } from './text.js'
+import { beginTutorial, endTutorial as leaveTutorial, setTutorialStep } from './tutorial.js'
 
 // On the show there's no visible clock, but answers have to come fast: the host counts down about three seconds
 // on anyone who stalls, and no answer is a strike. Phones need a little longer for typing, so a face-off answer
@@ -18,6 +19,20 @@ const MAX_PLAYERS = 12
 const MAX_ROUNDS = 8
 // Face-off misses before control goes to a coin toss, so two stumped players can't stall the round.
 const MAX_FACEOFF_MISSES = 6
+// The practice round (the tutorial; see docs/tutorial.md): one question played with the real rules before round one,
+// with coach text on every screen and nothing scoring. To keep it short, one strike hands the other team its steal,
+// and two face-off misses settle the face-off with a coin toss. The coach text is SURVEY_COACH in src/survey.
+export const PRACTICE_STEPS = ['faceoff', 'answer', 'choose', 'guess', 'steal', 'done']
+export const PRACTICE_SURVEY = {
+  id: 'practice', question: 'Name an animal you’d see on a farm.',
+  answers: [
+    { text: 'Cow', points: 34, alts: ['Cows', 'Cattle', 'Bull', 'Calf'] }, { text: 'Pig', points: 21, alts: ['Pigs', 'Hog', 'Piglet'] },
+    { text: 'Horse', points: 14, alts: ['Pony', 'Horses'] }, { text: 'Chicken', points: 11, alts: ['Hen', 'Rooster', 'Chick'] },
+    { text: 'Sheep', points: 8, alts: ['Lamb'] }, { text: 'Goat', points: 6, alts: ['Goats'] },
+    { text: 'Duck', points: 4, alts: ['Ducks', 'Goose'] }, { text: 'Dog', points: 2, alts: ['Sheepdog', 'Dogs'] },
+  ],
+}
+const PRACTICE_STRIKES = 1, PRACTICE_FACEOFF_MISSES = 2
 const MULTIPLIERS = { 1: [1], 2: [1, 2], 3: [1, 1, 2], 4: [1, 1, 2, 3], 5: [1, 1, 1, 2, 3], 6: [1, 1, 1, 2, 2, 3], 7: [1, 1, 1, 2, 2, 3, 3], 8: [1, 1, 1, 1, 2, 2, 3, 3] }
 
 // ---------- Matching typed guesses to survey answers ----------
@@ -81,15 +96,18 @@ function cleanConfig(config) {
   })).filter((survey) => survey.question && survey.answers.length >= 2)
   if (!surveys.length) throw new Error('A game needs at least one survey question with two or more answers.')
   const teamNames = [0, 1].map((i) => text(config?.teamNames?.[i], 24) || `Team ${i + 1}`)
-  return { surveys, teamNames, hostless: !!config?.hostless }
+  return { surveys, teamNames, hostless: !!config?.hostless, tutorial: !!config?.tutorial }
 }
 
 export function createSurveyGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave }) {
   const isLive = (game, playerId, socket) => { const player = game?.players.get(playerId); return !!player?.socketId && (!socket || player.socketId === socket.id) }
   const surveyGame = (code) => { const game = games.get(code); return game?.kind === 'survey' ? game : undefined }
   const teamMembers = (game, team) => [...game.players.values()].filter((player) => player.team === team && player.socketId)
-  const current = (game) => game.surveys[game.roundIndex]
-  const multiplier = (game) => game.multipliers[game.roundIndex] || 1
+  // During the practice round its question is the one being played, at single points.
+  const current = (game) => (game.practice ? game.practice.survey : game.surveys[game.roundIndex])
+  const matcherFor = (game) => (game.practice ? game.practice.matcher : game.matchers[game.roundIndex])
+  const multiplier = (game) => (game.practice ? 1 : game.multipliers[game.roundIndex] || 1)
+  const strikesToSteal = (game) => (game.practice ? PRACTICE_STRIKES : 3)
   const allRevealed = (game) => game.round.revealed.every(Boolean)
   const other = (team) => 1 - team
   // One ruling can set off several events before the next update goes out (the last answer's "hit", then
@@ -106,7 +124,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
       kind: 'survey', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config,
       teams: config.teamNames.map((name) => ({ name, score: 0 })),
       surveys: config.surveys, matchers: config.surveys.map(buildMatcher), multipliers: MULTIPLIERS[config.surveys.length],
-      roundIndex: 0, round: null, rotation: { faceoff: [0, 0], guess: [0, 0] }, undo: null, lastEvent: null,
+      roundIndex: 0, round: null, rotation: { faceoff: [0, 0], guess: [0, 0] }, undo: null, lastEvent: null, practice: null,
     }
   }
   // New players go to the smaller team, so teams stay even as people arrive.
@@ -130,15 +148,18 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     const round = game.round
     if (game.status !== 'playing' || !round) return null
     const responder = { faceoffAnswer: round.faceoff.answeringId, guessing: round.guesserId, steal: round.stealTeam, choose: round.chooserId }[round.phase] ?? null
-    return JSON.stringify([game.roundIndex, round.phase, responder, round.strikes, round.revealed.filter(Boolean).length, round.faceoff.misses])
+    return JSON.stringify([!!game.practice, game.roundIndex, round.phase, responder, round.strikes, round.revealed.filter(Boolean).length, round.faceoff.misses])
   }
 
+  // The practice round's step, read off the round so the coach always matches the screen.
+  const PRACTICE_STEP = { faceoffRead: 'faceoff', faceoff: 'faceoff', faceoffAnswer: 'answer', choose: 'choose', guessing: 'guess', steal: 'steal', roundEnd: 'done' }
   function publicGame(game) {
+    if (game.practice && game.round) setTutorialStep(game, PRACTICE_STEP[game.round.phase])
     const round = game.round, survey = current(game)
     const showAll = !game.hostless || round?.phase === 'roundEnd' || game.status === 'complete'
     return {
       kind: 'survey', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
-      teams: game.teams, roundIndex: game.roundIndex, roundCount: game.surveys.length, multiplier: multiplier(game), multipliers: game.multipliers,
+      teams: game.teams, roundIndex: game.roundIndex, roundCount: game.surveys.length, multiplier: multiplier(game), multipliers: game.multipliers, strikesToSteal: strikesToSteal(game),
       players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId })),
       round: round && {
         phase: round.phase, question: survey.question, strikes: round.strikes, bank: round.bank, control: round.control,
@@ -195,6 +216,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     else setPhase(game, 'faceoffRead')
   }
   function nextRound(game) {
+    if (game.practice) { endTutorial(game); return }
     if (game.roundIndex >= game.surveys.length - 1) { finish(game); return }
     game.roundIndex++
     startRound(game)
@@ -266,7 +288,8 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     const round = game.round
     round.winner = team
     round.awarded = team == null ? 0 : round.bank
-    if (team != null) game.teams[team].score += round.bank
+    // Nothing scores in the practice round.
+    if (team != null && !game.practice) game.teams[team].score += round.bank
     round.guesserId = null; round.chooserId = null; round.faceoff.answeringId = null
     event(game, team == null ? 'roundSkipped' : 'roundWon', { team })
     setPhase(game, 'roundEnd')
@@ -318,7 +341,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     if (round.phase === 'faceoffAnswer') {
       const { faceoff } = round
       if (faceoff.firstHit) winFaceoff(game, faceoff.firstHit.team)
-      else if (++faceoff.misses >= MAX_FACEOFF_MISSES) winFaceoff(game, Math.random() < 0.5 ? 0 : 1)
+      else if (++faceoff.misses >= (game.practice ? PRACTICE_FACEOFF_MISSES : MAX_FACEOFF_MISSES)) winFaceoff(game, Math.random() < 0.5 ? 0 : 1)
       else {
         const rival = faceoff.playerIds[other(team)]
         faceoff.answeringId = isLive(game, rival) ? rival : playerId
@@ -327,13 +350,13 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     } else if (round.phase === 'guessing') {
       round.strikes++
       game.lastEvent.count = round.strikes
-      if (round.strikes >= 3) toSteal(game)
+      if (round.strikes >= strikesToSteal(game)) toSteal(game)
       else nextGuesser(game)
     } else if (round.phase === 'steal') endRound(game, round.control)
     emitGame(game)
   }
   function judgeGuess(game, playerId, guess) {
-    const index = matchAnswer(game.matchers[game.roundIndex], guess)
+    const index = matchAnswer(matcherFor(game), guess)
     if (index >= 0 && !game.round.revealed[index]) ruleHit(game, index, playerId, guess)
     else ruleMiss(game, playerId, guess, index >= 0 ? 'repeat' : guess ? 'miss' : 'timeout')
   }
@@ -384,7 +407,9 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     const round = game.round, playing = game.status === 'playing' && round
     if (action === 'start' && game.status === 'lobby') {
       if (!teamMembers(game, 0).length || !teamMembers(game, 1).length) return emitGame(game)
-      game.status = 'playing'; game.roundIndex = 0; startRound(game)
+      game.status = 'playing'; game.roundIndex = 0
+      if (game.config.tutorial) startPractice(game)
+      startRound(game)
     }
     if (action === 'buzz' && playing) { buzz(game, payload.playerId); return }
     if (action === 'reveal' && playing) {
@@ -411,7 +436,8 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     }
     if (action === 'nextRound' && playing && round.phase === 'roundEnd') { nextRound(game); return }
     if (action === 'skipRound' && playing && round.phase !== 'roundEnd') { saveUndo(game); endRound(game, null) }
-    if (action === 'endGame' && game.status === 'playing') { finish(game); return }
+    // Not offered in the practice round, which the skip control leaves instead.
+    if (action === 'endGame' && game.status === 'playing' && !game.practice) { finish(game); return }
     if (action === 'renameTeam') { const team = game.teams[payload.team], name = text(payload.name, 24); if (team && name) team.name = name }
     if (action === 'adjustScore') { const team = game.teams[payload.team], amount = Math.trunc(Number(payload.amount)); if (team && Number.isFinite(amount)) team.score += amount }
     if (action === 'renamePlayer') { const player = game.players.get(payload.playerId), name = text(payload.name, 20); if (player && name) player.name = name }
@@ -433,7 +459,9 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
       let surveys = game.surveys
       try { if (payload.surveys) surveys = cleanConfig({ surveys: payload.surveys }).surveys } catch {}
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', surveys, matchers: surveys.map(buildMatcher), multipliers: MULTIPLIERS[surveys.length], roundIndex: 0, round: null, rotation: { faceoff: [0, 0], guess: [0, 0] }, undo: null, lastEvent: null })
+      // A replay goes straight into round one.
+      leaveTutorial(game); game.config.tutorial = false
+      Object.assign(game, { practice: null, status: 'lobby', surveys, matchers: surveys.map(buildMatcher), multipliers: MULTIPLIERS[surveys.length], roundIndex: 0, round: null, rotation: { faceoff: [0, 0], guess: [0, 0] }, undo: null, lastEvent: null })
       game.teams.forEach((team) => { team.score = 0 })
     }
     emitGame(game)
@@ -458,5 +486,22 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register, RULINGS, rulingTurn }
+  // ---------- The practice round ----------
+  function startPractice(game) {
+    beginTutorial(game, PRACTICE_STEPS)
+    game.practice = { survey: PRACTICE_SURVEY, matcher: buildMatcher(PRACTICE_SURVEY) }
+  }
+  // Out of the practice (played through, skipped by the host or voted off) into round one, with the scores at 0 and the
+  // face-off and guessing turns starting over.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.practice = null
+    game.teams.forEach((team) => { team.score = 0 })
+    Object.assign(game, { roundIndex: 0, rotation: { faceoff: [0, 0], guess: [0, 0] }, undo: null })
+    startRound(game)
+    emitGame(game)
+  }
+
+  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register, RULINGS, rulingTurn, endTutorial }
 }

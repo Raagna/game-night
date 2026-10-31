@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE, CONSOLATION, SPEED_UP_BONUS, TIEBREAK_VALUE, WHEEL_TIMES, BONUS_ENVELOPES, MILLION_PRIZE } from './wheel.js'
+import { createWheelGames, buildWheel, VOWEL_COST, SOLVE_MINIMUM, SLOTS_PER_WEDGE, CONSOLATION, SPEED_UP_BONUS, TIEBREAK_VALUE, WHEEL_TIMES, BONUS_ENVELOPES, MILLION_PRIZE, PRACTICE_STEPS, PRACTICE_PUZZLE } from './wheel.js'
+import { registerTutorial } from './tutorial.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire(), and spins
 // land where the test says.
@@ -884,4 +885,164 @@ test('the whole winning team plays the bonus round: any member can pick, choose 
   h.act(game, 'p1', 'bonusSolve', { guess: 'I' })
   assert.equal(game.bonus.solved, true)
   assert.equal(game.contestants[0].total, SOLVE_MINIMUM + 100000)
+})
+
+// ---------- The practice round ----------
+// The step the coach shows, as the screens get it (publicGame keeps it in step with the round).
+const stepOf = (h, game) => { h.api.publicGame(game); return game.tutorial?.step ?? null }
+// The skip events as server/index.js wires them, on a connection: the TV's or controller's skip, or a phone's vote.
+function skipEvents(h, socketId, data = {}) {
+  const handlers = new Map()
+  registerTutorial({ id: socketId, data, on: (name, fn) => handlers.set(name, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+  return { skip: (game) => handlers.get('tutorial:skip')({ code: game.code }), vote: (game, playerId) => handlers.get('tutorial:vote')({ code: game.code, playerId }) }
+}
+const practiceGame = (h, config = {}) => newGame(h, { tutorial: true, ...config })
+// The practice puzzle's letters still hidden, in reading order: a right fill-in-the-blanks solve.
+const practiceBlanks = (game) => [...PRACTICE_PUZZLE.text.replace(/[^A-Z]/g, '')].filter((ch) => !game.round.shown.includes(ch)).join('')
+const practiceSpin = (h, game, playerId) => { h.act(game, playerId, 'spin', { power: 0.8 }); assert.equal(game.round.phase, 'spinning'); h.fire() }
+// The game proper, fresh: its first puzzle, contestant 1 to play, and every total and round bank at $0.
+function assertGameStarted(h, game) {
+  assert.equal(game.tutorial, null)
+  assert.equal(game.status, 'playing')
+  assert.equal(game.segmentIndex, 0)
+  assert.equal(game.round.practice, undefined)
+  assert.equal(game.round.puzzle.text, 'HELLO WORLD')
+  assert.equal(h.api.publicGame(game).segment.type, 'final')
+  assert.equal(game.round.phase, 'turn')
+  assert.equal(game.round.control, 0)
+  for (const contestant of game.contestants) assert.deepEqual([contestant.total, contestant.roundBank, contestant.solvedAny, contestant.prizes.length], [0, 0, false, 0])
+}
+
+test('practice round: without the option, the game starts straight away', () => {
+  const h = harness(), game = newGame(h)
+  assert.equal(game.tutorial, undefined)
+  assert.equal(game.round.puzzle.text, 'HELLO WORLD')
+})
+
+test('practice round: spin, a consonant, a vowel, a Bankrupt and a solve, banking nothing; then the game', () => {
+  const h = harness(), game = practiceGame(h, { hostless: true })
+  assert.deepEqual(game.tutorial.steps, PRACTICE_STEPS)
+  assert.equal(stepOf(h, game), 'spin')
+  assert.equal(h.api.publicGame(game).segment.type, 'practice')
+  assert.equal(game.round.puzzle.text, PRACTICE_PUZZLE.text)
+  assert.ok(game.round.wheel.every((wedge) => ['cash', 'bankrupt', 'loseTurn'].includes(wedge.kind) && !wedge.wild), 'the plain wheel')
+  h.act(game, 'p1', 'solveStart')
+  assert.equal(game.round.phase, 'turn', 'no solving yet')
+  practiceSpin(h, game, 'p1')
+  assert.equal(game.round.landed.kind, 'cash', 'the first spin lands on money')
+  assert.equal(stepOf(h, game), 'consonant')
+  h.act(game, 'p1', 'consonant', { letter: 'L' }) // not in it: the next contestant spins
+  assert.equal(game.round.control, 1)
+  assert.equal(stepOf(h, game), 'spin')
+  practiceSpin(h, game, 'p2')
+  const value = game.round.value
+  h.act(game, 'p2', 'consonant', { letter: 'N' })
+  assert.equal(game.contestants[1].roundBank, value * 3)
+  assert.equal(stepOf(h, game), 'vowel')
+  h.act(game, 'p2', 'spin')
+  h.act(game, 'p2', 'solveStart')
+  assert.equal(game.round.phase, 'turn', 'only a vowel now')
+  h.act(game, 'p2', 'buyVowel', { letter: 'E' })
+  assert.equal(game.contestants[1].roundBank, value * 3 - VOWEL_COST)
+  assert.equal(stepOf(h, game), 'bad')
+  h.act(game, 'p2', 'buyVowel', { letter: 'A' })
+  assert.ok(!game.round.called.includes('A'), 'one vowel, then spin')
+  h.randoms([0, 0.5]) // the first Bankrupt
+  practiceSpin(h, game, 'p2')
+  assert.equal(game.contestants[1].roundBank, 0)
+  assert.equal(game.round.control, 0)
+  assert.equal(stepOf(h, game), 'solve')
+  assert.deepEqual(h.api.publicGame(game).round.practice, { bad: 'bankrupt' })
+  h.act(game, 'p1', 'spin')
+  assert.equal(game.round.phase, 'turn', 'no more spinning')
+  h.act(game, 'p1', 'solveStart')
+  h.act(game, 'p1', 'solve', { guess: 'X'.repeat(practiceBlanks(game).length) })
+  assert.equal(game.round.control, 1, 'a wrong solve passes the turn')
+  assert.equal(stepOf(h, game), 'solve')
+  h.act(game, 'p2', 'solveStart')
+  h.act(game, 'p2', 'solve', { guess: practiceBlanks(game) })
+  assert.equal(stepOf(h, game), 'done')
+  assert.equal(game.round.winner, 1)
+  assert.equal(game.round.awarded, SOLVE_MINIMUM)
+  assert.deepEqual(game.contestants.map((contestant) => [contestant.total, contestant.solvedAny]), [[0, false], [0, false]], 'nothing banks')
+  h.fire() // the pause after the round
+  assertGameStarted(h, game)
+})
+
+test('practice round with a host: Lose a Turn, a spoken solve, no End game, and Next puzzle starts the game', () => {
+  const h = harness(), game = practiceGame(h)
+  practiceSpin(h, game, 'p1')
+  h.act(game, 'p1', 'consonant', { letter: 'T' })
+  h.act(game, 'p1', 'buyVowel', { letter: 'A' })
+  assert.equal(stepOf(h, game), 'bad')
+  h.api.hostAction(game, 'undo', {})
+  assert.equal(stepOf(h, game), 'vowel', 'Undo takes the step back too')
+  h.act(game, 'p1', 'buyVowel', { letter: 'A' })
+  const bank = game.contestants[0].roundBank
+  practiceSpin(h, game, 'p1') // lands on Lose a Turn
+  assert.deepEqual(h.api.publicGame(game).round.practice, { bad: 'loseTurn' })
+  assert.equal(game.contestants[0].roundBank, bank, 'Lose a Turn keeps the money')
+  assert.equal(game.round.control, 1)
+  h.act(game, 'p2', 'solveStart')
+  h.api.hostAction(game, 'judgeSolve', { correct: true })
+  assert.equal(stepOf(h, game), 'done')
+  assert.equal(game.contestants[1].total, 0)
+  h.api.hostAction(game, 'endGame', {})
+  assert.equal(game.status, 'playing', 'End game is refused in the practice')
+  assert.ok(game.tutorial)
+  h.api.hostAction(game, 'nextSegment', {})
+  assertGameStarted(h, game)
+})
+
+test('practice round: a turn that runs out before the vowel starts the next contestant at the spin', () => {
+  const h = harness(), game = practiceGame(h, { hostless: true })
+  practiceSpin(h, game, 'p1')
+  h.act(game, 'p1', 'consonant', { letter: 'S' })
+  assert.equal(stepOf(h, game), 'vowel')
+  h.fire() // the decide clock
+  assert.equal(game.round.control, 1)
+  assert.equal(stepOf(h, game), 'spin')
+})
+
+test('practice round with a host: only the TV or the host controller can skip, and a second skip does nothing', () => {
+  const h = harness(), game = practiceGame(h)
+  game.hostSocketId = 'tv'
+  h.api.hostAction(game, 'adjustScore', { contestant: 0, amount: 500 })
+  practiceSpin(h, game, 'p1')
+  skipEvents(h, 's-p2').skip(game)
+  skipEvents(h, 's-p2').vote(game, 'p2')
+  assert.equal(stepOf(h, game), 'consonant', 'a phone can’t skip a hosted practice')
+  skipEvents(h, 'controller', { controllerGame: game.code }).skip(game)
+  assertGameStarted(h, game)
+  const round = game.round
+  skipEvents(h, 'tv').skip(game)
+  assert.equal(game.round, round, 'already playing the game')
+})
+
+test('practice round without a host: a strict majority of connected players skips it', () => {
+  const h = harness(), game = practiceGame(h, { hostless: true, players: 3 })
+  h.api.hostAction(game, 'adjustScore', { contestant: 2, amount: 500 })
+  game.hostSocketId = 'tv'
+  skipEvents(h, 'tv').skip(game)
+  assert.ok(game.tutorial, 'no host to skip')
+  skipEvents(h, 's-p1').vote(game, 'p2')
+  assert.deepEqual(game.tutorial.votes, [], 'a vote from someone else’s phone')
+  skipEvents(h, 's-p1').vote(game, 'p1')
+  skipEvents(h, 's-p1').vote(game, 'p1')
+  skipEvents(h, 's-p2').vote(game, 'p2')
+  assert.ok(game.tutorial, 'p1 took their vote back: 1 of 3')
+  skipEvents(h, 's-p3').vote(game, 'p3')
+  assertGameStarted(h, game)
+})
+
+test('practice round: a replay skips it', () => {
+  const h = harness(), game = practiceGame(h)
+  h.api.hostAction(game, 'revealPuzzle', {})
+  assert.equal(stepOf(h, game), 'done')
+  h.api.hostAction(game, 'nextSegment', {})
+  h.api.hostAction(game, 'endGame', {})
+  h.api.hostAction(game, 'replay', {})
+  h.api.hostAction(game, 'start', {})
+  assert.equal(game.tutorial, null)
+  assert.equal(game.round.puzzle.text, 'HELLO WORLD')
 })

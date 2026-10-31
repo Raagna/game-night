@@ -38,6 +38,7 @@
 // Solves are typed as the missing letters ("fill in the blanks") and checked exactly, like the show's
 // "read it exactly as written". In hosted games the host can also judge a solve said out loud.
 import { layoutPuzzle, puzzleProblem, normalizePuzzle, letterCounts, isLetter, isVowel, CONSONANTS, VOWELS } from './wheelBoard.js'
+import { beginTutorial, endTutorial as leaveTutorial, setTutorialStep } from './tutorial.js'
 
 export const WHEEL_TIMES = {
   decideMs: 10000, letterMs: 10000, solveMs: 20000, quickSolveMs: 10000, spinMs: 5200, roundEndMs: 9000,
@@ -82,6 +83,19 @@ export const MYSTERY_PRIZE = 10000
 // round 2 adds the Mystery wedges, round 3 the Express wedge and the Prize Puzzle.
 export const SPECIAL_ROUNDS = 3
 const DEFAULT_GIFT = { name: 'A surprise gift', value: 1000 }, DEFAULT_TRIP = { name: 'A trip for two', value: 8000 }
+
+// The practice round (the tutorial; see docs/tutorial.md): one short puzzle on the plain wheel before the game, played
+// with the real rules but walked through one move at a time, and nothing it banks counts. Its stages, in order:
+//   spin       spin the wheel (this spin lands on money)
+//   consonant  call a consonant (a miss passes the turn, and the next contestant spins)
+//   vowel      buy a vowel (every vowel is in the puzzle, so it always lights something)
+//   bad        spin again (this spin lands on Bankrupt or Lose a Turn, and the turn passes)
+//   solve      solve it (a wrong solve passes the turn)
+//   done       solved, or the host revealed it; round one is next
+// Only the move each stage teaches is allowed. The stage lives on the round, so the host's Undo takes it back too.
+// The coach text is WHEEL_COACH in src/wheel.
+export const PRACTICE_STEPS = ['spin', 'consonant', 'vowel', 'bad', 'solve', 'done']
+export const PRACTICE_PUZZLE = { category: 'Phrase', text: 'QUESTION AND ANSWER' }
 
 // The wheel for a round (1-based); rounds after the fourth, and the final round, use the fourth round's wheel.
 export function buildWheel(roundNumber, { million = true } = {}) {
@@ -128,7 +142,7 @@ function cleanConfig(config) {
   return {
     mode: teams ? 'teams' : 'solo', teamNames: teams ? Array.from({ length: teamCount }, (_, i) => text(config?.teamNames?.[i], 24) || `Team ${i + 1}`) : [],
     segments, spares, bonus, gifts, trip: prize(config?.trip), hostless: !!config?.hostless, pace: config?.pace === 'relaxed' ? 'relaxed' : 'show',
-    speedUp: config?.speedUp === 'start' ? 'start' : 'after',
+    speedUp: config?.speedUp === 'start' ? 'start' : 'after', tutorial: !!config?.tutorial,
   }
 }
 
@@ -222,12 +236,14 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function rulingTurn(game) {
     const round = game.round, bonus = game.status === 'bonus' ? game.bonus : null
     if (game.status !== 'playing' && !bonus) return null
-    return JSON.stringify([game.status, game.segmentIndex, round?.phase, round?.actorId, round?.control, round?.called.length, bonus?.phase])
+    return JSON.stringify([game.status, !!round?.practice, game.segmentIndex, round?.phase, round?.actorId, round?.control, round?.called.length, bonus?.phase])
   }
 
   function publicGame(game) {
     const round = game.round, ended = round?.phase === 'roundEnd' || game.status === 'complete'
-    const segment = game.segments[game.segmentIndex]
+    // The practice round's step, read off the round so the coach always matches the screen.
+    if (round?.practice) setTutorialStep(game, round.phase === 'roundEnd' ? 'done' : round.practice.stage)
+    const segment = round?.practice ? { type: 'practice' } : game.segments[game.segmentIndex]
     return {
       kind: 'wheel', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId, mode: game.config.mode, maxPlayers: maxPlayers(game),
       pace: game.config.pace, clocksPaused: game.clocksPaused, vowelCost: VOWEL_COST, canUndo: !!game.undo && game.status === 'playing', winner: game.winner, speedUpMode: game.config.speedUp,
@@ -252,6 +268,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
         tossup: isTossup(round) ? { value: round.tossupValue, lockedOut: round.lockedOut, eligible: round.eligible } : null,
         speedUp: round.speedUp, speedUpAt: round.speedUp ? null : round.speedUpAt,
         winner: round.winner, awarded: round.awarded, solution: ended ? round.puzzle.text : undefined,
+        // In the practice round: what the "bad" spin landed on (bankrupt or loseTurn), for the coach.
+        practice: round.practice ? { bad: round.practice.bad } : null,
       },
       serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
     }
@@ -377,6 +395,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     giveControl(game, start)
   }
   function nextSegment(game) {
+    if (game.round?.practice) { endTutorial(game); return }
     if (game.segmentIndex >= game.segments.length - 1 && !addTiebreak(game)) { endMainGame(game); return }
     game.segmentIndex++
     startSegment(game)
@@ -495,6 +514,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   }
   function passControl(game) {
     const round = game.round
+    // In the practice round, a turn that ends before its vowel is bought starts the next contestant at the spin.
+    if (['consonant', 'vowel'].includes(round.practice?.stage)) round.practice.stage = 'spin'
     giveControl(game, nextPresent(game, round.control ?? -1))
     event(game, 'control', { contestant: round.control })
   }
@@ -502,6 +523,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
 
   function spin(game, power) {
     const round = game.round
+    // In the practice round, spinning is only for its two spins.
+    if (round.practice && !['spin', 'bad'].includes(round.practice.stage)) return
     // Once every consonant is showing, only vowels and solving are left.
     if (round.phase === 'turn' && lettersLeft(round, CONSONANTS)) { round.wildChance = null; spinWheel(game, power) }
     else if (round.phase === 'finalSpin') spinWheel(game, power)
@@ -509,7 +532,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function spinWheel(game, power) {
     const round = game.round, slots = round.wheel.length * SLOTS_PER_WEDGE
     // jitter is where in its slot the pointer stops (-0.4 to 0.4 of a slot), so every screen draws the same landing.
-    round.spin = { id: (round.spin?.id || 0) + 1, slot: Math.floor(random() * slots), jitter: random() * 0.8 - 0.4, power: Math.min(1, Math.max(0, Number(power) || 0.6)), ms: WHEEL_TIMES.spinMs }
+    round.spin = { id: (round.spin?.id || 0) + 1, slot: round.practice ? practiceSlot(round) : Math.floor(random() * slots), jitter: random() * 0.8 - 0.4, power: Math.min(1, Math.max(0, Number(power) || 0.6)), ms: WHEEL_TIMES.spinMs }
     event(game, 'spin', { contestant: round.control })
     setPhase(game, 'spinning')
   }
@@ -526,6 +549,10 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
       event(game, 'speedUpValue', { value: round.value })
       setPhase(game, 'speedLetter')
       return
+    }
+    if (round.practice) {
+      if (round.practice.stage === 'bad' && kind !== 'cash') Object.assign(round.practice, { stage: 'solve', bad: kind })
+      else if (round.practice.stage === 'spin' && kind === 'cash') round.practice.stage = 'consonant'
     }
     if (kind === 'bankrupt') { goBankrupt(game); passControl(game) }
     else if (kind === 'loseTurn') passControl(game)
@@ -553,6 +580,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     }
     round.shown.push(letter)
     round.value = null
+    if (round.practice?.stage === 'consonant') round.practice.stage = 'vowel'
     // On a Mystery wedge the money waits for the choice: take it, or flip the wedge over.
     if (landed.kind === 'mystery') { round.mysteryCount = count; event(game, 'hit', { contestant: round.control, letter, count, amount: null }); setPhase(game, 'mystery'); return }
     contestant.roundBank += landed.value * count
@@ -624,6 +652,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function buyVowel(game, letter) {
     const round = game.round, bank = bankOf(game), express = round.phase === 'express'
     if ((round.phase !== 'turn' && !express) || !isVowel(letter) || round.called.includes(letter) || bank.roundBank < VOWEL_COST || !lettersLeft(round, VOWELS)) return
+    if (round.practice && round.practice.stage !== 'vowel') return
     bank.roundBank -= VOWEL_COST
     round.called.push(letter)
     round.wildChance = null
@@ -635,6 +664,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
       return
     }
     round.shown.push(letter)
+    if (round.practice) round.practice.stage = 'bad'
     event(game, 'hit', { contestant: round.control, letter, count, amount: 0, vowel: true })
     if (allShown(round)) win(game, round.control)
     else setPhase(game, express ? 'express' : 'turn')
@@ -642,6 +672,7 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
   function startSolve(game) {
     const round = game.round
     if (!['turn', 'speedLetter', 'express'].includes(round.phase)) return
+    if (round.practice && round.practice.stage !== 'solve') return
     round.wildChance = null
     event(game, 'solving', { contestant: round.control })
     setPhase(game, round.phase === 'speedLetter' ? 'speedSolve' : 'solving')
@@ -675,10 +706,13 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     round.winner = contestant
     round.prizesWon = prizes
     round.awarded = Math.max(winner.roundBank, SOLVE_MINIMUM - prizeValue) + prizeValue
-    winner.total += round.awarded
-    winner.prizes.push(...prizes)
-    if (winner.millionThisRound) winner.million = true
-    winner.solvedAny = true
+    // Nothing banks in the practice round.
+    if (!round.practice) {
+      winner.total += round.awarded
+      winner.prizes.push(...prizes)
+      if (winner.millionThisRound) winner.million = true
+      winner.solvedAny = true
+    }
     game.contestants.forEach((other) => Object.assign(other, { roundBank: 0, roundPrizes: [], millionThisRound: false }))
     round.actorId = null; round.express = false; round.wildChance = null
     event(game, 'solve', { contestant, amount: round.awarded, prizes })
@@ -830,6 +864,41 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     setBonusPhase(game, 'envelope')
   }
 
+  // ---------- The practice round ----------
+  // The plain wheel (no Wild Card, Gift, Million, Mystery or Express) and the practice puzzle. Control starts with the
+  // first contestant with a phone connected.
+  function startPractice(game) {
+    beginTutorial(game, PRACTICE_STEPS)
+    game.undo = null
+    const puzzle = PRACTICE_PUZZLE
+    game.round = {
+      type: 'round', n: 0, puzzle: { ...puzzle, rows: layoutPuzzle(puzzle.text).rows, counts: letterCounts(puzzle.text) },
+      phase: null, shown: [], revealed: [], called: [], control: null, actorId: null, deadline: null, pausedMs: null,
+      wheel: buildWheel(LAYOUTS.length), spin: null, value: null, lastSolve: null, winner: null, awarded: 0, prizesWon: [],
+      landed: null, wildChance: null, express: false, gift: null, prizePuzzle: null, mysteryTenK: null, mysteryFlipped: false,
+      practice: { stage: 'spin', bad: null },
+    }
+    event(game, 'round', { segment: -1, type: 'practice' })
+    giveControl(game, firstPresent(game, 0))
+    sendSecret(game)
+  }
+  // Where a practice spin stops: on money for the first spin, on Bankrupt or Lose a Turn for the "bad" one.
+  function practiceSlot(round) {
+    const wanted = round.practice.stage === 'bad' ? ['bankrupt', 'loseTurn'] : ['cash']
+    const wedges = round.wheel.map((wedge, i) => (wanted.includes(wedge.kind) ? i : -1)).filter((i) => i >= 0)
+    return wedges[Math.floor(random() * wedges.length)] * SLOTS_PER_WEDGE + Math.floor(random() * SLOTS_PER_WEDGE)
+  }
+  // Out of the practice (played through, skipped by the host or voted off) into the first segment, with every total
+  // at $0 and everything the practice picked up gone.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.contestants.forEach((contestant, i) => { game.contestants[i] = freshContestant(contestant.name) })
+    Object.assign(game, freshPlay(game.config), { status: 'playing' })
+    startSegment(game)
+    emitGame(game)
+  }
+
   // ---------- Pausing (host) ----------
   function pause(game) {
     const round = game.round
@@ -928,7 +997,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     if (action === 'start' && game.status === 'lobby') {
       if (!game.contestants.some((_, i) => present(game, i))) return emitGame(game)
       Object.assign(game, freshPlay(game.config), { status: 'playing' })
-      startSegment(game)
+      if (game.config.tutorial) startPractice(game)
+      else startSegment(game)
     }
     if (action === 'judgeSolve' && playing && SOLVE_PHASES.includes(round.phase)) withUndo(game, () => {
       round.lastSolve = { playerId: round.actorId, contestant: round.control, text: null, correct: !!payload.correct, byHost: true }
@@ -956,7 +1026,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     if (action === 'revealPuzzle' && playing && round.phase !== 'roundEnd') withUndo(game, () => endRoundUnsolved(game))
     if (action === 'nextSegment' && playing && round.phase === 'roundEnd') { nextSegment(game); return }
     // Ending early skips the bonus round.
-    if (action === 'endGame' && game.status === 'playing') { endMainGame(game, { bonus: false }); return }
+    // Not offered in the practice round, which the skip control leaves instead.
+    if (action === 'endGame' && game.status === 'playing' && !round?.practice) { endMainGame(game, { bonus: false }); return }
     if (action === 'adjustScore') {
       const contestant = game.contestants[payload.contestant], amount = Math.trunc(Number(payload.amount))
       if (contestant && Number.isFinite(amount)) contestant.total += amount
@@ -976,6 +1047,8 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
         if (payload.segments) Object.assign(game.config, cleanConfig({ ...game.config, segments: payload.segments, spares: payload.spares, bonus: payload.bonus, ...(payload.gifts && { gifts: payload.gifts, trip: payload.trip }) }))
       } catch {}
       clearGameTimers(game)
+      // A replay goes straight into the game.
+      leaveTutorial(game); game.config.tutorial = false
       Object.assign(game, freshPlay(game.config), { status: 'lobby', lastEvent: null })
       game.contestants.forEach((contestant, i) => { game.contestants[i] = freshContestant(contestant.name) })
     }
@@ -1027,5 +1100,5 @@ export function createWheelGames({ io, games, emitGame, schedule, clearGameTimer
     })
   }
 
-  return { MAX_PLAYERS: MAX_SOLO, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register, RULINGS, rulingTurn }
+  return { MAX_PLAYERS: MAX_SOLO, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register, RULINGS, rulingTurn, endTutorial }
 }

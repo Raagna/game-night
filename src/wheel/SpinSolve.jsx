@@ -9,6 +9,7 @@ import { useSound, playWinnersTune } from "../survey/sounds";
 import { SwapIcon, useCountUp } from "../survey/SurveySays";
 import "./wheel.css";
 import Flap from "../Flap";
+import { Coach } from "../Tutorial";
 
 // The show's name on a gold-rimmed plate, with a little wheel, in place of the split-flap brand.
 function ShowTitle({ className = "" }) {
@@ -134,6 +135,7 @@ function segmentLabel(game) {
   const { type, n, value, rounds } = game.segment;
   if (type === "tossup") return `Toss-up · ${money(value)}`;
   if (type === "tiebreak") return "Tiebreaker";
+  if (type === "practice") return "Practice round";
   if (type === "final") return "Final round";
   return `Round ${n} of ${rounds}`;
 }
@@ -175,6 +177,7 @@ function phaseText(game) {
       return { title: `${who}, solve it now!`, detail: game.hostless ? "As many tries as the clock allows" : "Say it, or fill in the blanks" };
     case "roundEnd":
       if (round.winner == null) return { title: "Nobody solved it", detail: round.tossup ? "Nobody wins the toss-up" : "No money banked this round" };
+      if (game.tutorial) return { title: `${nameOf(game, round.winner)} solved it!`, detail: `That banks ${money(round.awarded)} in a real round. Practice totals stay at $0.` };
       return {
         title: `${nameOf(game, round.winner)} ${round.tossup ? "wins the toss-up" : "solved it"}!`,
         detail: round.tossup ? `+${money(round.awarded)}` : `Banks ${money(round.awarded)}${round.prizesWon?.length ? `, including ${round.prizesWon.map((prize) => prize.name).join(" and ")}` : ""}`,
@@ -200,6 +203,54 @@ function landedHint(round) {
     default: return "Call a consonant";
   }
 }
+
+// ---------- Practice round ----------
+// The coach for the practice round (see docs/tutorial.md): what to do at each step, on the TV, the host controller and
+// the phones. The steps come from the server (PRACTICE_STEPS in server/wheel.js); each allows only the move it teaches.
+const controlling = (game) => nameOf(game, game.round.control);
+const acting = (game, me) => game.round.actorId === me;
+// What the phone of someone who isn't acting says: "Ann is spinning", or in a teams game "Sam is spinning for your team"
+// or "Sam is spinning for the Reds" (never "the Reds is spinning": a team name can be plural).
+function watching(game, me, doing) {
+  if (!isTeams(game)) return `${controlling(game)} is ${doing}. Watch the TV.`;
+  const team = game.round.control === myContestant(game, me) ? "your team" : controlling(game);
+  return `${playerName(game, game.round.actorId) || "A player"} is ${doing} for ${team}. Watch the TV.`;
+}
+const PRACTICE_MOVES = { spin: ["spin", "bad"], vowel: ["vowel"], solve: ["solve"] };
+// Whether a turn's move is open now: always in the game, and in the practice round only on the step that teaches it.
+const moveOpen = (game, move) => !game.tutorial || PRACTICE_MOVES[move].includes(game.tutorial.step);
+const WHEEL_COACH = {
+  spin: {
+    tv: ({ game }) => game.round.phase === "spinning" ? "Where the wheel stops is what each consonant will be worth." : `${possessive(controlling(game))} turn. On a turn you can spin, buy a vowel or solve; first, spin the wheel from the phone.`,
+    controller: "Players spin, call letters and solve on their own phones. Below you can pause the clocks or skip a turn; the answer is at the top.",
+    phone: ({ game, me }) => !acting(game, me) ? watching(game, me, game.round.phase === "spinning" ? "spinning" : "up to spin") : game.round.phase === "spinning" ? "Watch the wheel! Where it stops is what each consonant is worth." : "Your turn! Press and hold Spin, then let go: the longer you hold, the harder it spins.",
+  },
+  consonant: {
+    tv: ({ game }) => `${money(game.round.value)} a letter. Next, call a consonant: it pays that for every time it’s in the puzzle, and a letter that isn’t there passes the turn.`,
+    phone: ({ game, me }) => acting(game, me) ? `Call a consonant: ${money(game.round.value)} for every time it’s in the puzzle. A miss passes the turn.` : watching(game, me, "calling a consonant"),
+  },
+  vowel: {
+    tv: ({ game }) => `It’s there! That’s ${money(game.contestants[game.round.control]?.roundBank)} this round for ${controlling(game)}. Vowels aren’t free: next, buy one for ${money(game.vowelCost)}.`,
+    phone: ({ game, me }) => acting(game, me) ? `Now buy a vowel: tap Buy a vowel and pick one. It costs ${money(game.vowelCost)} of this round’s money.` : watching(game, me, "up to buy a vowel"),
+  },
+  bad: {
+    tv: ({ game }) => game.round.phase === "spinning" ? "Watch out…" : `Spin again. The wheel has two dangers: Bankrupt takes all of this round’s money, and Lose a Turn passes play. This practice spin lands on one of them.`,
+    phone: ({ game, me }) => acting(game, me) ? (game.round.phase === "spinning" ? "Watch out…" : "Spin again. Heads up: this practice spin lands on Bankrupt or Lose a Turn.") : watching(game, me, game.round.phase === "spinning" ? "spinning" : "up to spin again"),
+  },
+  solve: {
+    tv: ({ game }) => `${game.round.practice?.bad === "loseTurn" ? "Lose a Turn: play passes, but the money stays." : "Bankrupt: the round’s money is gone, and play passes."} Over to ${controlling(game)}, who can solve instead of spinning: tap Solve and ${game.hostless ? "fill in the blanks" : "say it out loud, or fill in the blanks"}. A wrong solve passes the turn.`,
+    controller: "If they say the answer out loud, judge it below: Correct or Wrong. It has to be said exactly as written.",
+    phone: ({ game, me }) => !acting(game, me) ? watching(game, me, "up to solve")
+      : game.round.phase === "solving" ? (game.hostless ? "Fill in the blanks, then tap Solve! A wrong answer passes the turn." : "Say it out loud for the host, or fill in the blanks.")
+      : game.hostless ? "Know it? Tap Solve and fill in the blanks. A wrong answer passes the turn." : "Know it? Tap Solve, then say it out loud or fill in the blanks.",
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! Solving banks the round’s money (at least $1,000), and everyone else’s round money is lost. ${game.hostless ? "The game starts in a few seconds." : "The host starts the game."}`,
+    controller: "That’s the practice. Tap Start the game, with every total at $0.",
+    phone: "That’s the practice! Totals stay at $0. The game is next.",
+    skip: "Start the game",
+  },
+};
 
 // The latest thing that happened this round, in words ("There are 3 L’s!").
 const NEWS = ["hit", "miss", "land", "timeout", "wrongSolve", "skipped", "gift", "million", "wild", "wildUsed", "mysteryTake", "mysteryFlip", "expressPlay", "bankrupt", "undo"];
@@ -280,6 +331,7 @@ export function WheelSetup({ onCreate }) {
     [hostless, setHostless] = useState(false),
     [relaxed, setRelaxed] = useState(false),
     [speedUpNow, setSpeedUpNow] = useState(false),
+    [practice, setPractice] = useState(true),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   const [pack, setPack] = useState(readPack), [packsReady, setPacksReady] = useState(packsLoaded);
@@ -312,7 +364,7 @@ export function WheelSetup({ onCreate }) {
       {
         game: "wheel", segments: gameSegments(plan, picks), spares: spares.map(forServer), bonus: withBonus ? bonus.map(forServer) : [], ...dealPrizes(),
         mode: teams ? "teams" : "solo", teamCount, teamNames: teamNames.slice(0, teamCount).map((name, i) => name.trim() || `Team ${i + 1}`),
-        hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after",
+        hostless, pace: relaxed ? "relaxed" : "show", speedUp: speedUpNow ? "start" : "after", tutorial: practice,
       },
       (error) => { setBusy(false); setNotice(error); },
     );
@@ -423,6 +475,10 @@ export function WheelSetup({ onCreate }) {
           <label className="game-mode">
             <input type="checkbox" checked={speedUpNow} onChange={(e) => setSpeedUpNow(e.target.checked)} />
             <span><b>Speed-up from the start of the final round</b><small>Otherwise the final round plays normally for two minutes first{hostless ? "" : ", or until the host starts the speed-up"}.</small></span>
+          </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>A short practice puzzle before the game, with tips on the TV and every phone: spinning, calling a consonant, buying a vowel, a Bankrupt or Lose a Turn, and solving. Nothing banks. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
           </label>
         </section>
         <div className="final-row">
@@ -728,7 +784,8 @@ function RoundTools({ game, onAction }) {
         <button className="chip-btn" onClick={() => onAction("speedUp")}>Start the speed-up <SpeedUpIn game={game} /></button>
       )}
       {round.phase !== "roundEnd" && <button className="chip-btn" onClick={() => onAction("revealPuzzle")}>Reveal puzzle (nobody wins)</button>}
-      <button className="chip-btn danger" onClick={() => onAction("endGame")}>{last ? "End game" : "End game early"}</button>
+      {/* The practice round is left with its skip control instead. */}
+      {!game.tutorial && <button className="chip-btn danger" onClick={() => onAction("endGame")}>{last ? "End game" : "End game early"}</button>}
     </div>
   );
 }
@@ -861,6 +918,7 @@ export function WheelDisplay({ game, onAction }) {
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         {game.status === "bonus" ? <BonusClock game={game} /> : <Clock game={game} />}
       </header>
+      <Coach game={game} coach={WHEEL_COACH} place="tv" />
       {game.status === "bonus" ? (
         <BonusStage game={game} onAction={onAction} />
       ) : game.status === "lobby" || !round ? (
@@ -894,8 +952,9 @@ export function WheelDisplay({ game, onAction }) {
               {detail && <p>{detail}</p>}
               {news && round.phase !== "roundEnd" && <p className={`ws-news is-${news.tone}`} key={game.events.at(-1)?.id}>{news.tone === "bad" ? <XIcon className="ws-news-x" /> : <i className="ws-marker" aria-hidden="true" />}{news.text}</p>}
               {game.clocksPaused && round.phase !== "roundEnd" && <p className="ws-paused">Clocks paused</p>}
-              {round.phase === "roundEnd" && <button className="primary ws-next" onClick={() => onAction("nextSegment")}>{last ? "See final scores" : "Next puzzle"}</button>}
-              {round.phase === "roundEnd" && game.hostless && <p className="muted">{last ? "Final scores" : "The next puzzle"} will appear in a few seconds.</p>}
+              {/* After the practice puzzle, the coach's button starts the game. */}
+              {round.phase === "roundEnd" && !game.tutorial && <button className="primary ws-next" onClick={() => onAction("nextSegment")}>{last ? "See final scores" : "Next puzzle"}</button>}
+              {round.phase === "roundEnd" && game.hostless && !game.tutorial && <p className="muted">{last ? "Final scores" : "The next puzzle"} will appear in a few seconds.</p>}
             </div>
             <UsedLetters round={round} />
           </div>
@@ -987,7 +1046,7 @@ function SolveBox({ game, playerId, board = game.round?.board, blanks = game.rou
 }
 
 // Hold to spin harder: the longer the press (up to about a second), the more the wheel turns.
-function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder", event = "wheel:spin" }) {
+function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder", offNote = "No consonants left", event = "wheel:spin" }) {
   const pressed = useRef(null), [sent, setSent] = useState(false);
   const release = () => {
     if (pressed.current == null || sent) return;
@@ -1000,7 +1059,7 @@ function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder", ev
       onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && pressed.current == null) pressed.current = Date.now(); }} onKeyUp={(e) => { if (e.key === "Enter" || e.key === " ") release(); }}>
       <WheelIcon />
       <span className="ws-spin-word">Spin</span>
-      <small>{disabled ? "No consonants left" : hint}</small>
+      <small>{disabled ? offNote : hint}</small>
     </button>
   );
 }
@@ -1008,7 +1067,8 @@ function SpinButton({ game, playerId, disabled, hint = "Hold to spin harder", ev
 function TurnActions({ game, playerId }) {
   const round = game.round, me = game.contestants[round.control];
   const [buying, setBuying] = useState(false), [sent, setSent] = useState(false);
-  const canBuy = round.vowelsLeft && me.roundBank >= game.vowelCost;
+  const canBuy = round.vowelsLeft && me.roundBank >= game.vowelCost && moveOpen(game, "vowel");
+  const canSpin = round.consonantsLeft && moveOpen(game, "spin"), canSolve = moveOpen(game, "solve");
   const emit = (name, extra = {}) => { setSent(true); socket.emit(`wheel:${name}`, { code: game.code, playerId, ...extra }); };
   if (buying)
     return (
@@ -1022,12 +1082,12 @@ function TurnActions({ game, playerId }) {
     );
   return (
     <div className="ws-turn">
-      <SpinButton game={game} playerId={playerId} disabled={!round.consonantsLeft} />
+      <SpinButton game={game} playerId={playerId} disabled={!canSpin} offNote={round.consonantsLeft ? "Not this step" : undefined} />
       <div className="ws-turn-row">
         <button className="secondary" disabled={!canBuy || sent} onClick={() => setBuying(true)}>
-          Buy a vowel <small>{!round.vowelsLeft ? "None left" : !canBuy ? `Needs ${money(game.vowelCost)}` : money(game.vowelCost)}</small>
+          Buy a vowel <small>{!round.vowelsLeft ? "None left" : !moveOpen(game, "vowel") ? "Not this step" : !canBuy ? `Needs ${money(game.vowelCost)}` : money(game.vowelCost)}</small>
         </button>
-        <button className="primary" disabled={sent} onClick={() => emit("solveStart")}>Solve</button>
+        <button className="primary" disabled={sent || !canSolve} onClick={() => emit("solveStart")}>Solve</button>
       </div>
       {round.wildChance && me.wildCard && round.consonantsLeft && (
         <button className="secondary ws-wild-btn" disabled={sent} onClick={() => emit("wild")}>Play your Wild Card <small>Another consonant at the same value</small></button>
@@ -1176,6 +1236,7 @@ export function WheelPlayer({ game, playerId }) {
         <span className="ws-my-total"><span className="label">Total</span><Cash value={me?.total || 0} /></span>
       </div>
       <Extras contestant={me} />
+      <Coach game={game} coach={WHEEL_COACH} place="phone" playerId={playerId} />
       {game.status === "bonus" ? (
         <BonusPlayer game={game} playerId={playerId} />
       ) : game.status === "lobby" || !round ? (
@@ -1238,6 +1299,7 @@ export function WheelController({ game, onAction }) {
   return (
     <main className="controller wheel-game">
       {header}
+      <Coach game={game} coach={WHEEL_COACH} place="controller" />
       <p className="player-clue-meta ws-meta"><span>{segmentLabel(game)}</span><span className="ws-cat-name">{round.category}</span></p>
       <div className="ws-answer">
         <span>The answer</span>
@@ -1256,7 +1318,7 @@ export function WheelController({ game, onAction }) {
           </div>
         </div>
       )}
-      {round.phase === "roundEnd" && <button className="wide on" onClick={() => onAction("nextSegment")}>{last ? "See final scores" : "Next puzzle"}</button>}
+      {round.phase === "roundEnd" && !game.tutorial && <button className="wide on" onClick={() => onAction("nextSegment")}>{last ? "See final scores" : "Next puzzle"}</button>}
       <RoundTools game={game} onAction={onAction} />
       <section className="controller-players"><h2>Players</h2><PlayerTools game={game} onAction={onAction} /></section>
     </main>

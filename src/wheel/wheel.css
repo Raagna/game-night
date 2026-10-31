@@ -660,3 +660,13 @@ button.wb-cell { cursor: pointer; }
   .ws-final li { min-height: 56px; padding-block: 5px; }
   .ws-final li.is-winner { min-height: 70px; }
 }
+
+/* ---------- Practice round ---------- */
+/* The coach banner (src/Tutorial.jsx) as one of the studio's lit panels, trimmed in gold, its label in gold. */
+:is(.display, .player, .controller).wheel-game .coach {
+  border-left: 0; border-radius: 12px; padding: 14px 18px 14px 20px;
+  background: var(--ws-panel);
+  box-shadow: var(--ws-panel-edge), inset 0 0 0 2px rgb(255 207 63 / 0.6), 0 0 18px rgb(186 100 255 / 0.18);
+}
+.wheel-game .coach-label { color: var(--ws-gold); }
+.wheel-game .coach-text { color: #fff; }
