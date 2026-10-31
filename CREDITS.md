@@ -60,7 +60,7 @@ no recordings or samples.
 
 ## Price Check Open Prices pack
 
-`public/data/prices-openprices.json` is built from [Open Prices](https://prices.openfoodfacts.org), an
+`public/data/prices-openprices.json` (United States) and `public/data/prices-openprices-ca.json` (Canada) are built from [Open Prices](https://prices.openfoodfacts.org), an
 [Open Food Facts](https://world.openfoodfacts.org) project that collects prices from shop receipts and price tags,
 contributed by its community.
 
@@ -69,13 +69,21 @@ contributed by its community.
 - Product names, brands and sizes come from the Open Food Facts database (ODbL), and product photos, loaded from
   `images.openfoodfacts.org`, are under [CC BY-SA](https://creativecommons.org/licenses/by-sa/3.0/) by their contributors.
 
-Changes made for this game: only US-dollar prices for whole products paid at US shops, not on sale, from the two
-years before the newest price, and between $0.50 and $80 are kept; products need a name and a photo; each
-product's price is the median of its receipts; products that look the same are merged; all-caps names are put in
-title case. `scripts/build-openprices-pack.py` rebuilds the file and documents every rule.
+The data was downloaded from the public Open Prices API (`https://prices.openfoodfacts.org/api/v1/prices`), one
+request a second.
+
+Changes made for this game: the US pack keeps only US-dollar prices paid at US shops, and the Canada pack only
+Canadian-dollar prices paid at Canadian shops (no price is converted between currencies, and a product with no
+Canadian receipt is left out of the Canada pack); only whole products, not on sale, bought one at a time, from the
+two years before the newest price, and between 0.50 and 80 dollars are kept; produce sold by weight ("$ per kg",
+"varies") is dropped; products need a name, a photo and a brand or a size; emoji are removed from names and only
+the first brand is kept; each product's price is the median of its receipts; products that look the same are
+merged; all-caps names are put in title case. `scripts/build-openprices-pack.py` rebuilds either file
+(`--country US` or `--country CA`) and documents every rule.
 
 ## Price Check showcase pack
 
-The big-ticket items in `src/price/showcase.json` were written for this project. Their prices are our own
-estimates of typical US prices in 2026, not quotes from any shop.
+The big-ticket items in `src/price/showcase.json` were written for this project. Each has a US price and a
+Canadian price, both our own estimates of typical 2026 prices in that country, not quotes from any shop; the
+Canadian prices were estimated separately, not converted from the US ones.
 

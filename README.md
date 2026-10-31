@@ -59,20 +59,25 @@ A bluffing trivia game for 2 to 8 players (best with 4 or more), played on clues
 The TV plays a pop for each fib and vote, a sliding "wah-wah" for each fib that fooled someone, a bell and fanfare for the fact and a ticking count at the end of each clock, sharing the other games' sound on/off button.
 
 ### Price Check
-A price-guessing game for 2 to 8 players on real prices: what shoppers paid for groceries and household goods at US stores. Everyone plays every round on their phone at once.
+A price-guessing game for 2 to 8 players on real prices: what shoppers paid for groceries and household goods. Setup picks the country, **United States** (prices in US$ from US stores) or **Canada** (prices in CA$ from Canadian stores); each has its own pack of real receipt prices, and nothing is converted from one currency to the other. Everyone plays every round on their phone at once, and at each reveal the TV shows every player's answer, whether it was right, how close it was and the points it earned (in Higher or Lower, every call on every product).
 
 - **Closest Bid**: everyone bids secretly on one product; closest without going over wins 500 (an exact bid earns 500 more). If everybody goes over, everyone bids again, under the lowest bid.
 - **Higher or Lower**: five products, each shown with a wrong price; call whether the real one is higher or lower (100 each, 200 more for all five).
 - **Pick the Priciest**: three sets of three products; pick the most expensive in each (200 each).
 - **Price Order**: put four products in order, cheapest first (100 per product in its place, 200 more for a perfect order).
 - **Grocery Run**: fill a cart as close to the budget as you can without going over (400 to the closest).
-- **The Showcase**: the top two players each bid on a bundle of big-ticket prizes; closest without going over wins 1,500, and within $250 of your own showcase wins both (1,500 more). Everyone else predicts the winner (300 if they're right).
-- **Game length**: Short (four rounds and the showcase, about 20 minutes) or Classic (eight rounds, about 35 minutes). Setup deals the products; "New products" deals again.
+- **The Showcase**: the top two players each bid on a bundle of big-ticket prizes; closest without going over wins 1,500, and within 250 dollars of your own showcase wins both (1,500 more). Everyone else predicts the winner (300 if they're right).
+- **Game length**: Short (four rounds and the showcase, about 20 minutes) or Classic (eight rounds, about 40 minutes). Setup deals the products; "New products" deals again.
+- **Clocks**: 35 seconds to bid, 70 for the five Higher or Lower calls, 20 for each Pick the Priciest set, 55 for Price Order, 70 for Grocery Run and 75 for the showcase. Without a host, each reveal stays up for 16 seconds (20 for the showcase, 9 between Pick the Priciest sets).
+- **Look**: Price Check has its own look, a bright 1970s TV showroom: saturated yellow, orange and pink, chasing marquee bulbs, price tags and big price readouts.
 
-Prices come from two packs:
+Prices come from three packs:
 
-- **Open Prices**: real receipt prices from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py` into `public/data/prices-openprices.json` (fetched when Price Check opens). Product photos load from Open Food Facts.
-- **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project with estimated typical US prices.
+- **Open Prices, United States**: real receipt prices in US dollars from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py --country US` into `public/data/prices-openprices.json`.
+- **Open Prices, Canada**: real receipt prices in Canadian dollars from Canadian stores, built by `scripts/build-openprices-pack.py --country CA` into `public/data/prices-openprices-ca.json`. It is much smaller than the US pack (a few hundred products), since fewer Canadian receipts have been contributed; a product with no Canadian receipt is simply not in it.
+- **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project, each with its own estimated typical US price and Canadian price (a few trips differ by country, such as Québec City instead of New Orleans).
+
+The chosen country's pack is fetched when the game is set up; product photos load from Open Food Facts.
 
 ### Tip of the Tongue
 A team word game for teams of two (up to 12 players). Players pair up as they join; the host can move them between teams in the lobby, and an odd player makes one team of three.
@@ -206,7 +211,7 @@ public/
   data/               built-in Jeopardy archive, one file per season (seasons.json is the index),
                       the Survey Says! packs (surveys-protoqa.json, surveys-sheet.json)
                       the Spin & Solve Fan Database (puzzles-fans.json)
-                      and the Price Check prices (prices-openprices.json)
+                      and the Price Check prices (prices-openprices.json, prices-openprices-ca.json)
   audio/              sound effects
 scripts/
   build-question-data.py    rebuilds the Jeopardy archive in public/data from a season archive ZIP
@@ -214,7 +219,7 @@ scripts/
   build-sheet-surveys.py    rebuilds public/data/surveys-sheet.json from CSV exports of the sheet's tabs
   check-wheel-puzzles.mjs   checks the Spin & Solve puzzle packs (npm run check:puzzles)
   build-fan-puzzles.mjs     rebuilds public/data/puzzles-fans.json from answers collected from wheeloffortuneanswer.com
-  build-openprices-pack.py  rebuilds public/data/prices-openprices.json from the Open Prices API
+  build-openprices-pack.py  rebuilds the Price Check packs from the Open Prices API (--country US or CA)
 docs/
   wheel-of-fortune-plan.md  the Spin & Solve design: rules, server state, socket events and screens
 ```
@@ -229,7 +234,7 @@ docs/
 - The ProtoQA pack is built from [ProtoQA](https://github.com/iesl/protoqa-data) (Boratko et al., 2020), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [CREDITS.md](CREDITS.md) for the full attribution and what was changed.
 - The Feud Sheet pack comes from a publicly shared "Family Feud Question Database" Google Sheet. Its author and licence aren't known; see [CREDITS.md](CREDITS.md).
 - Fib or Fact uses the same built-in Jeopardy clues. Its sounds are synthesized in `src/fib/sounds.js` and are original.
-- Price Check's prices come from [Open Prices](https://prices.openfoodfacts.org), an Open Food Facts project, under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/); the pack built from it is released under the same licence. Product photos are from Open Food Facts under CC BY-SA. The showcase prices in `src/price/showcase.json` are our own estimates. See [CREDITS.md](CREDITS.md).
+- Price Check's prices come from [Open Prices](https://prices.openfoodfacts.org), an Open Food Facts project, under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/); the pack built from it is released under the same licence. Product photos are from Open Food Facts under CC BY-SA. The showcase prices in `src/price/showcase.json` are our own estimates, for the US and for Canada. See [CREDITS.md](CREDITS.md).
 - The Tip of the Tongue word pack in `src/tongue/words.json` was written for this project.
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune*, *The Price Is Right* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.
