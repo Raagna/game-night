@@ -1,7 +1,7 @@
-/* Tip of the Tongue — the board with a lime lamp. The TV shows who's cluing, the 45-second clock and the words
-   cleared on flaps, and a row for each of the turn's words that stays blank until the word is got: the word itself
-   is only ever on the clue-giver's phone (and the host controller). Fouls are red with an X cell.
-   Word Budget borrows several of these (tt-card-wrap, tt-headline, tt-pass-btn, tt-cats, tt-team-num). */
+/* Tip of the Tongue. The rules up to "Tip of the Tongue's own look" are the shared base: Word Budget borrows many of
+   these classes (tt-card-wrap, tt-headline, tt-pass-btn, tt-cats, tt-team-num, tt-board, tt-row, tt-meter and more),
+   so they keep the board look. Tip of the Tongue's own screens (roots .tt and .tt-setup) are restyled at the end of
+   the file as a '70s-'80s word-association studio: navy set, amber seven-segment clock, a wall of word monitors. */
 
 /* A team's number on a small steel cell, so teams are told apart by more than their name. */
 .tt-team-num {
@@ -273,3 +273,376 @@
 
 /* The setup's choice rows (shared with Word Budget's setup). */
 .tt-fieldset .pc-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+
+
+/* =====================================================================================================
+   Tip of the Tongue's own look: a '70s-'80s word-association studio
+   ===================================================================================================== */
+
+/* A navy set lit from above, chrome trim, amber lamps. The shared tokens are re-set so the shared keys, fields
+   and dialogs come out in the studio's colours. */
+body:has(main.tt), body:has(main.tt-setup) {
+  --tt-night: #040a1e;
+  --tt-navy: #0a1b4a;
+  --tt-blue: #12307a;
+  --tt-royal: #1e4ab3;
+  --tt-sky: #79a3ff;
+  --tt-amber: #ffb22e;
+  --tt-amber-hi: #ffd57e;
+  --tt-glass: #050d28;
+  --tt-chrome: #a9b8d8;
+  --tt-chrome-lo: #4a5b85;
+  --tt-cream: #f6f1e3;
+  --tt-red: #ff5d4a;
+  --board: #0b1b4a;
+  --well: #071440;
+  --flap-face: #16307a;
+  --flap-face-lo: #132a6c;
+  --flap-gap: #040a1e;
+  --rule: #22408f;
+  --rule-strong: #3a5cb8;
+  --steel-hi: #cfdaf5;
+  --steel: #a6b9e6;
+  --steel-mid: #5f7cc4;
+  --steel-lo: #16307a;
+  --paint: #f6f1e3;
+  --paint-dim: #8195c8;
+  --red-text: #ff8a7a;
+  background: var(--tt-night);
+}
+main.tt, main.tt-setup { --table: #ffb22e; --on-table: #1a1000; }
+body:has(main.tt) .back-to-settings.is-controller { color: var(--steel); }
+
+/* The set: navy, with soft columns of light across the back wall and a spotlight from above. */
+.tt.display, .tt.end, .tt.player, .tt.controller, .tt-setup {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% -5%, rgb(121 163 255 / 0.28), transparent 70%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.03) 0 3px, transparent 3px 96px),
+    linear-gradient(180deg, #0f2560 0%, var(--tt-navy) 45%, #071338 100%);
+  border-radius: 6px;
+}
+/* Data on flaps elsewhere in the app is plain studio lettering here: no tiles, no hairline. */
+.tt .flap .flap-c, .tt-setup .flap .flap-c { width: auto; min-width: 0.2em; background: none; box-shadow: none; color: inherit; font-variant-numeric: tabular-nums; }
+.tt .flap .flap-c::after, .tt-setup .flap .flap-c::after { content: none; }
+.tt .flap .flap-cells, .tt .flap .flap-w { gap: 0; }
+
+/* The marquee: TIP OF THE over TONGUE in a lit box with a ring of bulbs. */
+.tt-logo {
+  display: inline-grid; justify-items: center; gap: 0.26em; justify-self: start;
+  padding: 0.18em;
+  font: 700 2.2rem/1 var(--flap-font); text-transform: uppercase;
+}
+.tt-logo-top { padding-left: 0.3em; font-size: max(0.36em, 0.62rem); letter-spacing: 0.3em; color: var(--tt-amber); }
+.tt-logo-main {
+  padding: 0.12em 0.36em 0.06em; border-radius: 0.14em;
+  background: linear-gradient(180deg, var(--tt-royal), var(--tt-blue));
+  color: var(--tt-cream); letter-spacing: 0.08em;
+  box-shadow: inset 0 0 0 0.05em var(--tt-amber), 0 0 0 0.05em var(--tt-night);
+  outline: 0.08em dotted var(--tt-amber-hi); outline-offset: 0.1em;
+  text-shadow: 0 0.04em 0 var(--tt-night);
+}
+.display.tt .display-bar { min-height: 92px; border-bottom: 3px solid var(--tt-amber); box-shadow: 0 3px 0 var(--tt-chrome-lo); margin-bottom: 20px; }
+.display.tt .display-bar .tt-logo { font-size: clamp(1.7rem, 2.8vw, 2.6rem); }
+
+/* Seven-segment digits: amber lamps, the unlit segments a faint ghost. */
+.tt-seg { display: inline-flex; gap: 0.08em; height: 1em; vertical-align: middle; }
+.tt-seg svg { width: 0.7em; height: 1em; overflow: visible; }
+.tt-seg polygon { fill: rgb(255 178 46 / 0.09); }
+.tt-seg polygon.on { fill: var(--tt-amber); }
+.tt-seg svg { filter: drop-shadow(0 0 0.05em rgb(255 178 46 / 0.55)); }
+
+/* The studio clock: a black window in a chrome bezel. Waiting: dim. The last five seconds: red. */
+.tt-clock {
+  display: inline-grid; place-items: center;
+  padding: 0.14em 0.2em 0.14em 0.14em; border-radius: 0.1em;
+  background: radial-gradient(ellipse at 50% 30%, #0b1636, #02061a 75%);
+  box-shadow: inset 0 0 0 0.025em #1c2b55, 0 0 0 0.04em var(--tt-chrome-lo), 0 0 0 0.06em var(--tt-night);
+}
+.tt-clock.is-idle polygon.on { fill: rgb(255 178 46 / 0.4); }
+.tt-clock.is-idle svg { filter: none; }
+.tt-clock.is-low polygon.on { fill: var(--tt-red); }
+.tt-clock.is-low svg { filter: drop-shadow(0 0 0.05em rgb(255 93 74 / 0.7)); }
+.tt-clock.is-low { animation: tt-blink 1s steps(1) infinite; }
+@keyframes tt-blink { 50% { box-shadow: inset 0 0 0 0.025em #1c2b55, 0 0 0 0.04em var(--tt-red), 0 0 0 0.06em var(--tt-night); } }
+.tt-clock.is-small { font-size: 2.1rem; }
+
+/* The header clock and other shared timers: amber figures in a small black window. */
+.tt .clue-timer { padding: 0.08em 0.3em; border-radius: 0.14em; background: #02061a; box-shadow: 0 0 0 0.05em var(--tt-chrome-lo); color: var(--tt-amber); }
+.tt .clue-timer .flap-c { color: var(--tt-amber); }
+.tt .clue-timer.is-paused .flap-c { color: rgb(255 178 46 / 0.45); }
+
+/* Keys: chunky console buttons with a lip. */
+.tt .primary, .tt-setup .primary {
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--tt-amber-hi), var(--tt-amber) 55%);
+  color: #1a1000; font-size: 1.12rem;
+  box-shadow: 0 5px 0 #9c5d06, inset 0 1px 0 rgb(255 255 255 / 0.5);
+}
+.tt .primary:active:not(:disabled), .tt-setup .primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #9c5d06, inset 0 1px 0 rgb(255 255 255 / 0.5); }
+.tt .primary:disabled, .tt-setup .primary:disabled { background: var(--tt-blue); color: var(--paint-dim); box-shadow: 0 5px 0 #06102e, inset 0 0 0 2px var(--rule-strong); }
+@media (min-width: 721px) {
+  .tt .lobby > .primary:active:not(:disabled), .tt .tt-center > .sv-next:active:not(:disabled) { transform: translate(-50%, 3px); }
+}
+.tt .chip-btn, .tt-setup .chip-btn { border-radius: 8px; }
+.tt .wide { border-radius: 12px; }
+.tt .wide.on { background: linear-gradient(180deg, var(--tt-amber-hi), var(--tt-amber) 55%); box-shadow: 0 4px 0 #9c5d06; }
+.tt .game-mode, .tt-setup .game-mode { border-radius: 12px; }
+
+/* A team number: an amber disc. */
+.tt .tt-team-num, .tt-setup .tt-team-num { width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--tt-amber); color: #1a1000; }
+
+/* The header's join corner. */
+.tt .join-hint .qr-small { background: var(--tt-cream); padding: 4px; border-radius: 6px; }
+.tt .code-chip .flap-c, .tt-code-chip { color: var(--tt-amber); }
+.tt-code-chip { font: 700 1.2rem var(--flap-font); letter-spacing: 0.12em; }
+
+/* ---------- Lobby ---------- */
+.tt .lobby h1 { color: var(--tt-amber); }
+/* The room code on a row of little monitors. */
+.tt .lobby-code .flap-cells { gap: 0.12em; }
+.tt .lobby-code .flap-c {
+  position: relative; width: 0.86em; height: 1.1em; border-radius: 0.12em / 0.14em;
+  background: radial-gradient(ellipse at 50% 40%, #16306e, var(--tt-glass) 75%);
+  color: var(--tt-amber); text-shadow: 0 0 0.12em rgb(255 178 46 / 0.6);
+  box-shadow: 0 0 0 0.05em #2a3a66, 0 0 0 0.075em var(--tt-night), 0 0.1em 0 0.075em #050b20;
+}
+.tt .lobby-code .flap-c::after { content: ""; inset: 0; top: 0; height: auto; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.28) 0 2px, transparent 2px 4px); border-radius: inherit; }
+.tt .qr-card { border-radius: 10px; background: var(--tt-cream); box-shadow: 0 0 0 5px var(--tt-amber), 0 0 0 9px var(--tt-chrome-lo); }
+.tt .lobby-url b { color: var(--tt-amber); }
+/* Players as rows on the set's desk: name, team, status. */
+.tt .departures li { border-radius: 10px; overflow: hidden; gap: 3px; }
+.tt .departures li > span, .tt .departures li > button { background: #0f2462; }
+.tt .departures li > button, .tt .departures li > span:first-child { background: linear-gradient(90deg, #1b3f9a, #11296b); color: var(--tt-cream); }
+.tt .departures .dep-status, .tt .departures .dep-status .flap-c { color: var(--tt-amber); }
+.tt .departures .dep-status::before { border-radius: 50%; width: 0.42em; height: 0.42em; }
+.tt .departures li.is-open { border: 2px dashed var(--rule-strong); }
+.tt .departures li.is-open > span { background: transparent; }
+
+/* ---------- The stage ---------- */
+.tt .tt-stage { grid-template-columns: minmax(0, 1fr) minmax(220px, 290px); }
+.tt-round-pill {
+  padding: 6px 16px 5px; border-radius: 8px;
+  background: #06113a; box-shadow: inset 0 0 0 2px var(--tt-chrome-lo);
+  font: 700 clamp(1rem, 1.4vw, 1.3rem) var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--tt-amber);
+}
+.tt .tt-round-team { color: var(--steel-hi); }
+.tt .tt-headline { color: var(--steel); font-weight: 700; }
+.tt .tt-headline em { color: var(--tt-amber); }
+.tt .tt-headline small { color: var(--steel); }
+
+/* The set: the console with the clock beside the monitor wall. */
+.tt .tt-play { grid-template-columns: auto minmax(0, 1fr); align-items: stretch; gap: clamp(16px, 2vw, 28px); max-width: 1180px; }
+.tt-console {
+  display: grid; align-content: center; justify-items: center; gap: 18px;
+  padding: 20px 24px; border-radius: 16px;
+  background: linear-gradient(180deg, #1d3b86, #0e2058);
+  box-shadow: inset 0 0 0 3px var(--tt-chrome-lo), inset 0 6px 0 rgb(255 255 255 / 0.08), 0 6px 0 #030920;
+}
+.tt-console .label { color: var(--tt-amber-hi); font-size: 0.95rem; letter-spacing: 0.3em; }
+.tt-console-clock, .tt-console-words { display: grid; justify-items: center; gap: 8px; }
+.tt-console-clock .tt-clock { font-size: clamp(4.6rem, 12vh, 9rem); }
+.tt-console-words .tt-of { display: inline-flex; align-items: center; gap: 0.2em; font-size: clamp(2rem, 4.6vh, 3.2rem); }
+.tt-console-words .tt-of > small { font: 700 0.36em var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel); }
+.tt-play.is-waiting .tt-console-words polygon.on { fill: rgb(255 178 46 / 0.4); }
+
+/* The monitor wall: four over three. */
+.tt-monitors { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: clamp(10px, 1.4vw, 18px); }
+.tt-monitor { flex: 0 0 calc((100% - 3 * clamp(10px, 1.4vw, 18px)) / 4); display: grid; gap: 16px; min-width: 0; }
+.tt-screen {
+  position: relative; container-type: inline-size; overflow: hidden;
+  display: grid; place-items: center;
+  height: clamp(92px, 15.5vh, 176px); padding: 8px 10px;
+  border-radius: 18px / 22px;
+  background: radial-gradient(ellipse at 50% 38%, #14296a, var(--tt-glass) 78%);
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 26px rgb(0 0 0 / 0.75), 0 0 0 6px #25335c, 0 0 0 8px #0a1230, 0 8px 0 7px #040a1e;
+  margin: 8px 8px 0;
+}
+.tt-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 2px, transparent 2px 4px), radial-gradient(ellipse at 30% 18%, rgb(255 255 255 / 0.09), transparent 45%); }
+.tt-screen-idle { font: 700 clamp(2.2rem, 6vh, 3.6rem)/1 var(--flap-font); color: rgb(121 163 255 / 0.16); }
+.tt-screen-word {
+  display: block; max-width: 100%;
+  font: 700 clamp(1.1rem, calc(100cqi / (var(--n) * 0.56)), 2.7rem)/1.04 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-align: center; text-wrap: balance; overflow-wrap: anywhere;
+  color: var(--tt-amber); text-shadow: 0 0 0.3em rgb(255 178 46 / 0.55);
+  animation: tt-power 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.tt-screen-mark { position: absolute; z-index: 1; top: 8px; right: 10px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--tt-amber); color: #1a1000; }
+.tt-screen-mark svg { width: 17px; height: 17px; }
+.tt-monitor-foot { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 26px; }
+.tt-monitor-num { display: grid; place-items: center; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 4px; background: linear-gradient(180deg, #c9d3e8, #8292b5); color: #0a1640; font: 700 0.95rem/1 var(--flap-font); }
+.tt-monitor-foot em { font: 700 0.92rem var(--flap-font); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
+.tt-monitor.is-got .tt-screen { background: radial-gradient(ellipse at 50% 38%, #2a2c55, var(--tt-glass) 80%); }
+.tt-monitor.is-got .tt-monitor-foot em { color: var(--tt-amber); }
+.tt-monitor.is-passed .tt-screen-word, .tt-monitor.is-missed .tt-screen-word { color: var(--paint-dim); text-shadow: none; }
+.tt-monitor.is-foul .tt-screen { background: radial-gradient(ellipse at 50% 38%, #4a1630, #1a0618 80%); }
+.tt-monitor.is-foul .tt-screen-word { color: var(--tt-red); text-shadow: 0 0 0.3em rgb(255 93 74 / 0.55); text-decoration: line-through; text-decoration-thickness: 0.08em; }
+.tt-monitor.is-foul .tt-screen-mark { background: var(--tt-red); color: #fff; }
+.tt-monitor.is-foul .tt-monitor-foot em { color: var(--red-text); }
+
+/* A foul: FOUL! and a red X across the wall for a moment. */
+.tt .tt-foul-flash { gap: 0.25em; border-radius: 16px; background: rgb(4 10 30 / 0.72); }
+.tt .tt-foul-x { width: 1.2em; height: 1.2em; border-radius: 0.16em; background: var(--tt-glass); color: var(--tt-red); box-shadow: inset 0 0 0 0.05em var(--tt-red), 0 0 0 0.04em #25335c; }
+.tt-foul-word { font: 700 1em/1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--tt-red); text-shadow: 0 0 0.2em rgb(255 93 74 / 0.6); }
+
+/* A typed guess that wasn't it. */
+.tt .tt-miss q { color: var(--tt-cream); }
+
+/* The turn's result: the points light up in the headline. */
+.tt .tt-scored-n { font-size: 1.1em; margin-left: 0.15em; }
+
+/* The scoreboard: partner pairs, each with a seven-segment score window. */
+.tt .tt-scores {
+  padding: 16px; border-radius: 16px;
+  background: linear-gradient(180deg, #16327a, #0c1d50);
+  box-shadow: inset 0 0 0 3px var(--tt-chrome-lo), 0 6px 0 #030920;
+}
+.tt .tt-scores > h2 { color: var(--tt-amber-hi); font-size: 0.95rem; letter-spacing: 0.3em; }
+.tt .tt-scores > ol { gap: 10px; }
+.tt .tt-scores li { padding: 12px; border-radius: 12px; background: #081544; box-shadow: inset 0 0 0 2px #1d3577; }
+.tt .tt-team-head { font: 700 1.2rem var(--flap-font); color: var(--tt-cream); }
+.tt .tt-team-score { padding: 6px 8px; border-radius: 6px; background: #02061a; box-shadow: 0 0 0 2px var(--tt-chrome-lo); font-size: 2.3rem; height: auto; }
+.tt .tt-team-score svg { height: 1em; }
+.tt .tt-scores li > small { font: 600 1rem/1.3 var(--set); color: var(--steel); }
+.tt .tt-scores li.is-turn { background: #0d1f5c; box-shadow: inset 0 0 0 3px var(--tt-amber); }
+/* ON AIR: a lit amber sign. */
+.tt .tt-onair { margin-top: 6px; padding: 4px 10px; border-radius: 4px; background: var(--tt-amber); color: #1a1000; letter-spacing: 0.24em; box-shadow: 0 0 0 2px #6b4107; }
+.tt .tt-onair::before { border-radius: 50%; }
+
+/* The host's Next key, like Start game, sits in the rail. */
+@media (min-width: 721px) {
+  .tt .tt-center > .sv-next { position: fixed; z-index: 6; left: 50%; bottom: calc(var(--frame) + 8px); transform: translateX(-50%); margin: 0; min-height: 52px; }
+}
+
+/* ---------- Setup ---------- */
+.tt-setup .tt-logo { font-size: clamp(2.3rem, 5vw, 3.4rem); margin: 8px 0; }
+.tt-setup .setup-card { border-top: 3px solid var(--tt-amber); box-shadow: 0 -3px 0 var(--tt-chrome-lo); }
+.tt-setup h1 { color: var(--tt-amber); }
+.tt-setup .sv-fieldset legend, .tt-setup .game-options h2 { color: var(--tt-amber-hi); }
+.tt-setup .pc-choices button { border-radius: 10px; min-height: 46px; background: #0f2462; }
+.tt-setup .pc-choices button[aria-checked="true"] { background: var(--tt-amber); color: #1a1000; border-color: var(--tt-amber); }
+/* Categories as little screens: dark and dim when off, amber and glowing when on. */
+.tt-setup .tt-cats > button { border-radius: 10px / 12px; background: var(--tt-glass); box-shadow: 0 0 0 3px #1d3577; color: var(--paint-dim); }
+.tt-setup .tt-cats > button[aria-checked="true"] { background: radial-gradient(ellipse at 50% 40%, #16306e, var(--tt-glass) 80%); color: var(--tt-amber); border-color: transparent; box-shadow: 0 0 0 3px var(--tt-amber); text-shadow: 0 0 0.3em rgb(255 178 46 / 0.45); }
+.tt-setup .tt-cats > button::before { border-radius: 50%; }
+.tt-setup .final-row, .tt-setup .game-options { border-top-color: var(--rule-strong); }
+
+/* ---------- Phone ---------- */
+.player.tt .player-bar { border-bottom: 3px solid var(--tt-amber); box-shadow: 0 3px 0 var(--tt-chrome-lo); padding-bottom: 10px; }
+.player.tt .tt-logo { font-size: 1.45rem; }
+.player.tt .player-name { color: var(--steel); }
+.tt .tt-my-team { border-radius: 14px; background: linear-gradient(180deg, #1d3b86, #0e2058); box-shadow: inset 0 0 0 2px var(--tt-chrome-lo), 0 4px 0 #030920; padding: 12px; }
+.tt .tt-my-text > b { color: var(--tt-cream); }
+.tt .tt-my-text > small { color: var(--steel); }
+.tt-my-score { padding: 6px 8px; border-radius: 6px; background: #02061a; box-shadow: 0 0 0 2px var(--tt-chrome-lo); font-size: 2.2rem; height: auto; }
+.player.tt .player-clue-meta { color: var(--tt-amber); }
+.player.tt .player-status { color: var(--tt-cream); }
+.player.tt .player-status.is-you { color: var(--tt-amber); }
+.tt .sv-guess-label { color: var(--tt-amber); }
+/* The word: one big monitor. */
+.tt .tt-word { padding: 12px 12px 18px; border-radius: 16px; background: linear-gradient(180deg, #1d3b86, #0e2058); box-shadow: inset 0 0 0 2px var(--tt-chrome-lo), 0 5px 0 #030920; }
+.tt .tt-word > .label { color: var(--tt-amber-hi); letter-spacing: 0.3em; }
+.tt-word-screen {
+  position: relative; container-type: inline-size; overflow: hidden;
+  display: grid; place-items: center; width: 100%;
+  min-height: clamp(130px, 24vh, 210px); padding: 12px 14px;
+  border-radius: 20px / 26px;
+  background: radial-gradient(ellipse at 50% 38%, #14296a, var(--tt-glass) 78%);
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 30px rgb(0 0 0 / 0.75), 0 0 0 6px #25335c, 0 0 0 8px #0a1230;
+}
+.tt-word-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 2px, transparent 2px 4px), radial-gradient(ellipse at 30% 18%, rgb(255 255 255 / 0.09), transparent 45%); }
+.tt-word-text {
+  font: 700 clamp(1.5rem, calc(100cqi / (var(--w) * 0.56)), 4.6rem)/1.02 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-align: center; text-wrap: balance; overflow-wrap: anywhere;
+  color: var(--tt-amber); text-shadow: 0 0 0.3em rgb(255 178 46 / 0.55);
+  animation: tt-power 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.tt .tt-word.is-small .tt-word-screen { min-height: 120px; }
+.tt .tt-word.is-small .tt-word-text { font-size: clamp(1.3rem, calc(100cqi / (var(--w) * 0.56)), 3.2rem); }
+.tt .tt-tally { font-size: 1.9rem; gap: 8px 12px; }
+.tt .tt-tally .label { color: var(--steel-hi); }
+/* Got it, Pass and the foul key, as console buttons. */
+.tt .tt-got-btn { border-radius: 14px; background: linear-gradient(180deg, var(--tt-amber-hi), var(--tt-amber) 55%); box-shadow: 0 6px 0 #9c5d06, inset 0 1px 0 rgb(255 255 255 / 0.5); }
+.tt .tt-pass-btn { border-radius: 14px; border: 0; background: linear-gradient(180deg, #3664d0, #1e46a8 55%); color: var(--tt-cream); box-shadow: 0 6px 0 #0b2063, inset 0 1px 0 rgb(255 255 255 / 0.3); }
+.tt .tt-got-btn:active, .tt .tt-pass-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #0b2063; }
+.tt .tt-got-btn:active { box-shadow: 0 2px 0 #9c5d06; }
+.tt .tt-foul-btn { border-radius: 12px; border-width: 2px; }
+.tt .tt-big { border-radius: 14px; }
+.tt .sv-guess input { border-radius: 12px; border-width: 2px; min-height: 60px; background: var(--tt-glass); font-size: 1.25rem; }
+/* The turn's words as a compact list. */
+.tt-wordlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; text-align: left; }
+.tt-wordlist li { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 6px 12px 6px 8px; border-radius: 10px; background: var(--tt-glass); box-shadow: inset 0 0 0 2px #1d3577; }
+.tt-wl-mark { display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--steel-mid); }
+.tt-wl-mark svg { width: 16px; height: 16px; }
+.tt-wl-word { flex: 1; min-width: 0; font: 700 1.15rem/1.1 var(--flap-font); letter-spacing: 0.03em; text-transform: uppercase; color: var(--paint-dim); overflow-wrap: anywhere; }
+.tt-wordlist em { flex-shrink: 0; font: 700 0.8rem var(--flap-font); font-style: normal; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+.tt-wordlist .is-got .tt-wl-mark { background: var(--tt-amber); color: #1a1000; box-shadow: none; }
+.tt-wordlist .is-got .tt-wl-word { color: var(--tt-amber); }
+.tt-wordlist .is-got em { color: var(--tt-amber); }
+.tt-wordlist .is-foul .tt-wl-mark { background: var(--tt-red); color: #fff; box-shadow: none; }
+.tt-wordlist .is-foul .tt-wl-word { color: var(--red-text); text-decoration: line-through; }
+.tt-wordlist .is-foul em { color: var(--red-text); }
+.tt .tt-status-n { font-size: 1.1em; }
+
+/* ---------- Host controller ---------- */
+.controller.tt .controller-bar { border-bottom: 3px solid var(--tt-amber); }
+.controller.tt .tt-logo { font-size: 1.4rem; }
+.controller.tt .status-note { color: var(--steel-hi); }
+.tt .tt-team-tools > li { border-radius: 10px; background: #0f2462; }
+
+/* ---------- End ---------- */
+.end.tt > .tt-logo { justify-self: center; font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin-top: 6px; }
+.tt-winner {
+  display: block !important; max-width: 18ch;
+  font: 700 clamp(2.6rem, 7vw, 6rem)/1.02 var(--flap-font) !important; letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere;
+  color: var(--tt-amber); text-shadow: 0 0 0.25em rgb(255 178 46 / 0.45), 0 0.05em 0 #6b4107;
+  animation: tt-power 600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.tt-winner > span { color: var(--tt-cream); }
+.end.tt .podium { gap: 10px; }
+.end.tt .place { border-radius: 14px; background: linear-gradient(180deg, #1d3b86, #0e2058); box-shadow: inset 0 0 0 2px var(--tt-chrome-lo), 0 5px 0 #030920; }
+.end.tt .place .rank { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--tt-chrome); color: #0a1640; font-size: 1.3rem; }
+.end.tt .place b { color: var(--tt-cream); }
+.end.tt .place-1 { box-shadow: inset 0 0 0 3px var(--tt-amber), 0 5px 0 #030920; }
+.end.tt .place-1 .rank { background: var(--tt-amber); color: #1a1000; }
+.end.tt .place-1 b { color: var(--tt-amber); }
+.tt-place-score { padding: 6px 8px; border-radius: 6px; background: #02061a; box-shadow: 0 0 0 2px var(--tt-chrome-lo); font-size: 2.2rem; height: auto; }
+.end.tt .place-1 .tt-place-score { font-size: 2.8rem; }
+.end.tt .remaining-players li { border-radius: 10px; background: #0f2462; }
+.tt-rest-score { font-size: 1.3rem; }
+.end.tt .sv-end-buttons a { color: var(--steel-hi); }
+.end.tt .player-end p { color: var(--tt-cream); }
+
+/* ---------- Motion ---------- */
+/* A screen switching on: a bright line that opens into the picture. */
+@keyframes tt-power { 0% { opacity: 0; transform: scaleY(0.04) scaleX(1.2); filter: brightness(3); } 60% { opacity: 1; transform: scaleY(1.06); filter: brightness(1.4); } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tt-screen-word, .tt-word-text, .tt-winner { animation: tt-fade 240ms ease-out both !important; }
+  .tt-clock.is-low { animation: none !important; }
+}
+@keyframes tt-fade { from { opacity: 0; } }
+
+/* ---------- Narrower and shorter screens ---------- */
+@media (max-width: 1180px) {
+  .tt .tt-play { grid-template-columns: minmax(0, 1fr); }
+  .tt-console { grid-auto-flow: column; justify-content: center; align-items: center; gap: 28px; padding: 14px 22px; }
+  .tt-console-clock .tt-clock { font-size: clamp(3.6rem, 9vh, 6rem); }
+}
+@media (max-width: 960px) {
+  .tt .tt-stage { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .display.tt .display-bar { min-height: 0; }
+  .display.tt .display-bar .tt-logo { font-size: 1.3rem; }
+  .tt-monitor { flex-basis: calc((100% - 12px) / 2); }
+  .tt-monitors { gap: 12px; }
+  .tt-screen { height: 84px; margin: 6px 6px 0; }
+  .tt-console { gap: 18px; padding: 12px 14px; }
+  .tt-console-clock .tt-clock { font-size: 3.4rem; }
+  .tt-console-words .tt-of { font-size: 2rem; }
+}
+/* A 720p TV: a slimmer clock and screens so the whole set fits. */
+@media (max-height: 800px) and (min-width: 761px) {
+  .display.tt .display-bar { min-height: 70px; margin-bottom: 12px; }
+  .tt-screen { height: 13.5vh; }
+  .tt-console { padding: 14px 18px; gap: 12px; }
+  .tt .tt-scores li { padding: 9px 10px; }
+  .tt .tt-team-score { font-size: 1.9rem; }
+}
