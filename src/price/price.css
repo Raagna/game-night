@@ -313,7 +313,7 @@ body:has(.pc), body:has(.pc-setup) {
 }
 
 /* Higher or Lower: every call, product by product. */
-.pc-hl-table { --hl-cols: minmax(6.5em, 1.1fr) repeat(5, minmax(0, 1fr)) minmax(5.6em, auto); display: grid; gap: 6px; width: 100%; max-width: 1240px; }
+.pc-hl-table { --hl-cols: minmax(6.5em, 1.1fr) repeat(var(--hl-n, 5), minmax(0, 1fr)) minmax(5.6em, auto); display: grid; gap: 6px; width: 100%; max-width: 1240px; }
 .pc-hl-head, .pc-hl-row { display: grid; grid-template-columns: var(--hl-cols); gap: 6px; align-items: stretch; }
 .pc-hl-row { min-height: 50px; }
 .pc-hl-head > span { display: grid; justify-items: center; align-content: end; gap: 4px; min-width: 0; padding: 6px 4px; }
@@ -645,7 +645,7 @@ body:has(.pc) .back-to-settings.is-controller { color: var(--pc-ink); }
   .pc-shelf.count-5, .pc-shelf.count-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .pc-shelf.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pc-stage { grid-template-columns: minmax(0, 1fr); }
-  .pc-hl-table { --hl-cols: minmax(5em, 1fr) repeat(5, minmax(0, 1fr)) minmax(4.6em, auto); }
+  .pc-hl-table { --hl-cols: minmax(5em, 1fr) repeat(var(--hl-n, 5), minmax(0, 1fr)) minmax(4.6em, auto); }
   .pc-hl-call > span:not(.pc-mark) { display: none; }
 }
 @media (max-width: 760px) {
@@ -731,4 +731,33 @@ body:has(.pc) .back-to-settings.is-controller { color: var(--pc-ink); }
   .pc-code { font-size: clamp(56px, 13vh, 132px); }
   .pc-qr-card .qr { width: clamp(120px, 21vh, 210px); }
   .pc-name-tags li { padding-block: 6px; }
+}
+
+/* ---------- Practice round (the tutorial's coach, src/Tutorial.jsx) ---------- */
+/* The coach is a showroom sign: a plum panel ringed in sun yellow, its label on a hot-pink tag in the sign's
+   italic capitals. It sits above the bulbs, between the TV's header and the stage. */
+.pc .coach {
+  position: relative; z-index: 1;
+  max-width: 1240px; margin: 0 auto 18px; padding: 12px 16px 12px 20px;
+  border: 0; border-radius: 14px;
+  background: linear-gradient(180deg, var(--pc-night-2), var(--pc-night));
+  box-shadow: 0 0 0 3px var(--pc-sun), 0 5px 0 3px var(--pc-ink);
+}
+.pc .coach-label {
+  display: inline-block; margin-bottom: 6px; padding: 3px 12px 2px; border-radius: 999px;
+  background: var(--pc-hot); color: #fff;
+  font: italic 800 0.9rem/1.2 var(--pc-sign-font); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.pc .coach-text { font: 500 clamp(1.1rem, 1.6vw, 1.45rem)/1.35 var(--set); color: var(--pc-cream); }
+.pc .tutorial-tally { font-family: var(--pc-sign-font); color: var(--pc-sun); }
+.pc .tutorial-tally small { color: var(--steel); }
+.pc .tutorial-skip-note { color: var(--steel); }
+.pc .coach.is-phone, .pc .coach.is-controller { margin: 0 0 14px; }
+.pc .coach.is-phone .coach-text, .pc .coach.is-controller .coach-text { font-size: 1.05rem; }
+/* One product on the shelf, or one column of calls: the practice's single Higher or Lower product. */
+.pc-shelf.count-1 { grid-template-columns: minmax(0, 1fr); max-width: 320px; }
+.pc-hl-table.is-single { max-width: 820px; }
+@media (max-height: 800px) and (min-width: 761px) {
+  .display.pc .coach { margin-bottom: 10px; padding-block: 8px; }
+  .display.pc .coach-text { font-size: 1.1rem; }
 }

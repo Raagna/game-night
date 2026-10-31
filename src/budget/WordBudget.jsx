@@ -13,7 +13,8 @@ import { useSound, setMuted, isMuted, useEventSounds, playWinnersTune, playBuzz,
 import { useClockTicks, playBlip, playSoClose } from "../wheel/sounds";
 import { playClue, playPop } from "../fib/sounds";
 import { repeatHostTap } from "../../server/taps.js";
-import { standings, BUDGET_TIMES } from "../../server/budget.js";
+import { standings, BUDGET_TIMES, BUDGET_PRACTICE_TIMES } from "../../server/budget.js";
+import { Coach } from "../Tutorial";
 import WORDS from "../tongue/words.json";
 import "./budget.css";
 
@@ -38,7 +39,9 @@ const SCORING = {
   points: { label: "Points", note: "A card is worth 10 and every saved word 1. First team to 10 × the target wins." },
 };
 const secs = (ms) => Math.round(ms / 1000);
-const PHASE_MS = { peek: BUDGET_TIMES.peekMs, bid: BUDGET_TIMES.bidMs, play: BUDGET_TIMES.playMs, steal: BUDGET_TIMES.stealMs, done: BUDGET_TIMES.doneMs };
+// Each phase's clock, from the real game's times or (on the practice card) the practice's.
+const timesOf = (game) => (game?.tutorial ? BUDGET_PRACTICE_TIMES : BUDGET_TIMES);
+const phaseMs = (game, phase) => timesOf(game)[`${phase}Ms`];
 
 // ---------- Small helpers ----------
 const nameOf = (game, id) => game.players.find((p) => p.id === id)?.name || "Nobody";
@@ -131,7 +134,7 @@ function Clock({ deadline, serverNow, total, label, className = "" }) {
     </div>
   );
 }
-const PhaseClock = ({ game, label, className }) => <Clock deadline={game.turn?.deadline} serverNow={game.serverNow} total={PHASE_MS[game.turn?.phase]} label={label} className={className} />;
+const PhaseClock = ({ game, label, className }) => <Clock deadline={game.turn?.deadline} serverNow={game.serverNow} total={phaseMs(game, game.turn?.phase)} label={label} className={className} />;
 // A team's number in a sticker dot of its colour, so teams are told apart by more than colour.
 const TeamDot = ({ game, team }) => <span className={`wb-dot ${teamClass(game, team?.id)}`} aria-hidden="true">{teamIndex(game, team?.id) + 1}</span>;
 // The bid on a price tag: the number big, who holds it underneath.
@@ -192,6 +195,7 @@ export function BudgetSetup({ onCreate }) {
     [scoring, setScoring] = useState(() => read(SCORING_KEY, ["cards", "points"], "cards")),
     [chosen, setChosen] = useState(readCategories),
     [hostless, setHostless] = useState(false),
+    [practice, setPractice] = useState(true),
     [sound, setSound] = useState(() => !isMuted()),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -200,7 +204,7 @@ export function BudgetSetup({ onCreate }) {
   const wordCount = new Set(wordsIn(chosen).map((w) => w.toLowerCase())).size, enough = wordCount >= CARD_SIZE * 2;
   const start = () => {
     setNotice(""); setBusy(true);
-    onCreate({ game: "budget", words: dealWords(chosen), cardsToWin, scoring, hostless }, (e) => { setBusy(false); setNotice(e); });
+    onCreate({ game: "budget", words: dealWords(chosen), cardsToWin, scoring, hostless, tutorial: practice }, (e) => { setBusy(false); setNotice(e); });
   };
   return (
     <main className="wb-setup">
@@ -241,6 +245,10 @@ export function BudgetSetup({ onCreate }) {
           <label className="wb-option">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a host</b><small>The team that isn’t guessing keeps track: the other clue-giver counts every clue word, checks off each word said and calls no-nos from their phone, and the game moves on by itself. With a host, the host does all of that from the controller, and phones only bid.</small></span>
+          </label>
+          <label className="wb-option">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>One practice card before card one, with tips on the TV and every phone: the look, bidding the budget down, clueing while every word is counted, going over the budget, and the steal. Nothing scores, and it takes about two minutes. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
           </label>
           <label className="wb-option">
             <input type="checkbox" checked={sound} onChange={(e) => { setSound(e.target.checked); setMuted(!e.target.checked); }} />
@@ -327,6 +335,62 @@ function ResultTags({ turn, inline = false }) {
 // Who keeps track of the words on this card, for the screens' instructions.
 const trackerLine = (game, turn) => (game.hostless ? `${nameOf(game, turn.judgeId)} counts every word and checks them off` : "The host counts every word and checks them off");
 
+// ---------- The practice card's coach (see docs/tutorial.md) ----------
+// What to do at each step, on the TV, the host controller and the phones. The step is the practice card's phase
+// (server/budget.js): the look, the bidding, the clue-giving with every word tracked, the steal, and the result.
+const giversOf = (game) => Object.values(game.turn?.givers || {}).filter(Boolean);
+const teamNameOf = (game, id) => teamById(game, id)?.name || "the other team";
+const BUDGET_COACH = {
+  peek: {
+    tv: ({ game }) => `The practice card. ${names(game, giversOf(game))}, your team’s clue-givers, look at its five words on their phones. Nobody else sees them, and the TV shows a word only once it’s been said.`,
+    controller: "You see the card too. Bidding opens when the look clock runs out, or tap Open the bidding once both clue-givers have read it.",
+    phone: ({ game, me }) => giversOf(game).includes(me) ? "You’re your team’s clue-giver for this card. Learn the five words: next you bid on how few clue words you need." : `${names(game, giversOf(game))} are reading the card. Clue-givers take turns, so your go is coming.`,
+  },
+  bid: {
+    tv: ({ game }) => `Bidding: from 25 down, each clue-giver bids how few clue words they need to get all five. Every bid restarts the shot clock; when it runs out, the lowest bid plays the card. No bids, and ${teamNameOf(game, game.turn?.starterId)} plays it at 25.`,
+    controller: "The clue-givers bid on their phones, or tap a team’s bid here. Tap Close the bidding to move on.",
+    phone: ({ game, me }) => {
+      const turn = game.turn, mine = teamOfPlayer(game, me);
+      if (!giversOf(game).includes(me)) return "Your clue-giver is bidding. The lowest bid when the shot clock runs out plays the card.";
+      return turn?.bid?.teamId === mine?.id ? "You’re lowest. If the other clue-giver doesn’t go under you, you clue it." : "Bid lower to win the card, but then your clues must fit the bid. Try a bid!";
+    },
+  },
+  play: {
+    tv: ({ game }) => {
+      const turn = game.turn;
+      return `${nameOf(game, turn.clueGiverId)} clues ${teamNameOf(game, turn.control)}, and every clue word counts. ${game.hostless ? `${nameOf(game, turn.judgeId)}, from the other team,` : "The host"} taps +1 for each word and checks off each one guessed. For practice, keep clueing past the budget and see what happens.`;
+    },
+    controller: "Tap +1 for every clue word, and tap each word when the team says it. For practice, keep counting past the budget: one word over ends the turn.",
+    phone: ({ game, me }) => {
+      const turn = game.turn;
+      if (turn.clueGiverId === me) return "Clue your team, in any order. Every word you say counts, so keep it short. For practice, keep talking past the budget.";
+      if (game.hostless && turn.judgeId === me) return "You keep track for the other team: tap +1 for every word they say, and tap each word their team gets. Keep counting past the budget.";
+      if (teamOfPlayer(game, me)?.id === turn.control) return "Shout your guesses! Each word you get is checked off on the TV.";
+      return "Watch the budget. If they go over or run out of time, your team gets to steal.";
+    },
+  },
+  steal: {
+    tv: ({ game }) => {
+      const turn = game.turn, why = turn.failReason === "time" ? "The clock ran out" : "One word over the budget";
+      return `${why}: that ends the turn, and ${teamNameOf(game, turn.stealTeamId)} gets a steal. They say every word left, using only the clues already given. All of them wins the card; miss one and nobody gets it.`;
+    },
+    controller: "Tap each word the stealing team says. Tap End the steal when they’re done.",
+    phone: ({ game, me }) => {
+      const turn = game.turn;
+      if (turn.clueGiverId === me) return game.hostless ? "Your team lost it. Check off each word the other team says, fairly: the TV shows the whole card after." : "The other team is stealing, and the host checks off what they say. Not a word!";
+      if (turn.judgeId === me) return "You know the card, so not a word! Your team is stealing.";
+      if (teamOfPlayer(game, me)?.id === turn.stealTeamId) return "Steal! Shout the words left, using only the clues you’ve heard.";
+      return "The other team is stealing. No help from you!";
+    },
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! In a real game the card counts toward the target, and words left in a cleared budget are saved for the tiebreak. Both teams start at 0: ${game.hostless ? "card one starts in a few seconds." : "the host starts card one."}`,
+    controller: "That’s the practice. Tap Start the game for card one, with both teams at 0.",
+    phone: ({ game }) => `That’s the practice! Both teams start at 0, and ${game.hostless ? "card one starts in a few seconds." : "the host starts card one."}`,
+    skip: "Start the game",
+  },
+};
+
 // ---------- Shared TV display ----------
 function JoinCorner({ code }) {
   const base = useJoinBase();
@@ -386,7 +450,7 @@ function Stage({ game, onAction }) {
   return (
     <div className={`wb-center is-${turn.phase}`}>
       <div className="wb-round">
-        <span className="wb-round-card">Card {turn.number}</span><span className="wb-round-phase">{phaseName}</span>
+        <span className="wb-round-card">{game.tutorial ? "Practice card" : `Card ${turn.number}`}</span><span className="wb-round-phase">{phaseName}</span>
         {turn.phase === "steal" && <span className="wb-tag is-bad"><XIcon />{turn.failReason === "time" ? "Time’s up" : "Over budget"}</span>}
         {turn.phase === "done" && <ResultTags turn={turn} inline />}
       </div>
@@ -406,7 +470,7 @@ function Stage({ game, onAction }) {
             <BidTag game={game} turn={turn} size="tv" />
             <PhaseClock game={game} label="Shot clock" className="is-huge" />
           </div>
-          <p className="wb-howto">Bid lower on your phone. Every bid restarts the {secs(BUDGET_TIMES.bidMs)}-second shot clock; when it runs out, the lowest bid plays.</p>
+          <p className="wb-howto">Bid lower on your phone. Every bid restarts the {secs(timesOf(game).bidMs)}-second shot clock; when it runs out, the lowest bid plays.</p>
         </>
       )}
       {["peek", "bid"].includes(turn.phase) && passed.length > 0 && <p className="wb-pass-note">{passed.join(" and ")} {passed.length > 1 ? "pass" : "wants a new card"}…</p>}
@@ -449,7 +513,7 @@ function Stage({ game, onAction }) {
           </>
         );
       })()}
-      {!game.hostless && turn.phase === "done" && <button className="wb-btn is-go wb-next" onClick={() => onAction("next")}>{won ? "See the winners" : "Next card"}</button>}
+      {!game.hostless && turn.phase === "done" && !game.tutorial && <button className="wb-btn is-go wb-next" onClick={() => onAction("next")}>{won ? "See the winners" : "Next card"}</button>}
     </div>
   );
 }
@@ -464,8 +528,9 @@ export function BudgetDisplay({ game, onAction }) {
       <header className="wb-bar">
         <Logo />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
-        {phase === "done" && game.hostless ? <PhaseClock game={game} label="Next card" className="is-small" /> : <span />}
+        {phase === "done" && game.hostless ? <PhaseClock game={game} label={game.tutorial ? "Card one" : "Next card"} className="is-small" /> : <span />}
       </header>
+      <Coach game={game} coach={BUDGET_COACH} place="tv" />
       {game.status === "lobby" || !turn ? <Lobby game={game} onAction={onAction} /> : (
         <div className="wb-stage"><Stage game={game} onAction={onAction} /><Scoreboard game={game} /></div>
       )}
@@ -474,7 +539,7 @@ export function BudgetDisplay({ game, onAction }) {
           <summary>Host tools</summary>
           <div className="wb-tools-row">
             {["peek", "bid"].includes(phase) && <button className="wb-chip" onClick={() => onAction("newCard")}>New card</button>}
-            <button className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button>
+            {!game.tutorial && <button className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button>}
           </div>
         </details>
       )}
@@ -649,7 +714,8 @@ export function BudgetPlayer({ game, playerId }) {
         </div>
       ) : (
         <>
-          <p className="wb-meta">Card {turn.number} · first to {game.target}</p>
+          <p className="wb-meta">{game.tutorial ? "Practice card · nothing scores" : `Card ${turn.number} · first to ${game.target}`}</p>
+          <Coach game={game} coach={BUDGET_COACH} place="phone" playerId={playerId} />
           <PlayerAction game={game} playerId={playerId} />
         </>
       )}
@@ -685,8 +751,9 @@ export function BudgetController({ game, onAction }) {
   return (
     <main className="controller wb wb-phone">
       {header}
+      <Coach game={game} coach={BUDGET_COACH} place="controller" />
       <div className="wb-pad-top">
-        <p className="wb-meta">Card {turn.number} · {phase === "play" ? control?.name : { peek: "the look", bid: "bidding", steal: "the steal", done: "result" }[phase]}</p>
+        <p className="wb-meta">{game.tutorial ? "Practice card" : `Card ${turn.number}`} · {phase === "play" ? control?.name : { peek: "the look", bid: "bidding", steal: "the steal", done: "result" }[phase]}</p>
         <PhaseClock game={game} className="is-small" />
       </div>
       {["peek", "bid"].includes(phase) && (
@@ -722,14 +789,14 @@ export function BudgetController({ game, onAction }) {
           <ResultTags turn={turn} />
           <p className="wb-status">{resultLine(game, turn).head}</p>
           <WordCard marks={turn.marks} words={turn.slots} size="phone" />
-          <div className="wb-row2 wb-award">
+          {!game.tutorial && <div className="wb-row2 wb-award">
             {game.teams.map((team) => <button key={team.id} type="button" className="wb-chip" disabled={turn.result?.winnerId === team.id} onClick={() => onAction("award", { teamId: team.id })}>Give it to {team.name}</button>)}
             <button type="button" className="wb-chip" disabled={!turn.result?.winnerId} onClick={() => onAction("award", { teamId: null })}>Nobody</button>
-          </div>
+          </div>}
         </div>
       )}
-      <button type="button" className="wb-btn is-go wb-wide" onClick={() => onAction("next")}>{nextLabel}</button>
-      <div className="wb-tools-row"><button type="button" className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button></div>
+      {!(game.tutorial && phase === "done") && <button type="button" className="wb-btn is-go wb-wide" onClick={() => onAction("next")}>{nextLabel}</button>}
+      {!game.tutorial && <div className="wb-tools-row"><button type="button" className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button></div>}
       <section className="wb-ctrl-teams"><h2 className="wb-kicker">Teams</h2><TeamTools game={game} onAction={onAction} /></section>
     </main>
   );

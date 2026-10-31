@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { io } from 'socket.io-client'
-import { createBudgetGames, standings, BUDGET_TIMES, COUNT_LIMIT } from './budget.js'
+import { createBudgetGames, standings, BUDGET_TIMES, COUNT_LIMIT, BUDGET_PRACTICE_TIMES, BUDGET_TUTORIAL_STEPS, PRACTICE_CARDS } from './budget.js'
+import { registerTutorial, publicTutorial, inTutorial } from './tutorial.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire(), and the clock only
 // moves when a test moves it.
@@ -545,5 +546,158 @@ describe('on the real server', () => {
     assert.equal(tv.state.turn.used, 2, 'taps tagged for the play phase don’t land in the steal')
     const everything = JSON.stringify(tv.state)
     for (const word of card.words.filter((_, i) => !tv.state.turn.slots[i])) assert.ok(!everything.includes(word), `${word} stayed off the TV`)
+  })
+})
+
+describe('the practice card (the tutorial)', () => {
+  const practiceGame = (h, config = {}) => newGame(h, { tutorial: true, ...config })
+  // The skip events as server/index.js wires them, on fake sockets.
+  const skipEvents = (h, socket) => {
+    const handlers = new Map()
+    registerTutorial({ data: {}, ...socket, on: (event, fn) => handlers.set(event, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+    return handlers
+  }
+  // The step the screens see (publicGame reads it off the practice card's phase).
+  const step = (h, game) => { h.api.publicGame(game); return publicTutorial(game)?.step }
+  const cardWords = (game) => game.turn.words.map((word) => word.text)
+
+  test('starts from the lobby when the setup asks for it, on a practice card of its own words', () => {
+    const h = harness(), game = practiceGame(h)
+    assert.equal(inTutorial(game), true)
+    assert.equal(game.status, 'playing')
+    assert.deepEqual(publicTutorial(game).steps, BUDGET_TUTORIAL_STEPS)
+    assert.equal(step(h, game), 'peek')
+    assert.deepEqual(cardWords(game), PRACTICE_CARDS[0])
+    assert.equal(game.dealt, 0, 'the game’s own words are untouched')
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.peekMs)
+    assert.equal(h.card(game, giverOf(game, T1)).ok, true, 'the clue-givers see the practice card')
+    assert.equal(h.card(game, 'p2').ok, false, 'nobody else does')
+  })
+  test('no practice without the option, or on a replay', () => {
+    const h = harness()
+    assert.equal(inTutorial(newGame(h)), false)
+    const game = practiceGame(h)
+    h.api.endTutorial(game)
+    h.host(game, 'endGame')
+    h.host(game, 'replay', { words: WORDS })
+    h.host(game, 'start')
+    assert.equal(game.status, 'playing')
+    assert.equal(inTutorial(game), false)
+    assert.deepEqual(cardWords(game), WORDS.slice(0, 5))
+  })
+  test('the practice card is played on shorter clocks, but each long enough to read the coach', () => {
+    assert.ok(BUDGET_PRACTICE_TIMES.playMs < BUDGET_TIMES.playMs && BUDGET_PRACTICE_TIMES.stealMs < BUDGET_TIMES.stealMs)
+    for (const ms of Object.values(BUDGET_PRACTICE_TIMES)) assert.ok(ms >= 10000)
+    const total = BUDGET_PRACTICE_TIMES.peekMs + BUDGET_PRACTICE_TIMES.bidMs + BUDGET_PRACTICE_TIMES.playMs + BUDGET_PRACTICE_TIMES.stealMs + BUDGET_PRACTICE_TIMES.doneMs
+    assert.ok(total <= 2 * 60000, 'about two minutes at most, played to every clock')
+  })
+  test('without a host: the look, the bidding, the judge counting past the budget, the steal, and nothing scores', () => {
+    const h = harness(), game = practiceGame(h)
+    h.fire()
+    assert.equal(step(h, game), 'bid')
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.bidMs)
+    h.phone(game, giverOf(game, T1), 'bid', { amount: 12 })
+    h.phone(game, giverOf(game, T2), 'bid', { amount: 4 })
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.bidMs, 'every bid restarts the practice shot clock')
+    h.fire()
+    assert.equal(step(h, game), 'play')
+    assert.equal(game.turn.budget, 4)
+    assert.equal(game.turn.clueGiverId, giverOf(game, T2))
+    assert.equal(game.turn.judgeId, giverOf(game, T1), 'the other team’s clue-giver keeps track')
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.playMs)
+    h.phone(game, game.turn.judgeId, 'mark', { index: 0 })
+    for (let i = 0; i < 5; i++) { h.tick(200); h.phone(game, game.turn.judgeId, 'countWord') }
+    assert.equal(step(h, game), 'steal', 'one word over the budget hands over a steal')
+    assert.equal(game.turn.failReason, 'budget')
+    assert.equal(game.turn.stealTeamId, T1)
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.stealMs)
+    // In the steal, the clue-giver who lost the card checks off the stealing team's words.
+    for (let i = 1; i < 5; i++) h.phone(game, game.turn.clueGiverId, 'mark', { index: i })
+    assert.equal(step(h, game), 'done')
+    assert.equal(game.turn.result.winnerId, T1, 'the result still says who stole it')
+    assert.deepEqual(game.teams.map((t) => [t.cards, t.bonus]), [[0, 0], [0, 0]], 'nothing scores')
+    assert.equal(h.timers.budget.ms, BUDGET_PRACTICE_TIMES.doneMs, 'card one starts by itself')
+    h.fire()
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.turn.number, 1)
+    assert.equal(game.turn.phase, 'peek')
+    assert.deepEqual(cardWords(game), WORDS.slice(0, 5), 'card one is the first real card')
+    assert.equal(h.timers.budget.ms, BUDGET_TIMES.peekMs, 'real clocks again')
+  })
+  test('a cleared practice card banks nothing either', () => {
+    const h = harness(), game = practiceGame(h)
+    toPlay(h, game, [[T1, 20]])
+    for (let i = 0; i < 5; i++) h.phone(game, game.turn.judgeId, 'mark', { index: i })
+    assert.equal(game.turn.result.reason, 'cleared')
+    assert.equal(game.turn.result.bonus, 20)
+    assert.deepEqual(game.teams.map((t) => [t.cards, t.bonus]), [[0, 0], [0, 0]])
+  })
+  test('with a host: the host counts, a missed steal, the host can’t hand out the card, and starts card one', () => {
+    const h = harness(), game = practiceGame(h, { hostless: false })
+    h.host(game, 'next')
+    assert.equal(step(h, game), 'bid')
+    h.host(game, 'bid', { teamId: T1, amount: 2 })
+    h.host(game, 'next')
+    assert.equal(step(h, game), 'play')
+    h.phone(game, game.turn.judgeId, 'countWord')
+    assert.equal(game.turn.used, 0, 'with a host, the judge’s phone doesn’t count')
+    h.host(game, 'countWord'); h.host(game, 'countWord'); h.host(game, 'countWord')
+    assert.equal(step(h, game), 'steal')
+    h.host(game, 'next')
+    assert.equal(step(h, game), 'done')
+    assert.equal(game.turn.result.reason, 'stealMissed')
+    assert.equal(h.timers.budget, undefined, 'with a host, the host starts card one')
+    h.host(game, 'award', { teamId: T2 })
+    assert.equal(game.teams[1].cards, 0, 'no handing out practice cards')
+    h.host(game, 'next')
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.turn.number, 1)
+  })
+  test('both clue-givers passing draws the second practice card, not one of the game’s', () => {
+    const h = harness(), game = practiceGame(h)
+    h.phone(game, giverOf(game, T1), 'pass'); h.phone(game, giverOf(game, T2), 'pass')
+    assert.deepEqual(cardWords(game), PRACTICE_CARDS[1])
+    assert.equal(game.dealt, 0)
+  })
+  test('scores go back to 0 for card one, and the practice can’t end the game', () => {
+    const h = harness(), game = practiceGame(h, { hostless: false })
+    h.host(game, 'adjustScore', { teamId: T1, amount: 2 })
+    h.host(game, 'endGame')
+    assert.equal(game.status, 'playing')
+    h.api.endTutorial(game)
+    assert.deepEqual(game.teams.map((t) => t.cards), [0, 0])
+    assert.equal(game.turn.number, 1)
+  })
+  test('with a host, only the TV or the host controller can skip it, straight into card one', () => {
+    const h = harness(), game = practiceGame(h, { hostless: false })
+    game.hostSocketId = 'tv'
+    toPlay(h, game)
+    skipEvents(h, { id: 's0' }).get('tutorial:skip')({ code: game.code })
+    skipEvents(h, { id: 's0' }).get('tutorial:vote')({ code: game.code, playerId: 'p0' })
+    assert.equal(inTutorial(game), true, 'phones can’t skip a hosted practice')
+    skipEvents(h, { id: 'tv' }).get('tutorial:skip')({ code: game.code })
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.turn.number, 1)
+    assert.equal(game.turn.phase, 'peek')
+    assert.deepEqual(cardWords(game), WORDS.slice(0, 5))
+    h.api.endTutorial(game)
+    assert.equal(game.turn.number, 1, 'a second end does nothing')
+  })
+  test('without a host, a strict majority of connected players skips it, and a dropout can carry it', () => {
+    const h = harness(), game = practiceGame(h, { players: 5 })
+    const vote = (id) => skipEvents(h, { id: game.players.get(id).socketId }).get('tutorial:vote')({ code: game.code, playerId: id })
+    skipEvents(h, { id: 'tv' }).get('tutorial:skip')({ code: game.code })
+    assert.equal(inTutorial(game), true, 'no host skip in a hostless game')
+    vote('p0'); vote('p1')
+    assert.deepEqual(publicTutorial(game), { step: 'peek', steps: BUDGET_TUTORIAL_STEPS, votes: ['p0', 'p1'], connected: 5, needed: 3 })
+    vote('p1')
+    assert.deepEqual(publicTutorial(game).votes, ['p0'], 'a second tap takes it back')
+    vote('p1')
+    h.host(game, 'kickPlayer', { playerId: 'p4' })
+    assert.equal(inTutorial(game), true, '2 of 4 isn’t a majority')
+    h.host(game, 'kickPlayer', { playerId: 'p3' })
+    assert.equal(inTutorial(game), false, '2 of 3 is')
+    assert.equal(game.turn.number, 1)
+    assert.deepEqual(game.teams.map((t) => t.cards), [0, 0])
   })
 })

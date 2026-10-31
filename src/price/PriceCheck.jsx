@@ -11,7 +11,8 @@ import { BackToHub } from "../Hub";
 import { useSound, useEventSounds, playWinnersTune, playBuzz, playDing } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
 import { playClue, playPop, playFact } from "../fib/sounds";
-import { PRICE_TIMES, POINTS, PRICE_COUNTRIES, formatPrice } from "../../server/price.js";
+import { PRICE_TIMES, PRICE_PRACTICE_TIMES, POINTS, PRICE_COUNTRIES, formatPrice } from "../../server/price.js";
+import { Coach } from "../Tutorial";
 import SHOWCASE from "./showcase.json";
 import "./price.css";
 
@@ -115,7 +116,9 @@ function dealShowcases(country) {
 function dealGame(length, pool, country) {
   const taken = new Set();
   const segments = LENGTHS[length].plan.map((type) => dealSegment(type, pool, taken)).filter(Boolean);
-  return { segments, showcases: dealShowcases(country), ids: [...taken] };
+  // The practice round's two products, from the same pack and never ones the game itself uses.
+  const [bid] = draw(pool, 1, taken, (i) => i.cents >= 200) || [], [call] = draw(pool, 1, taken) || [];
+  return { segments, showcases: dealShowcases(country), practice: bid && call ? { bid, higherLower: call } : null, ids: [...taken] };
 }
 
 // ---------- Small helpers ----------
@@ -131,16 +134,54 @@ export function parseMoney(value) {
 const ranked = (game) => [...game.players].sort((a, b) => b.score - a.score);
 const ordinal = (n) => `${n}${["th", "st", "nd", "rd"][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || "th"}`;
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
-const roundLabel = (game) => (game.round?.type === "showcase" ? "Finale" : `Round ${game.index + 1} of ${game.segmentCount}`);
+const roundLabel = (game) => (game.tutorial ? "Practice" : game.round?.type === "showcase" ? "Finale" : `Round ${game.index + 1} of ${game.segmentCount}`);
 const byId = (items) => Object.fromEntries(items.map((item) => [item.id, item]));
 // How long the current clock ran from the start, for the clock's ring.
 function phaseMs(game) {
-  const round = game.round;
+  const round = game.round, times = game.tutorial ? { ...PRICE_TIMES, ...PRICE_PRACTICE_TIMES } : PRICE_TIMES;
   if (!round) return 0;
-  if (round.phase === "answer") return PRICE_TIMES[ANSWER_MS[round.type]];
-  if (round.type === "priciest" && round.set < round.setCount - 1) return PRICE_TIMES.priciestRevealMs;
-  return round.type === "showcase" ? PRICE_TIMES.showcaseRevealMs : PRICE_TIMES.revealMs;
+  if (game.practice?.done) return PRICE_PRACTICE_TIMES.endMs;
+  if (round.phase === "answer") return times[ANSWER_MS[round.type]];
+  if (round.type === "priciest" && round.set < round.setCount - 1) return times.priciestRevealMs;
+  return round.type === "showcase" ? times.showcaseRevealMs : times.revealMs;
 }
+
+// ---------- The practice round's coach (see docs/tutorial.md) ----------
+// What to do at each step, on the TV, the host controller and the phones. The steps come from the server
+// (practiceStep in server/price.js): one Closest Bid and its reveal, then one Higher or Lower call and its breakdown.
+const answeredBy = (game, me) => game.round?.answered?.includes(me);
+const PRICE_COACH = {
+  bid: {
+    tv: ({ game }) => game.round?.below != null
+      ? "Everyone went over, so everyone bids again, under the lowest bid. Going over loses, however close."
+      : `Practice bid: everyone bids on this product on their phone, in ${PRICE_COUNTRIES[game.country]?.symbol || "US$"}. Closest without going over wins. Go over and you’re out, however close.`,
+    controller: "Players bid on their phones. You can see the real price below. Tap Stop the clock and reveal if they’re slow.",
+    phone: ({ game, me }) => answeredBy(game, me) ? "Locked in. The reveal comes once everyone’s bid, or when the clock runs out."
+      : game.round?.below != null ? "Everyone went over! Bid again, under the lowest bid."
+      : "What does it cost? Type a bid and lock it in. Closest without going over wins.",
+  },
+  bidReveal: {
+    tv: ({ game }) => `The reveal: the real price, then every bid, best first. Green won, red went over, and the rest came in under. A real round pays the closest bid ${POINTS.bid} points, and ${POINTS.exact} more for the exact price.${game.hostless ? " Higher or Lower is next." : ""}`,
+    controller: "Give everyone a moment with the reveal, then tap Next: Higher or Lower.",
+    phone: "Your bid against the real price is below. The TV shows everyone’s, best first.",
+  },
+  call: {
+    tv: "Higher or Lower: the tag shows the wrong price. Is the real price higher or lower? The real round has five products to call; the practice has one.",
+    controller: "Players make their call on their phones. You can see the real price below.",
+    phone: ({ game, me }) => answeredBy(game, me) ? "Locked in. The breakdown comes once everyone’s called it." : "Is the real price higher or lower than the tag? Tap one, then lock it in.",
+  },
+  callReveal: {
+    tv: ({ game }) => `The breakdown: the real price with an arrow, up for higher and down for lower, then every player’s call with a check or an X. A real round pays ${POINTS.higherLower} points a right call, and ${POINTS.higherLowerSweep} more for all five.${game.hostless ? "" : " The host moves on."}`,
+    controller: "When everyone’s seen the breakdown, tap Finish the practice.",
+    phone: "Your call and the real price are below. The TV shows everyone’s calls.",
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! The other rounds work the same way: answer on your phone, then see who got what. Scores start at 0, and ${game.hostless ? "round one starts in a few seconds." : "the host starts round one."}`,
+    controller: "That’s the practice. Tap Start the game when everyone’s ready: round one starts, scores at 0.",
+    phone: ({ game }) => `That’s the practice! Scores start at 0, and ${game.hostless ? "round one starts in a few seconds." : "the host starts round one."}`,
+    skip: "Start the game",
+  },
+};
 
 // The real prices for host controllers, caught when the module loads (as Fib or Fact does with its answers).
 let lastSecret = null;
@@ -291,8 +332,9 @@ function resultRows(game) {
       const right = mine.filter((call, i) => call === truth[i]).length;
       Object.assign(row, {
         calls: mine.map((call, i) => ({ call, right: call === truth[i] })),
-        kind: right === truth.length ? "right" : right ? "part" : "wrong", verdict: `${right} of ${truth.length}`,
-        detail: right === truth.length ? "All five right" : `${right} right, ${truth.length - right} wrong`, points: earned(row.id), rank: [0, -right],
+        kind: right === truth.length ? "right" : right ? "part" : "wrong",
+        verdict: truth.length === 1 ? (right ? "Right" : "Wrong") : `${right} of ${truth.length}`,
+        detail: truth.length === 1 ? (right ? "Called it" : "Wrong call") : right === truth.length ? "All five right" : `${right} right, ${truth.length - right} wrong`, points: earned(row.id), rank: [0, -right],
       });
     }
   } else if (round.type === "priciest") {
@@ -423,14 +465,14 @@ function HigherLowerStage({ game }) {
   const round = game.round, reveal = round.phase === "reveal";
   if (!reveal)
     return (
-      <ul className="pc-shelf count-5">
-        {round.items.map((item) => <li key={item.id}><Product item={item} country={game.country} cents={item.shownCents} small /></li>)}
+      <ul className={`pc-shelf count-${round.items.length}`}>
+        {round.items.map((item) => <li key={item.id}><Product item={item} country={game.country} cents={item.shownCents} small={round.items.length > 1} /></li>)}
       </ul>
     );
   // Every player's call on every product: the products across the top, a row per player.
   const rows = resultRows(game), truth = round.results.truth;
   return (
-    <div className="pc-hl-table" role="table" aria-label="Higher or lower calls">
+    <div className={`pc-hl-table${round.items.length === 1 ? " is-single" : ""}`} role="table" aria-label="Higher or lower calls" style={{ "--hl-n": round.items.length }}>
       <div className="pc-hl-head" role="row">
         <span role="columnheader" className="pc-hl-corner">Real price</span>
         {round.items.map((item, i) => (
@@ -593,7 +635,9 @@ export function PriceDisplay({ game, onAction }) {
   const round = game.round, Stage = round && STAGES[round.type], reveal = round?.phase === "reveal";
   useTvSounds(game);
   useClockTicks(round?.phase === "answer" ? round.deadline : null, game.serverNow);
-  const next = !game.hostless && reveal && !(round.type === "priciest" && round.set < round.setCount - 1);
+  const step = game.tutorial?.step;
+  const next = !game.hostless && reveal && !(round.type === "priciest" && round.set < round.setCount - 1) && step !== "done";
+  const nextLabel = step === "bidReveal" ? "Next: Higher or Lower" : step === "callReveal" ? "Finish the practice" : round?.type === "showcase" ? "See final scores" : "Next round";
   return (
     <main className={`display pc pc-tv${reveal ? " is-reveal" : ""}`}>
       <div className="pc-bulbs" aria-hidden="true" />
@@ -610,11 +654,12 @@ export function PriceDisplay({ game, onAction }) {
         <Clock game={game} />
         {game.status !== "lobby" && <JoinCorner code={game.code} />}
       </header>
+      <Coach game={game} coach={PRICE_COACH} place="tv" />
       {game.status === "lobby" || !round ? <Lobby game={game} onAction={onAction} /> : (
         <div className="pc-stage">
           <div className={`pc-center is-${round.type}`}>
             <Stage game={game} />
-            {next && <button className="primary pc-next" onClick={() => onAction("next")}>{round.type === "showcase" ? "See final scores" : "Next round"}</button>}
+            {next && <button className="primary pc-next" onClick={() => onAction("next")}>{nextLabel}</button>}
           </div>
           <Scoreboard game={game} />
         </div>
@@ -622,7 +667,7 @@ export function PriceDisplay({ game, onAction }) {
       {game.hostless && game.players.length > 0 && (
         <details className="host-tools sv-host-tools pc-host-tools">
           <summary>Host tools</summary>
-          {game.status === "playing" && <RoundControls game={game} onAction={onAction} />}
+          {game.status === "playing" && !game.tutorial && <RoundControls game={game} onAction={onAction} />}
           <PlayerTools game={game} onAction={onAction} />
         </details>
       )}
@@ -643,6 +688,7 @@ export function PriceSetup({ onCreate }) {
     [deal, setDeal] = useState(null),
     [error, setError] = useState(""),
     [hostless, setHostless] = useState(false),
+    [practice, setPractice] = useState(true),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -656,7 +702,7 @@ export function PriceSetup({ onCreate }) {
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed(deal.ids);
-    onCreate({ game: "price", segments: deal.segments, showcases: deal.showcases, hostless, country }, (e) => { setBusy(false); setNotice(e); });
+    onCreate({ game: "price", segments: deal.segments, showcases: deal.showcases, hostless, country, tutorial: practice && !!deal.practice, practice: deal.practice }, (e) => { setBusy(false); setNotice(e); });
   };
   const { name, symbol } = PRICE_COUNTRIES[country];
   return (
@@ -707,6 +753,10 @@ export function PriceSetup({ onCreate }) {
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a host</b><small>The game runs itself: {secs("bidMs")} seconds to bid, {secs("higherLowerMs")} for Higher or Lower, {secs("orderMs")}–{secs("groceryMs")} for the other big rounds, and each reveal stays up for {secs("revealMs")} seconds. With a host, the host controller shows every real price and moves the reveals along.</small></span>
           </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>A quick warm-up on two products from the {name} pack before round one, with tips on the TV and every phone: one bid, one Higher or Lower call, and how a reveal shows who got what. Nothing scores. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
+          </label>
         </section>
         <div className="pc-final-row">
           <p className="pc-summary">{name} · {symbol} · {LENGTHS[length].label} · 2 to 8 players</p>
@@ -747,6 +797,7 @@ function BidForm({ game, playerId, label = "Your bid" }) {
 }
 function HigherLowerForm({ game, playerId }) {
   const items = game.round.items, [calls, setCalls] = useState(() => items.map(() => null)), [send, busy, error] = useSend(game, playerId);
+  const one = items.length === 1;
   const call = (i, value) => setCalls((list) => list.map((c, j) => (j === i ? value : c)));
   const done = calls.filter(Boolean).length;
   return (
@@ -763,7 +814,7 @@ function HigherLowerForm({ game, playerId }) {
         ))}
       </ul>
       {error && <p className="notice" role="alert">{error}</p>}
-      <button className="primary pc-sticky" disabled={done < items.length || busy} onClick={() => send({ calls })}>{done < items.length ? `Call all five (${done} of 5)` : "Lock in my calls"}</button>
+      <button className="primary pc-sticky" disabled={done < items.length || busy} onClick={() => send({ calls })}>{done < items.length ? (one ? "Call it higher or lower" : `Call all ${items.length === 5 ? "five" : items.length} (${done} of ${items.length})`) : one ? "Lock in my call" : "Lock in my calls"}</button>
     </div>
   );
 }
@@ -839,7 +890,8 @@ function MyResult({ game, playerId }) {
   const real = round.type === "bid" ? round.item.cents : round.type === "showcase" && round.contestants.includes(playerId) ? round.totals[round.contestants.indexOf(playerId)] : null;
   return (
     <div className={`pc-my-result is-${row?.kind || "none"}`}>
-      <p className="pc-my-points">{row?.points ? `+${points(row.points)}` : "No points"}<small>{round.type === "priciest" ? "this set" : "this round"}</small></p>
+      {game.tutorial ? <p className="pc-my-points">Practice<small>nothing scores</small></p>
+        : <p className="pc-my-points">{row?.points ? `+${points(row.points)}` : "No points"}<small>{round.type === "priciest" ? "this set" : "this round"}</small></p>}
       {row && <Stamp kind={row.kind}>{row.verdict}</Stamp>}
       {real != null && <p className="pc-my-line">Real price <Readout cents={real} country={game.country} /></p>}
       {row?.answerText && <p className="pc-my-line">You: {row.answerText}</p>}
@@ -849,7 +901,7 @@ function MyResult({ game, playerId }) {
           {round.items.map((item, i) => <li key={item.id} className={`is-${row.calls[i].right ? "right" : "wrong"}`}><Mark kind={row.calls[i].right ? "right" : "wrong"} /><span>{item.name}</span><span>You said {row.calls[i].call} than {price(game, item.shownCents)} · real price {price(game, item.cents)}</span></li>)}
         </ul>
       )}
-      <p className="pc-my-place">You’re {tied ? "tied for" : "in"} {ordinal(place)} place. Eyes on the TV!</p>
+      <p className="pc-my-place">{game.tutorial ? "Eyes on the TV!" : <>You’re {tied ? "tied for" : "in"} {ordinal(place)} place. Eyes on the TV!</>}</p>
     </div>
   );
 }
@@ -877,6 +929,7 @@ export function PricePlayer({ game, playerId }) {
       {game.status === "lobby" || !round ? <p className="pc-status">You’re in! The game starts when everyone’s here.</p> : (
         <>
           <p className="pc-phone-round">{roundLabel(game)} · <b>{ROUND_NAMES[round.type]}</b></p>
+          <Coach game={game} coach={PRICE_COACH} place="phone" playerId={playerId} />
           {round.type === "bid" && round.phase === "answer" && <Product item={round.item} country={game.country} hidden />}
           <PlayerAction game={game} playerId={playerId} />
         </>
@@ -899,10 +952,12 @@ export function PriceController({ game, onAction }) {
       </main>
     );
   const items = round.type === "bid" ? [round.item] : round.type === "showcase" ? [] : round.items;
-  const nextLabel = round.phase === "answer" ? "Stop the clock and reveal" : round.type === "showcase" ? "See final scores" : round.type === "priciest" && round.set < round.setCount - 1 ? "Next set" : "Next round";
+  const step = game.tutorial?.step;
+  const nextLabel = round.phase === "answer" ? "Stop the clock and reveal" : step === "bidReveal" ? "Next: Higher or Lower" : step === "callReveal" ? "Finish the practice" : round.type === "showcase" ? "See final scores" : round.type === "priciest" && round.set < round.setCount - 1 ? "Next set" : "Next round";
   return (
     <main className="controller pc pc-phone">
       {header}
+      <Coach game={game} coach={PRICE_COACH} place="controller" />
       <p className="pc-phone-round">{roundLabel(game)} · <b>{ROUND_NAMES[round.type]}</b></p>
       <div className="pc-ctrl-status" role="status"><b>{round.phase === "answer" ? `${round.answered.length} of ${game.players.filter((p) => p.connected).length} locked in` : "Reveal"}</b><span>{ROUND_RULES[round.type]}</span><Clock game={game} /></div>
       <section className="pc-ctrl-prices">
@@ -912,8 +967,8 @@ export function PriceController({ game, onAction }) {
           {round.type === "showcase" && secret?.totals && round.contestants.map((id, i) => <li key={id}><span>{nameOf(game, id)}’s showcase</span><Readout cents={secret.totals[i]} country={game.country} /></li>)}
         </ul>
       </section>
-      <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>
-      <RoundControls game={game} onAction={onAction} />
+      {step !== "done" && <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>}
+      {!game.tutorial && <RoundControls game={game} onAction={onAction} />}
       <section className="controller-players"><h2>Players</h2><PlayerTools game={game} onAction={onAction} /></section>
     </main>
   );

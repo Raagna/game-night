@@ -1,6 +1,7 @@
-import { test } from 'node:test'
+import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPriceGames, POINTS, SHOWCASE_BOTH, PRICE_TIMES, formatPrice } from './price.js'
+import { createPriceGames, POINTS, SHOWCASE_BOTH, PRICE_TIMES, PRICE_PRACTICE_TIMES, PRICE_TUTORIAL_STEPS, formatPrice } from './price.js'
+import { registerTutorial, publicTutorial, inTutorial } from './tutorial.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire().
 function harness(randoms = []) {
@@ -210,4 +211,147 @@ test('a player who leaves isn’t waited for', () => {
 test('only Open Food Facts photos are kept', () => {
   const h = harness(), game = newGame(h, [{ type: 'bid', item: item('a', 5, { image: 'https://evil.example/x.jpg' }) }], { start: false })
   assert.equal(game.segments[0].item.image, '')
+})
+
+// ---------- Practice round (the tutorial) ----------
+describe('the practice round', () => {
+  const PRACTICE = { bid: item('pb', 3.49), higherLower: item('ph', 5.99) }
+  const SEGMENTS = [{ type: 'bid', item: item('a', 4.99) }, { type: 'bid', item: item('b', 2.5) }]
+  const practiceGame = (h, config = {}) => newGame(h, SEGMENTS, { tutorial: true, practice: PRACTICE, ...config })
+  // The skip events as server/index.js wires them, on fake sockets.
+  const skipEvents = (h, socket) => {
+    const handlers = new Map()
+    registerTutorial({ data: {}, ...socket, on: (event, fn) => handlers.set(event, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+    return handlers
+  }
+  // The step the screens see (publicGame reads it off the practice state).
+  const step = (h, game) => { h.api.publicGame(game); return publicTutorial(game)?.step }
+
+  test('starts from the lobby when the setup asks for it, on the practice products, not round one’s', () => {
+    const h = harness(), game = practiceGame(h)
+    assert.equal(inTutorial(game), true)
+    assert.equal(game.status, 'playing')
+    assert.equal(game.round.type, 'bid')
+    assert.equal(game.round.item.id, 'pb')
+    assert.equal(h.timers.price.ms, PRICE_PRACTICE_TIMES.bidMs)
+    assert.ok(PRICE_PRACTICE_TIMES.bidMs < PRICE_TIMES.bidMs)
+    assert.deepEqual(publicTutorial(game).steps, PRICE_TUTORIAL_STEPS)
+    assert.equal(step(h, game), 'bid')
+    assert.equal(h.api.publicGame(game).round.item.cents, undefined, 'the price stays hidden in practice too')
+  })
+  test('no practice without the option, without practice products, or on a replay', () => {
+    const h = harness()
+    assert.equal(inTutorial(newGame(h, SEGMENTS)), false)
+    assert.equal(inTutorial(newGame(h, SEGMENTS, { tutorial: true })), false, 'no practice products sent')
+    const game = practiceGame(h)
+    h.api.endTutorial(game)
+    h.api.hostAction(game, 'endGame', {})
+    h.api.hostAction(game, 'replay', {})
+    h.api.hostAction(game, 'start', {})
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.round.item.id, 'a')
+  })
+  test('walks through a bid, its reveal, one higher-or-lower call and its breakdown, and nothing scores', () => {
+    const h = harness([0.1, 0.1]), game = practiceGame(h, { hostless: true })
+    h.act(game, 'p0', { cents: 300 }); h.act(game, 'p1', { cents: 349 }); h.act(game, 'p2', { cents: 900 })
+    assert.equal(step(h, game), 'bidReveal')
+    assert.deepEqual(game.round.results.winners, ['p1'], 'the reveal still shows who was closest')
+    assert.equal(h.api.publicGame(game).round.bids.p1, 349)
+    assert.equal(h.timers.price.ms, PRICE_PRACTICE_TIMES.revealMs)
+    h.fire()
+    assert.equal(step(h, game), 'call')
+    assert.equal(game.round.type, 'higherLower')
+    assert.equal(game.round.items.length, 1, 'one call, not five')
+    assert.equal(h.act(game, 'p0', { calls: [] }).ok, false)
+    // The tag is above the real price (a random draw under 0.5 goes up), so the real price is lower.
+    assert.ok(game.round.shownCents[0] > PRACTICE.higherLower.cents)
+    h.act(game, 'p0', { calls: ['lower'] }); h.act(game, 'p1', { calls: ['higher'] }); h.act(game, 'p2', { calls: ['lower'] })
+    assert.equal(step(h, game), 'callReveal')
+    assert.deepEqual(game.round.results.truth, ['lower'])
+    assert.deepEqual(h.api.publicGame(game).round.results.calls.p1, ['higher'])
+    for (const id of ['p0', 'p1', 'p2']) assert.equal(score(game, id), 0)
+    assert.deepEqual(game.round.awards, {})
+    h.fire()
+    assert.equal(step(h, game), 'done')
+    assert.equal(h.api.publicGame(game).practice.done, true)
+    assert.equal(h.timers.price.ms, PRICE_PRACTICE_TIMES.endMs, 'without a host, round one starts by itself')
+    h.fire()
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.practice, null)
+    assert.equal(h.api.publicGame(game).practice, null)
+    assert.equal(game.index, 0)
+    assert.equal(game.round.item.id, 'a', 'round one is the first real round')
+    assert.equal(h.timers.price.ms, PRICE_TIMES.bidMs, 'real clocks again')
+  })
+  test('everyone over in practice bids again, as in the real game', () => {
+    const h = harness(), game = practiceGame(h)
+    h.act(game, 'p0', { cents: 500 }); h.act(game, 'p1', { cents: 400 }); h.act(game, 'p2', { cents: 600 })
+    assert.equal(step(h, game), 'bid')
+    assert.equal(game.round.below, 400)
+  })
+  test('with a host, the host moves the reveals along and starts round one', () => {
+    const h = harness(), game = practiceGame(h)
+    h.api.hostAction(game, 'next', {})
+    assert.equal(step(h, game), 'bidReveal')
+    assert.equal(h.timers.price, undefined, 'hosted reveals wait for the host')
+    h.api.hostAction(game, 'next', {}); h.api.hostAction(game, 'next', {})
+    assert.equal(step(h, game), 'callReveal')
+    h.api.hostAction(game, 'next', {})
+    assert.equal(step(h, game), 'done')
+    assert.equal(game.round.deadline, null)
+    h.api.hostAction(game, 'next', {})
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.round.item.id, 'a')
+  })
+  test('scores go back to 0 for round one, and the practice can’t end the game', () => {
+    const h = harness(), game = practiceGame(h)
+    h.api.hostAction(game, 'adjustScore', { playerId: 'p0', amount: 300 })
+    h.api.hostAction(game, 'endGame', {})
+    assert.equal(game.status, 'playing')
+    h.api.hostAction(game, 'skip', {})
+    assert.equal(inTutorial(game), false, 'skipping a round skips the practice')
+    assert.equal(score(game, 'p0'), 0)
+    assert.equal(game.round.item.id, 'a')
+  })
+  test('with a host, only the TV or the host controller can skip it, straight into round one', () => {
+    const h = harness(), game = practiceGame(h)
+    game.hostSocketId = 'tv'
+    h.act(game, 'p0', { cents: 100 })
+    skipEvents(h, { id: 's0' }).get('tutorial:skip')({ code: game.code })
+    assert.equal(inTutorial(game), true, 'a phone can’t skip a hosted practice')
+    skipEvents(h, { id: 's0' }).get('tutorial:vote')({ code: game.code, playerId: 'p0' })
+    assert.equal(inTutorial(game), true, 'and there’s no vote with a host')
+    skipEvents(h, { id: 'ctrl', data: { controllerGame: game.code } }).get('tutorial:skip')({ code: game.code })
+    assert.equal(inTutorial(game), false)
+    assert.equal(game.round.item.id, 'a')
+    assert.equal(game.round.phase, 'answer')
+    assert.deepEqual(game.round.answers, {}, 'the practice bid doesn’t carry over')
+    h.api.endTutorial(game)
+    assert.equal(game.round.item.id, 'a', 'a second end does nothing')
+  })
+  test('without a host, a strict majority of connected players skips it', () => {
+    const h = harness(), game = practiceGame(h, { hostless: true, players: 4 })
+    const vote = (id, socketId = game.players.get(id).socketId) => skipEvents(h, { id: socketId }).get('tutorial:vote')({ code: game.code, playerId: id })
+    skipEvents(h, { id: 'tv' }).get('tutorial:skip')({ code: game.code })
+    assert.equal(inTutorial(game), true, 'no host skip in a hostless game')
+    vote('p0'); vote('p1', 's3')
+    assert.deepEqual(publicTutorial(game).votes, ['p0'], 'a vote from someone else’s phone doesn’t count')
+    vote('p1')
+    assert.equal(inTutorial(game), true, '2 of 4 isn’t a majority')
+    vote('p1')
+    assert.deepEqual(publicTutorial(game).votes, ['p0'], 'a second tap takes it back')
+    vote('p1'); vote('p2')
+    assert.equal(inTutorial(game), false, '3 of 4 skips')
+    assert.equal(game.round.item.id, 'a')
+    for (const id of ['p0', 'p1', 'p2', 'p3']) assert.equal(score(game, id), 0)
+  })
+  test('without a host, a kick can carry the vote', () => {
+    const h = harness(), game = practiceGame(h, { hostless: true, players: 3 })
+    skipEvents(h, { id: 's0' }).get('tutorial:vote')({ code: game.code, playerId: 'p0' })
+    assert.equal(inTutorial(game), true, '1 of 3')
+    h.api.hostAction(game, 'kickPlayer', { playerId: 'p2' })
+    assert.equal(inTutorial(game), true, '1 of 2 still isn’t a majority')
+    h.api.hostAction(game, 'kickPlayer', { playerId: 'p1' })
+    assert.equal(inTutorial(game), false, '1 of 1')
+  })
 })
