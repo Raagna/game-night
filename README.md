@@ -14,6 +14,7 @@ Up to 6 players buzz in from their phones.
 - **JeopardyLabs import**: paste a `jeopardylabs.com/play/...` link to turn a JeopardyLabs game into a custom board.
 - **Your own question files**: the archive screen also loads clues from a JSON, CSV or season ZIP file.
 - **Daily Doubles**, with wagers.
+- **Practice round** (on by default): two practice clues before round one, with tips on the TV and every phone about buzzing in, answering and wagering. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 - **Final Jeoparty**: one last wagered clue after the final round, from the archive or from your board.
 - **Fast Money finale**: the top two players race the clock through the same five quick clues: $1,000 per right answer, plus a $5,000 bonus each if they get 8 of 10 between them.
 
@@ -150,7 +151,7 @@ To make a production build in `dist/`:
 npm run build
 ```
 
-To run the tests (the Spin & Solve board layout and game rules, and the Fib or Fact, Price Check and Tip of the Tongue rules, with Node's built-in test runner):
+To run the tests (the Spin & Solve board layout and game rules, the Fib or Fact, Price Check and Tip of the Tongue rules, and Jeoparty's practice round and its skip rules, with Node's built-in test runner):
 
 ```bash
 npm test
@@ -186,6 +187,7 @@ src/                  React client
   questions.js        loads the built-in archive and parses imported question files
   JoinQR.jsx          join QR codes and the phone join link
   shared.jsx          server address, socket connection and shared pieces
+  Tutorial.jsx        a game's practice round on screen: the coach banner and the skip button or vote
   surveys.json        Survey Says! hand-written questions
   topics.json         topic keywords for archive search
 server/               game server (Express + Socket.IO)
@@ -200,6 +202,7 @@ server/               game server (Express + Socket.IO)
   herring.js          Red Herring game logic (herring.test.js tests it)
   herringCase.js      Red Herring's facts, roles and the deal, shared with the screens
   taps.js             ignores a host's (or phone's) double tap on a ruling (taps.test.js tests it)
+  tutorial.js         a game's practice round: its steps and the skip rules (tutorial.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
   text.js             text helpers for matching answers, including Jeopardy responses
 public/
@@ -217,6 +220,7 @@ scripts/
   build-openprices-pack.py  rebuilds public/data/prices-openprices.json from the Open Prices API
 docs/
   wheel-of-fortune-plan.md  the Spin & Solve design: rules, server state, socket events and screens
+  tutorial.md               how a game adds a practice round (tutorial): steps, skip events and the coach banner
 ```
 
 ## Credits and licence

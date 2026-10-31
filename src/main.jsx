@@ -25,6 +25,7 @@ import Hub, { Arrow, BackToHub, CodeEntry } from "./Hub";
 import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
 import { LobbyJoin, JoinCorner, Departures } from "./JoinQR";
+import { Coach } from "./Tutorial";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd, SoundToggle } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
@@ -68,6 +69,53 @@ const makeCategory = ([, qs], boardIndex) => ({
 const uid = () => Math.random().toString(36).slice(2);
 // A score in dollars, with a real minus sign when it's below zero.
 const dollars = (score) => (score < 0 ? `−$${Math.abs(score).toLocaleString()}` : `$${score.toLocaleString()}`);
+// The practice round's coach (see docs/tutorial.md): what to do at each step, on the TV, the host controller and
+// the phones. The steps come from the server (practiceStep in server/index.js).
+const nameOf = (game, id) => game.players.find((p) => p.id === id)?.name || "A player";
+// The practice clue to play next: $200, then the $400 Daily Double.
+const nextPractice = (game) => `$${(game.board?.[0]?.questions.find((q) => !q.used)?.value || 200).toLocaleString()}`;
+const dailyMax = (game) => Math.max(5, ...(game.board || []).flatMap((c) => c.questions.map((q) => q.value || 0)));
+const JEOPARTY_COACH = {
+  pick: {
+    tv: ({ game, name }) => game.hostless ? `${name(game.turnPlayerId)} picks a clue on their phone: the ${nextPractice(game)} clue.` : `The host picks a clue by tapping it on this board: the ${nextPractice(game)} clue.`,
+    controller: ({ game }) => `Tap the ${nextPractice(game)} clue on the TV board. Its controls show up here.`,
+    phone: ({ game, me, name }) => !game.hostless ? "The host picks the clue. Keep your phone ready: it’s your buzzer." : game.turnPlayerId === me ? `Your pick! Tap the ${nextPractice(game)} clue below.` : `${name(game.turnPlayerId)} is picking a clue. Watch the TV.`,
+  },
+  read: {
+    tv: ({ game, name }) => {
+      const daily = game.activeQuestion?.dailyDouble, who = name(game.activeQuestion?.dailyPlayerId);
+      if (daily) return game.hostless ? `${who} wagered $${game.activeQuestion.dailyWager}. Only their buzzer opens, in 10 seconds.` : `${who} wagered $${game.activeQuestion.dailyWager}. The host reads the clue, then opens ${who}’s buzzer.`;
+      return game.hostless ? "Read the clue. Buzzers open in 10 seconds, and a tap before then doesn’t count." : "The host reads the clue out loud, then opens the buzzers.";
+    },
+    controller: ({ game }) => game.activeQuestion?.dailyDouble ? "Read the clue out loud, then tap Open Daily Double buzzer." : "Read the clue out loud, then tap Open buzzers.",
+    phone: ({ game, me }) => game.activeQuestion?.dailyDouble ? (game.activeQuestion.dailyPlayerId === me ? "Read the clue on the TV. Your buzzer lights up when it opens." : "Only the Daily Double player answers this one. Watch the TV.") : game.hostless ? "Read the clue on the TV. Your buzzer lights up when it opens: wait for it." : "Listen to the clue. Your buzzer lights up when the host opens it.",
+  },
+  buzz: {
+    tv: ({ game, name }) => game.activeQuestion?.dailyDouble ? `${name(game.activeQuestion.dailyPlayerId)}’s buzzer is open.` : "Buzzers are open! The first to tap BUZZ gets to answer.",
+    controller: "Buzzers are open. Wait for someone to buzz in.",
+    phone: ({ game, me }) => game.incorrectPlayerIds?.includes(me) ? "You missed this one, so you’re locked out until the next clue." : game.activeQuestion?.dailyDouble && game.activeQuestion.dailyPlayerId !== me ? "Only the Daily Double player answers this one." : "Your buzzer is live. Tap BUZZ to answer!",
+  },
+  answer: {
+    tv: ({ game, name }) => game.hostless ? `${name(game.answeringPlayerId || game.buzzedPlayer)} buzzed in and has 10 seconds to type a response. “What is…” is optional.` : `${name(game.answeringPlayerId || game.buzzedPlayer)} buzzed in and answers out loud. The host rules on it.`,
+    controller: ({ game, name }) => `${name(game.answeringPlayerId || game.buzzedPlayer)} buzzed in. Tap Correct or Incorrect: in a real round that adds or takes away the clue’s value.`,
+    phone: ({ game, me, name }) => (game.answeringPlayerId || game.buzzedPlayer) === me ? (game.hostless ? "Type your response. You don’t need “What is…”, and a small typo is fine." : "Say your response out loud. The host rules Correct or Incorrect.") : `${name(game.answeringPlayerId || game.buzzedPlayer)} is answering. If they miss, the buzzers open again for everyone else.`,
+  },
+  wager: {
+    tv: ({ game, name }) => `A Daily Double! Only ${name(game.activeQuestion?.dailyPlayerId)} plays it, and first they wager: $5 up to their score, or up to $${dailyMax(game)} if that’s more.`,
+    controller: ({ game, name }) => `${name(game.activeQuestion?.dailyPlayerId)} is choosing a wager on their phone. Then open their buzzer.`,
+    phone: ({ game, me, name }) => game.activeQuestion?.dailyPlayerId === me ? `A Daily Double, just for you. Wager $5 to $${dailyMax(game)}: a right answer wins your wager, a miss loses it.` : `${name(game.activeQuestion?.dailyPlayerId)} found the Daily Double. Only they play it, and they’re choosing a wager.`,
+  },
+  reveal: {
+    tv: ({ game }) => game.activeQuestion?.dailyDouble ? "On a Daily Double, you win or lose exactly what you wagered. Here it’s practice, so scores stay at $0." : "A right answer wins the clue’s value and the next pick; a wrong one loses it. Here it’s practice, so scores stay at $0.",
+    phone: ({ game }) => game.activeQuestion?.dailyDouble ? "Daily Doubles win or lose exactly the wager. Practice scores stay at $0." : "Right answers win the clue’s value, wrong ones lose it. Practice scores stay at $0.",
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! Final Jeoparty works like a Daily Double that everyone plays. ${game.hostless ? "Round one starts in a moment." : "The host starts round one."}`,
+    controller: "That’s the practice. Tap Start the game when everyone’s ready.",
+    phone: ({ game }) => `That’s the practice! ${game.hostless ? "Round one starts in a moment." : "The host starts round one."}`,
+    skip: "Start the game",
+  },
+};
 const TOPICS = topicList.map(({ id, label, aliases }) => ({ id, label, names: [label.toLowerCase(), ...aliases] }));
 const TOPIC_LABEL = Object.fromEntries(TOPICS.map((topic) => [topic.id, topic.label]));
 // Topics a search refers to: "sport" or "sports" means the Sports topic, "movie" means Movies & TV, and so on.
@@ -81,6 +129,7 @@ function Setup({ onCreate }) {
     [editing, setEditing] = useState(null),
     [storageOk, setStorageOk] = useState(true),
     [includeFinal, setIncludeFinal] = useState(true),
+    [practice, setPractice] = useState(true),
     [fastMoney, setFastMoney] = useState(false),
     [status, setStatus] = useState("");
   const [questions, setQuestions] = useState(fallbackQuestions),
@@ -183,7 +232,7 @@ function Setup({ onCreate }) {
       if (!clues.length) return setNotice("Fast Money needs clues. Add some to the board, or wait for the archive to load.");
       fastMoneyConfig = { clues };
     }
-    onCreate({ ...config, final: finalClue, fastMoney: fastMoneyConfig, hostless }, setNotice);
+    onCreate({ ...config, final: finalClue, fastMoney: fastMoneyConfig, hostless, tutorial: practice }, setNotice);
   };
   const saveEdited = (board) => {
     const result = saveBoard(boards, board);
@@ -369,6 +418,7 @@ function Setup({ onCreate }) {
         <section className="game-options" aria-labelledby="game-options-title">
           <h2 id="game-options-title">Game options</h2>
           <label className="game-mode"><input type="checkbox" checked={hostless} onChange={(event) => setHostless(event.target.checked)} /> <span><b>Play without a host</b><small>Players select clues, buzz automatically, and type their own responses.</small></span></label>
+          <label className="game-mode"><input type="checkbox" checked={practice} onChange={(event) => setPractice(event.target.checked)} /> <span><b>Practice round first</b><small>Two practice clues before round one, with tips on the TV and every phone: buzzing in, answering and wagering on a Daily Double. Nothing scores. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span></label>
           <label className="game-mode"><input type="checkbox" checked={includeFinal} onChange={(event) => setIncludeFinal(event.target.checked)} /> <span><b>Final Jeoparty</b><small>
             {mode === "archive" ? "One last wagered clue after the final round." : chosenBoard && !hasFinal(chosenBoard) ? "This board has no Final clue, so a random archive one is used." : "Uses the board’s own Final Jeoparty clue."}
           </small></span></label>
@@ -410,8 +460,8 @@ function Scores({ players, turnPlayerId }) {
     <ul className="scores">
       {players.map((p) => (
         <li key={p.id} className={(p.id === turnPlayerId ? "is-turn " : "") + (p.connected ? "" : "is-away")}>
+          <span className={"podium-score" + (p.score < 0 ? " is-negative" : "")}>{dollars(p.score)}</span>
           <b>{p.name}</b>
-          <Money value={dollars(p.score)} />
           {!p.connected && <small>Reconnecting…</small>}
         </li>
       ))}
@@ -443,6 +493,7 @@ function Display({ game, host = false, onAction }) {
         {game.status !== "lobby" && <JoinCorner code={game.code} />}
         <ClueTimer deadline={game.status === "fastmoney" ? game.fastMoney?.deadline : game.activeQuestion ? game.answerDeadline || game.clueDeadline || game.preBuzzDeadline || game.finalDeadline : null} serverNow={game.serverNow} frozenMs={game.clockPaused ? game.pausedRemaining : null} />
       </header>
+      <Coach game={game} coach={JEOPARTY_COACH} place="tv" />
       {game.status === "lobby" ? (
         <div className="lobby">
           <h1>Join the game</h1>
@@ -463,28 +514,28 @@ function Display({ game, host = false, onAction }) {
       ) : game.activeQuestion ? (
         <div className="clue-screen">
           <p className="clue-meta">
-            {dailyPending ? <Flap text="Daily Double" intro /> : <><Flap text={q.category} wrap /><Flap className="clue-value" text={q.value ? `$${q.value.toLocaleString()}` : "Final Jeoparty"} /></>}
+            {dailyPending ? <span className="daily-banner">Daily Double</span> : <><span className="clue-category">{q.category}</span><span className="clue-value">{q.value ? `$${q.value.toLocaleString()}` : "Final Jeoparty"}</span></>}
           </p>
           <h1>{dailyPending ? "Wager required" : q.question}</h1>
           {game.status === "final" && !game.hostless && <FinalReveals game={game} />}
-          {game.reveal && <div className="answer" role="status"><Flap text={q.answer} wrap intro /></div>}
+          {game.reveal && <div className="answer" role="status">{q.answer}</div>}
           {game.clockPaused && <p className="paused-note">Clock paused while {game.status === "final" ? "a player confirms" : `${buzzed?.name || "the player"} confirms`} their answer</p>}
           {buzzed && <div className="buzzed">{game.activeQuestion.dailyDouble ? `${buzzed.name} buzzed in` : `${buzzed.name} buzzed in at ${formatBuzzTime(game.buzzedAtMs)}`}</div>}
         </div>
       ) : game.status === "final" ? (
         <div className="clue-screen">
-          <p className="clue-meta"><Flap text="Final Jeoparty" /></p>
+          <p className="clue-meta"><span className="clue-value">Final Jeoparty</span></p>
           <h1>Ready for the final clue</h1>
         </div>
       ) : (
         <>
           <h2 className="round-title">
-            <Flap text={game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeoparty!" : "Double Jeoparty!")} />
+            {game.tutorial ? "Practice round" : game.roundNames?.[game.boardIndex] || (game.boardIndex === 0 ? "Jeoparty!" : "Double Jeoparty!")}
           </h2>
-          <div className="board" style={{ "--cols": game.board.length, "--cols-small": Math.min(3, game.board.length) }}>
+          <div className="board" style={{ "--cols": game.board.length, "--rows": Math.max(1, ...game.board.map((c) => c.questions.length)), "--cols-small": Math.min(3, game.board.length) }}>
             {game.board.map((c, ci) => (
               <div className="column" key={ci}>
-                <div className="cat"><Flap text={c.name} wrap /></div>
+                <div className="cat"><span>{c.name}</span></div>
                 {c.questions.map((q, qi) => (
                   <button
                     disabled={q.used || !host || game.hostless}
@@ -498,14 +549,14 @@ function Display({ game, host = false, onAction }) {
                     className={q.used ? "used" : ""}
                     aria-label={q.used ? `${c.name} $${q.value}, already played` : `${c.name} for $${q.value}`}
                   >
-                    <Flap text={q.used ? "" : `$${q.value}`} cells={String(q.value).length + 1} />
+                    {q.used ? "" : <span className="value">${q.value.toLocaleString()}</span>}
                   </button>
                 ))}
               </div>
             ))}
           </div>
-          {chooser && <p className="turn-note">{chooser.name} picks the next clue</p>}
-          {host && boardDone && (
+          {chooser && game.tutorial?.step !== "done" && <p className="turn-note">{chooser.name} picks the next clue</p>}
+          {host && boardDone && !game.tutorial && (
             <div className="host-bottom">
               <button className="primary" onClick={() => onAction("nextBoard")}>
                 {next ? `Start ${next}` : "Finish game"}
@@ -592,6 +643,7 @@ function Controller({ game, onAction }) {
         <Brand text="JEOPARTY!" />
         <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
       </header>
+      <Coach game={game} coach={JEOPARTY_COACH} place="controller" />
       <h1>
         {finalMode
           ? "Final Jeoparty"
@@ -657,7 +709,7 @@ function Controller({ game, onAction }) {
           Pick a clue on the shared display, then control it here.
         </p>
       )}
-      {game.status === "playing" && (
+      {game.status === "playing" && !game.tutorial && (
         <button className="skip-controller" onClick={() => onAction("nextBoard")}>
           {next ? `Skip to ${next}` : "End the game now"}
         </button>
@@ -786,11 +838,11 @@ function DailyWager({ game, playerId, player }) {
   const [wager,setWager]=useState("5"); const max=Math.max(player.score,...(game.board||[]).flatMap((c)=>c.questions.map((q)=>q.value||0)),5)
   if(game.activeQuestion.judged?.includes(playerId) || game.reveal) return <><p className="status-card">Answer locked in</p><p className="player-status">{game.reveal ? "Answer revealed" : "Waiting for the ruling"}</p></>
   if(game.activeQuestion.dailyReady) return <><p className="status-card">Wager locked: ${game.activeQuestion.dailyWager.toLocaleString()}</p><p className="player-status">{game.buzzedPlayer ? "You buzzed in." : game.buzzerOpen ? "Buzz in!" : game.hostless ? "Your buzzer opens in 10 seconds." : "Waiting for the host to open your buzzer."}</p><button className={"buzzer " + (game.buzzerOpen ? "ready" : "")} disabled={!!game.buzzedPlayer || !game.buzzerOpen} onClick={()=>socket.emit("player:buzz",{code:game.code,playerId})}>BUZZ!</button></>
-  return <div className="final-form"><p className="daily-title"><Flap text="Daily Double!" intro /></p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
+  return <div className="final-form"><p className="daily-title">Daily Double!</p><label className="field"><span>Wager ($5 to ${max.toLocaleString()})</span><input type="number" inputMode="numeric" min="5" max={max} value={wager} onChange={e=>setWager(e.target.value)}/></label><button className="primary" onClick={()=>socket.emit("player:dailyWager",{code:game.code,playerId,wager})}>Lock wager</button></div>
 }
 function HostlessBoard({ game, playerId }) {
   const chooser=game.players.find((player)=>player.id===game.turnPlayerId), canSelect=chooser?.id===playerId;
-  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat"><Flap text={category.name} wrap /></div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}><Flap text={question.used ? "" : `$${question.value}`} cells={String(question.value).length + 1} /></button>)}</div>)}</div></div>
+  return <div className="hostless-board"><p className={"player-status" + (canSelect ? " is-you" : "")}>{canSelect ? "Your turn — pick a clue" : `${chooser?.name || "Another player"} is picking a clue`}</p><div className="board" style={{ "--cols-small": Math.min(3, game.board.length) }}>{game.board.map((category,categoryIndex)=><div className="column" key={categoryIndex}><div className="cat"><span>{category.name}</span></div>{category.questions.map((question,questionIndex)=><button key={question.id} disabled={question.used || !canSelect} className={question.used ? "used" : ""} aria-label={question.used ? `${category.name} $${question.value}, already played` : `${category.name} for $${question.value}`} onClick={()=>socket.emit("player:select",{code:game.code,playerId,categoryIndex,questionIndex})}>{question.used ? "" : <span className="value">${question.value.toLocaleString()}</span>}</button>)}</div>)}</div></div>
 }
 function HostlessAnswer({ game, playerId }) {
   const [response,setResponse]=useState(""), [confirming,setConfirming]=useState(false), [sent,setSent]=useState(false);
@@ -833,7 +885,8 @@ function Player({ game, playerId }) {
         <Brand text="JEOPARTY!" />
         <span className="player-name">{p.name}</span>
       </header>
-      <div className="player-score"><Money value={dollars(p.score)} /></div>
+      <div className={"player-score" + (p.score < 0 ? " is-negative" : "")}>{dollars(p.score)}</div>
+      <Coach game={game} coach={JEOPARTY_COACH} place="phone" playerId={playerId} />
       {clue && !game.activeQuestion.dailyDouble && <p className="player-clue-meta">{clue.category} · ${clue.value?.toLocaleString()}</p>}
       {game.status === "lobby" ? (
         <p className="player-status">{game.hostless ? "Waiting for the game to start…" : "Waiting for the host to start…"}</p>
@@ -841,7 +894,7 @@ function Player({ game, playerId }) {
         <FastMoneyPlayer game={game} playerId={playerId} />
       ) : game.status === "final" ? (
         <FinalPlayer game={game} playerId={playerId} p={p} />
-      ) : !game.activeQuestion && game.hostless ? <HostlessBoard game={game} playerId={playerId} /> : !game.activeQuestion ? (
+      ) : game.tutorial?.step === "done" ? null : !game.activeQuestion && game.hostless ? <HostlessBoard game={game} playerId={playerId} /> : !game.activeQuestion ? (
         <p className="player-status">
           {chooser ? (chooser.id === playerId ? "Your turn to pick a clue" : `${chooser.name} is picking a clue`) : "Waiting for the first turn…"}
         </p>
@@ -875,7 +928,7 @@ function Player({ game, playerId }) {
           </button>
         </>
       )}
-      {game.status === "playing" && <SkipVote game={game} playerId={playerId} />}
+      {game.status === "playing" && !game.tutorial && <SkipVote game={game} playerId={playerId} />}
     </main>
   );
 }
