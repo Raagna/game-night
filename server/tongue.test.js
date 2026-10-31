@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createTongueGames, TONGUE_TIMES } from './tongue.js'
+import { createTongueGames, TONGUE_TIMES, PRACTICE } from './tongue.js'
+import { registerTutorial, publicTutorial, inTutorial } from './tutorial.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire().
 function harness() {
@@ -161,4 +162,148 @@ test('in the lobby the host can move players between teams', () => {
   assert.deepEqual(game.teams.map((t) => t.members), [['p0'], ['p2', 'p3', 'p1']])
   h.api.hostAction(game, 'movePlayer', { playerId: 'p3', teamId: 't1' })
   assert.deepEqual(game.teams.map((t) => t.members), [['p0', 'p3'], ['p2', 'p1']])
+})
+
+// ---------- Practice round (the tutorial) ----------
+// The skip events as server/index.js registers them for every socket, ending the practice with the mode's own
+// endTutorial. `socketId` is the sender: 'host' is the TV in these tests, s0, s1… the players' phones.
+function tutorialEvent(h, game, socketId, event, payload = {}) {
+  const handlers = new Map()
+  registerTutorial({ id: socketId, data: {}, on: (name, fn) => handlers.set(name, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+  handlers.get(event)({ code: game.code, ...payload })
+}
+const practiceGame = (h, options = {}) => { const game = newGame(h, { tutorial: true, ...options }); game.hostSocketId = 'host'; return game }
+// The step the screens see: the mode's publicGame works it out, and server/index.js adds publicTutorial to it.
+const stepOf = (h, game) => { h.api.publicGame(game); return publicTutorial(game)?.step }
+const allZero = (game) => game.teams.every((team) => team.score === 0)
+
+test('with the practice option, the first team plays a short practice turn with the partners swapped', () => {
+  const h = harness(), game = practiceGame(h)
+  assert.ok(inTutorial(game))
+  assert.equal(game.status, 'playing')
+  assert.equal(stepOf(h, game), 'ready')
+  assert.equal(game.turn.teamId, 't1')
+  assert.equal(game.turn.clueGiverId, 'p1', 'the partner who guesses first in round one gives the practice clues')
+  assert.equal(h.timers.tongue.ms, PRACTICE.times.readyMs)
+  const turn = h.api.publicGame(game).turn
+  assert.equal(turn.size, 3); assert.equal(turn.seconds, 25)
+  assert.ok(!inTutorial(newGame(harness())), 'no practice without the option')
+})
+
+test('the practice walks through clue, got, pass and foul on easy words, and nothing scores', () => {
+  const h = harness(), game = practiceGame(h)
+  h.act(game, 'p1', 'start')
+  assert.equal(stepOf(h, game), 'clue')
+  assert.equal(h.timers.tongue.ms, PRACTICE.times.playMs)
+  assert.equal(h.act(game, 'p1', 'peek').word, 'Pizza', 'the clue-giver sees the practice word')
+  assert.equal(h.act(game, 'p0', 'peek').ok, false, 'the guesser doesn’t')
+  assert.equal(h.act(game, 'p0', 'guess', { guess: 'pizza' }).correct, true)
+  assert.equal(stepOf(h, game), 'got')
+  h.act(game, 'p1', 'word', { action: 'pass' })
+  assert.equal(stepOf(h, game), 'pass')
+  h.act(game, 'p1', 'word', { action: 'foul' })
+  assert.equal(stepOf(h, game), 'foul')
+  h.act(game, 'p0', 'guess', { guess: 'snowman' })
+  assert.equal(game.turn.phase, 'done')
+  assert.equal(stepOf(h, game), 'done')
+  assert.deepEqual(game.turn.words.map((w) => [w.text, w.status]), [['Pizza', 'got'], ['Snowman', 'got'], ['Birthday', 'foul']])
+  assert.equal(game.turn.points, 2, 'the result shows what it would have scored')
+  assert.ok(allZero(game))
+  assert.equal(game.dealt, 0, 'the game’s word pool is untouched')
+  // Skipping the practice's turn isn't a way out of it.
+  h.api.hostAction(game, 'skipTurn', {})
+  assert.ok(inTutorial(game))
+})
+
+test('a practice turn that clears every word shows its bonus but still scores nothing', () => {
+  const h = harness(), game = practiceGame(h, { guessing: 'aloud', hostless: true })
+  h.act(game, 'p1', 'start')
+  for (let i = 0; i < 3; i++) h.act(game, 'p1', 'word', { action: 'got' })
+  assert.equal(game.turn.phase, 'done')
+  assert.ok(game.turn.bonus > 0)
+  assert.ok(allZero(game))
+})
+
+test('a hosted practice ends when the host moves on, into round one at 0', () => {
+  const h = harness(), game = practiceGame(h)
+  h.act(game, 'p1', 'start')
+  h.fire() // the practice clock runs out
+  assert.equal(game.turn.phase, 'done')
+  assert.equal(h.timers.tongue, undefined, 'the host starts the game')
+  game.teams[0].score = 3 // a host adjustment during the practice
+  h.api.hostAction(game, 'next', {})
+  assert.ok(!inTutorial(game))
+  assert.equal(publicTutorial(game), null)
+  assert.equal(game.roundIndex, 0)
+  assert.equal(game.turn.teamId, 't1')
+  assert.equal(game.turn.clueGiverId, 'p0', 'partners swap for round one')
+  assert.equal(game.turn.phase, 'ready')
+  assert.equal(h.timers.tongue.ms, TONGUE_TIMES.readyMs, 'the real clocks are back')
+  assert.equal(h.api.publicGame(game).turn.size, 7)
+  assert.ok(allZero(game))
+  h.act(game, 'p0', 'start')
+  assert.deepEqual(game.turn.words.map((w) => w.text), WORDS.slice(0, 7), 'round one deals from the top of the pool')
+})
+
+test('a hostless practice moves on by itself into round one', () => {
+  const h = harness(), game = practiceGame(h, { hostless: true })
+  h.fire() // nobody taps Start: the practice clock starts anyway
+  assert.equal(game.turn.phase, 'play')
+  h.fire() // time's up
+  assert.equal(game.turn.phase, 'done')
+  assert.equal(h.timers.tongue.ms, PRACTICE.times.doneMs)
+  h.fire()
+  assert.ok(!inTutorial(game))
+  assert.equal(game.turn.teamId, 't1')
+  assert.equal(game.turn.clueGiverId, 'p0')
+  assert.ok(allZero(game))
+})
+
+test('the host can skip the practice; players can’t, and the skip can’t run twice', () => {
+  const h = harness(), game = practiceGame(h)
+  h.act(game, 'p1', 'start')
+  tutorialEvent(h, game, 's1', 'tutorial:skip')
+  assert.ok(inTutorial(game), 'a phone can’t skip a hosted practice')
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  assert.ok(inTutorial(game), 'and there’s no vote with a host')
+  tutorialEvent(h, game, 'host', 'tutorial:skip')
+  assert.ok(!inTutorial(game))
+  assert.equal(game.turn.phase, 'ready')
+  assert.equal(game.turn.clueGiverId, 'p0')
+  const turn = game.turn
+  h.api.endTutorial(game)
+  assert.equal(game.turn, turn, 'a second end does nothing')
+})
+
+test('without a host, a majority of the connected players skips the practice', () => {
+  const h = harness(), game = practiceGame(h, { players: 5, hostless: true })
+  tutorialEvent(h, game, 'host', 'tutorial:skip')
+  assert.ok(inTutorial(game), 'no host skip without a host')
+  tutorialEvent(h, game, 's0', 'tutorial:vote', { playerId: 'p0' })
+  tutorialEvent(h, game, 's3', 'tutorial:vote', { playerId: 'p3' })
+  assert.deepEqual(publicTutorial(game), { step: 'ready', steps: ['ready', 'clue', 'got', 'pass', 'foul', 'done'], votes: ['p0', 'p3'], connected: 5, needed: 3 })
+  tutorialEvent(h, game, 's3', 'tutorial:vote', { playerId: 'p3' })
+  assert.deepEqual(publicTutorial(game).votes, ['p0'], 'a second tap takes the vote back')
+  tutorialEvent(h, game, 's2', 'tutorial:vote', { playerId: 'p3' })
+  assert.deepEqual(publicTutorial(game).votes, ['p0'], 'only from their own phone')
+  tutorialEvent(h, game, 's3', 'tutorial:vote', { playerId: 'p3' })
+  tutorialEvent(h, game, 's4', 'tutorial:vote', { playerId: 'p4' })
+  assert.ok(!inTutorial(game))
+  assert.equal(game.turn.teamId, 't1')
+  assert.deepEqual(game.order, ['t1', 't2'])
+  assert.ok(allZero(game))
+})
+
+test('the practice team losing a player goes on to round one, and play again has no practice', () => {
+  const h = harness(), game = practiceGame(h)
+  game.players.get('p1').socketId = null
+  h.api.playerLeft(game, 'p1')
+  assert.ok(!inTutorial(game))
+  assert.equal(game.turn.teamId, 't2', 'round one starts with the team that can play')
+  h.api.hostAction(game, 'endGame', {})
+  h.api.hostAction(game, 'replay', {})
+  game.players.get('p1').socketId = 's1'
+  h.api.hostAction(game, 'start', {})
+  assert.ok(!inTutorial(game), 'play again goes straight to round one')
+  assert.equal(game.turn.clueGiverId, 'p0')
 })

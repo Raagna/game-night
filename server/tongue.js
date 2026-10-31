@@ -10,10 +10,24 @@
 // Guessing is set per game: "aloud" (the partner says it; the clue-giver, or a host, taps Got it) or "typed" (the
 // partner types it and the server checks it). The word is only ever shown on the clue-giver's phone and the host
 // controller, which ask for it with tongue:peek; it never goes out in the game state.
+//
+// Practice round (the tutorial; see docs/tutorial.md): when the setup asks for it, the first team plays one short
+// practice turn before round one: three easy words on a 25-second clock, with the partners the other way round from
+// their round-one turn. It runs through the real turn code (ready, play, done), but nothing scores. The coach text
+// for each step is TONGUE_COACH in src/tongue/TipOfTheTongue.jsx.
 import { answersMatch } from './text.js'
+import { beginTutorial, setTutorialStep, endTutorial as leaveTutorial, inTutorial, skipCarried } from './tutorial.js'
 
 export const TONGUE_TIMES = { chooseMs: 15000, readyMs: 15000, playMs: 45000, doneMs: 8000 }
 export const WORDS_PER_TURN = 7
+export const PRACTICE = { words: ['Pizza', 'Snowman', 'Birthday'], times: { ...TONGUE_TIMES, readyMs: 20000, playMs: 25000, doneMs: 10000 } }
+// ready → clue (the clock is running, no word played yet) → got / pass / foul (after the last word played) → done.
+export const PRACTICE_STEPS = ['ready', 'clue', 'got', 'pass', 'foul', 'done']
+function practiceStep(turn) {
+  if (!turn || turn.phase === 'ready' || turn.phase === 'choose') return 'ready'
+  if (turn.phase === 'done') return 'done'
+  return turn.lastAction || 'clue'
+}
 const MAX_PLAYERS = 12
 const MAX_WORDS = 1000
 
@@ -25,7 +39,7 @@ function cleanConfig(config) {
     .filter((word) => word && !seen.has(word.toLowerCase()) && seen.add(word.toLowerCase()))
   if (words.length < WORDS_PER_TURN) throw new Error(`Pick categories with at least ${WORDS_PER_TURN} words between them.`)
   const rounds = Math.max(3, Math.min(5, Math.trunc(Number(config?.rounds)) || 3))
-  return { words, rounds, guessing: config?.guessing === 'aloud' ? 'aloud' : 'typed', hostless: !!config?.hostless }
+  return { words, rounds, guessing: config?.guessing === 'aloud' ? 'aloud' : 'typed', hostless: !!config?.hostless, tutorial: !!config?.tutorial }
 }
 
 export function createTongueGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave, random = Math.random }) {
@@ -54,9 +68,11 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
   function publicTurn(game) {
     const turn = game.turn
     if (!turn) return null
-    const done = turn.phase === 'done'
+    const done = turn.phase === 'done', practice = inTutorial(game)
     return {
       teamId: turn.teamId, phase: turn.phase, deadline: turn.deadline, clueGiverId: turn.clueGiverId, seq: turn.seq,
+      // The turn's size and clock, so the screens can show them before it starts (the practice turn is shorter).
+      size: practice ? PRACTICE.words.length : WORDS_PER_TURN, seconds: timesFor(game).playMs / 1000,
       // Words the team got are safe to show as they land; passed ones would give the game away.
       got: turn.words.filter((word) => word.status === 'got').map((word) => word.text),
       total: turn.words.length, left: turn.queue.length, points: turn.points, bonus: turn.bonus,
@@ -64,6 +80,7 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     }
   }
   function publicGame(game) {
+    if (inTutorial(game)) setTutorialStep(game, practiceStep(game.turn))
     return {
       kind: 'tongue', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
       guessing: game.config.guessing, rounds: game.config.rounds, roundIndex: game.roundIndex,
@@ -75,10 +92,11 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
 
   // ---------- Turns ----------
   const PHASE_TIME = { choose: 'chooseMs', ready: 'readyMs', play: 'playMs', done: 'doneMs' }
+  const timesFor = (game) => (inTutorial(game) ? PRACTICE.times : TONGUE_TIMES)
   function setPhase(game, phase) {
     const turn = game.turn
     turn.phase = phase
-    const ms = phase === 'done' && !game.hostless ? null : TONGUE_TIMES[PHASE_TIME[phase]]
+    const ms = phase === 'done' && !game.hostless ? null : timesFor(game)[PHASE_TIME[phase]]
     turn.deadline = ms ? Date.now() + ms : null
     clearGameTimers(game)
     if (ms) schedule(game, 'tongue', ms, () => { if (game.turn === turn && turn.phase === phase && game.status === 'playing') { advance(game); emitGame(game) } })
@@ -103,6 +121,15 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     if (!game.order.length) return finish(game)
     startTurn(game, game.order[0])
   }
+  // The practice turn: the first team that can play, with its second member giving the clues (so in round one the
+  // partners swap and each has tried a role). Only this one team plays it; everyone else watches.
+  function startPractice(game) {
+    const team = game.teams.find((t) => live(game, t.members).length >= 2) // the start checks there is one
+    game.order = [team.id]
+    game.turn = { teamId: team.id, phase: 'ready', deadline: null, clueGiverId: live(game, team.members)[1], words: [], queue: [], seq: 0, points: 0, bonus: 0, lastGuess: null, lastAction: null }
+    event(game, 'turn', { teamId: team.id })
+    setPhase(game, 'ready')
+  }
   function startTurn(game, teamId) {
     game.turn = { teamId, phase: 'ready', deadline: null, clueGiverId: null, words: [], queue: [], seq: 0, points: 0, bonus: 0, lastGuess: null }
     event(game, 'turn', { teamId })
@@ -119,7 +146,8 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
   function startPlay(game) {
     const turn = game.turn
     if (turn.phase !== 'ready') return false
-    turn.words = deal(game).map((word) => ({ text: word, status: 'waiting' }))
+    // The practice turn plays its own easy words and leaves the game's pool alone.
+    turn.words = (inTutorial(game) ? PRACTICE.words : deal(game)).map((word) => ({ text: word, status: 'waiting' }))
     turn.queue = turn.words.map((_, i) => i)
     turn.seq++
     event(game, 'play', { teamId: turn.teamId })
@@ -127,6 +155,7 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     return true
   }
   function nextTurn(game) {
+    if (inTutorial(game)) return endTutorial(game)
     const at = game.order.indexOf(game.turn?.teamId)
     const next = game.order.slice(at + 1).find((id) => live(game, game.teams.find((t) => t.id === id)?.members || []).length >= 2)
     if (next) return startTurn(game, next)
@@ -139,12 +168,14 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     for (const i of turn.queue) if (turn.words[i].status === 'waiting') turn.words[i].status = 'missed'
     turn.queue = []
     const team = game.teams.find((t) => t.id === turn.teamId)
-    if (team) team.score += turn.points + turn.bonus
+    // The practice turn shows what it would have scored, but the team's score stays at 0.
+    if (team && !inTutorial(game)) team.score += turn.points + turn.bonus
     event(game, 'turnEnd', { teamId: turn.teamId, points: turn.points, bonus: turn.bonus })
     setPhase(game, 'done')
   }
   function finish(game) {
     clearGameTimers(game)
+    leaveTutorial(game)
     game.status = 'complete'
     if (game.turn) game.turn.deadline = null
     event(game, 'complete')
@@ -159,6 +190,7 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     else if (action === 'foul') { word.status = 'foul'; turn.queue.shift() }
     else if (action === 'pass') { word.status = 'passed'; turn.queue.push(turn.queue.shift()) }
     else return false
+    turn.lastAction = action
     turn.seq++
     event(game, action, { teamId: turn.teamId })
     // Every word got (no fouls, no misses): the seconds left on the clock are a bonus.
@@ -208,11 +240,15 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     if (action === 'start' && game.status === 'lobby') {
       // A team left with one player joins the team before it, making a team of three.
       for (let i = game.teams.length - 1; i > 0; i--) if (game.teams[i].members.length === 1) { game.teams[i - 1].members.push(...game.teams[i].members); game.teams.splice(i, 1) }
-      if (game.teams.some((team) => live(game, team.members).length >= 2)) { game.status = 'playing'; game.roundIndex = 0; startRound(game) }
+      if (game.teams.some((team) => live(game, team.members).length >= 2)) {
+        game.status = 'playing'; game.roundIndex = 0
+        if (game.config.tutorial) { beginTutorial(game, PRACTICE_STEPS); startPractice(game) } else startRound(game)
+      }
     }
     if (action === 'next' && playing) advance(game)
     if (['got', 'pass', 'foul'].includes(action) && playing) wordAction(game, action)
-    if (action === 'skipTurn' && playing) { if (turn.phase === 'play') endTurn(game); else nextTurn(game) }
+    // The practice is left with the skip button (or vote), not by skipping its turn.
+    if (action === 'skipTurn' && playing && !inTutorial(game)) { if (turn.phase === 'play') endTurn(game); else nextTurn(game) }
     if (action === 'endGame' && game.status === 'playing') finish(game)
     if (action === 'renameTeam') { const team = game.teams.find((t) => t.id === payload.teamId), name = text(payload.name, 24); if (team && name) team.name = name }
     if (action === 'adjustScore') { const team = game.teams.find((t) => t.id === payload.teamId), amount = Math.trunc(Number(payload.amount)); if (team && Number.isFinite(amount)) team.score += amount }
@@ -232,15 +268,30 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
         game.players.delete(player.id)
         handOff(game, player.id)
         removeFromTeams(game, player.id)
+        // One fewer player can carry a vote to skip the practice.
+        if (skipCarried(game)) return endTutorial(game)
       }
     }
     if (action === 'replay') {
       let config = game.config
       try { if (payload.words) config = cleanConfig({ ...game.config, words: payload.words, hostless: game.hostless }) } catch {}
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', config, roundIndex: 0, order: [], turn: null, dealt: 0, lastEvent: null })
+      leaveTutorial(game)
+      // A replay goes straight to round one: everyone has had the practice.
+      Object.assign(game, { status: 'lobby', config: { ...config, tutorial: false }, roundIndex: 0, order: [], turn: null, dealt: 0, lastEvent: null })
       for (const team of game.teams) team.score = 0
     }
+    emitGame(game)
+  }
+
+  // Out of the practice turn and into round one, with every team at 0: after the practice turn's result, or when the
+  // host skips or the players vote to. A skip racing the end of the practice does nothing.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.turn = null; game.roundIndex = 0
+    for (const team of game.teams) team.score = 0
+    if (game.status === 'playing') startRound(game)
     emitGame(game)
   }
 
@@ -288,5 +339,5 @@ export function createTongueGames({ io, games, emitGame, schedule, clearGameTime
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register }
+  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, register, endTutorial }
 }

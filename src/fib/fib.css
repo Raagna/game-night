@@ -563,3 +563,24 @@ body:has(main.fib) .back-to-settings.is-controller { color: var(--fib-lilac); }
   .fib-center.is-reveal .fib-clue .fib-clue-category { position: static; transform: rotate(-1.5deg); margin-top: -2px; }
   .fib-center.is-reveal .fib-clue { background: transparent; box-shadow: none; padding: 4px 0 0; margin: 0; }
 }
+
+/* ---------- Practice round ---------- */
+/* The coach (src/Tutorial.jsx) as a card on the plum set, with the show's '70s stripes down its edge and the label
+   in marigold. Its skip key takes the show's pill shape from the keys above. */
+.fib .coach {
+  position: relative; overflow: hidden;
+  border-left: 0; border-radius: 14px; padding-left: 28px;
+  background: rgb(20 7 37 / 0.85);
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+.fib .coach::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px;
+  background: linear-gradient(90deg, var(--fib-pink) 0 25%, var(--fib-tangerine) 25% 50%, var(--fib-orange) 50% 75%, var(--fib-gold) 75% 100%);
+}
+.fib .coach-label { color: var(--fib-gold); }
+.fib .coach-text { color: var(--fib-cream); }
+.fib .coach .tutorial-skip.primary { padding: 0 26px; font-size: 1rem; }
+.fib .coach.is-phone .tutorial-skip, .fib .coach.is-controller .tutorial-skip { border-radius: 999px; }
+.fib .tutorial-skip-note { color: var(--fib-lilac); }
+.fib .tutorial-tally { color: var(--fib-gold); }
+.fib .tutorial-tally small { color: var(--fib-lilac); }

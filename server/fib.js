@@ -8,7 +8,13 @@
 //
 // Hosted and hostless games play the same way on the phones. With a host, the controller sees the real answer
 // and every fib as it comes in (so the host can throw out a rude one), and the host paces the reveals.
+//
+// Practice round (the tutorial; see docs/tutorial.md): when the setup asks for it, one practice clue comes before the
+// first real one. It plays through the real code (pick a category, write, vote, the reveal, the scores) on an easy
+// clue, but nothing scores: the scores screen shows what each player would have won, and the totals stay at 0. The
+// coach text for each step is FIB_COACH in src/fib/FibOrFact.jsx.
 import { answersMatch, normalizeAnswer } from './text.js'
+import { beginTutorial, setTutorialStep, endTutorial as leaveTutorial, inTutorial, skipCarried } from './tutorial.js'
 
 export const FIB_TIMES = { pickMs: 15000, writeMs: 50000, voteMs: 25000, revealMs: 4000, factMs: 5000, scoresMs: 9000 }
 export const POINTS = { fact: 1000, fooled: 500 }
@@ -47,8 +53,20 @@ function cleanConfig(config) {
     .map((prompt) => (Array.isArray(prompt?.choices) ? prompt.choices : []).slice(0, 3).map(cleanClue).filter((clue) => clue.question && clue.display))
     .filter((choices) => choices.length)
   if (!prompts.length) throw new Error('A game needs at least one clue.')
-  return { prompts, hostless: !!config?.hostless }
+  return { prompts, hostless: !!config?.hostless, tutorial: !!config?.tutorial }
 }
+
+// The practice clue: three easy categories for the chooser, each with a clue nearly everyone knows, so the practice
+// is about the fibbing rather than the trivia.
+const practiceClue = (category, question, answer, decoys) => cleanClue({ id: `practice-${category}`, category, question, answer, decoys })
+export const PRACTICE_CHOICES = [
+  practiceClue('SPACE', 'Fourth from the Sun, it’s known as the Red Planet', 'Mars', ['Venus', 'Jupiter', 'Saturn']),
+  practiceClue('FOOD', 'Guacamole is mostly made from this green fruit', 'avocado', ['lime', 'kiwi', 'cucumber']),
+  practiceClue('ANIMALS', 'This black-and-white bear from China eats mostly bamboo', 'the giant panda', ['the polar bear', 'the koala', 'the sun bear']),
+]
+export const PRACTICE_STEPS = ['pick', 'write', 'vote', 'reveal', 'done']
+// The coach's step, read off the practice clue's phase (the scores screen is the last step).
+const practiceStep = (round) => (round?.phase === 'scores' ? 'done' : round?.phase)
 
 export function createFibGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave, random = Math.random }) {
   const fibGame = (code) => { const game = games.get(code); return game?.kind === 'fib' ? game : undefined }
@@ -91,6 +109,7 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
     }
   }
   function publicGame(game) {
+    if (inTutorial(game)) setTutorialStep(game, practiceStep(game.round))
     return {
       kind: 'fib', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
       index: game.index, clueCount: game.prompts.length, multiplier: multiplier(game), multipliers: game.multipliers,
@@ -104,7 +123,8 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
   function sendSecret(game, only = null) {
     const round = game.round
     if (game.hostless || !round?.clue) return
-    const secret = { code: game.code, index: game.index, fact: round.clue.answer, fibs: Object.entries(round.fibs).map(([playerId, fib]) => ({ playerId, text: fib })) }
+    // The practice clue's secret has index -1, so a controller never mistakes it for the first real clue's.
+    const secret = { code: game.code, index: inTutorial(game) ? -1 : game.index, fact: round.clue.answer, fibs: Object.entries(round.fibs).map(([playerId, fib]) => ({ playerId, text: fib })) }
     const sockets = only ? [only] : [...(io.sockets.adapter.rooms.get(game.code) || [])].map((id) => io.sockets.sockets.get(id))
     for (const socket of sockets) if (socket?.data.controllerGame === game.code && socket.id !== game.hostSocketId) socket.emit('fib:secret', secret)
   }
@@ -132,7 +152,7 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
   }
 
   function startClue(game) {
-    const choices = game.prompts[game.index]
+    const choices = inTutorial(game) ? PRACTICE_CHOICES : game.prompts[game.index]
     game.round = { phase: 'pick', deadline: null, chooserId: null, choices, clue: null, fibs: {}, removed: {}, options: [], votes: {}, reveal: [], step: -1, awards: null }
     event(game, 'clue', { index: game.index })
     // Players take turns choosing, in the order they joined.
@@ -217,17 +237,20 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
   }
   function toScores(game) {
     const round = game.round
-    for (const [playerId, a] of Object.entries(round.awards || {})) { const player = game.players.get(playerId); if (player) player.score += a.points }
+    // In the practice the awards are only shown (what each player would have won); the scores stay at 0.
+    if (!inTutorial(game)) for (const [playerId, a] of Object.entries(round.awards || {})) { const player = game.players.get(playerId); if (player) player.score += a.points }
     event(game, 'scores')
     setPhase(game, 'scores')
   }
   function nextClue(game) {
+    if (inTutorial(game)) return endTutorial(game)
     if (game.index >= game.prompts.length - 1) return finish(game)
     game.index++
     startClue(game)
   }
   function finish(game) {
     clearGameTimers(game)
+    leaveTutorial(game)
     game.status = 'complete'
     if (game.round) game.round.deadline = null
     event(game, 'complete')
@@ -268,10 +291,15 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
 
   function hostAction(game, action, payload) {
     const round = game.round, playing = game.status === 'playing' && round
-    if (action === 'start' && game.status === 'lobby' && connected(game).length >= 2) { game.status = 'playing'; game.index = 0; startClue(game) }
+    if (action === 'start' && game.status === 'lobby' && connected(game).length >= 2) {
+      game.status = 'playing'; game.index = 0
+      if (game.config.tutorial) beginTutorial(game, PRACTICE_STEPS)
+      startClue(game)
+    }
     if (action === 'pick' && playing && round.phase === 'pick') pick(game, Math.trunc(Number(payload.choice)) || 0)
     if (action === 'next' && playing) advance(game)
-    if (action === 'skipClue' && playing) nextClue(game)
+    // The practice is left with the skip button (or vote), not by skipping its clue.
+    if (action === 'skipClue' && playing && !inTutorial(game)) nextClue(game)
     if (action === 'removeFib' && playing) removeFib(game, payload.playerId)
     if (action === 'endGame' && game.status === 'playing') finish(game)
     if (action === 'adjustScore') { const player = game.players.get(payload.playerId), amount = Math.trunc(Number(payload.amount)); if (player && Number.isFinite(amount)) player.score += amount }
@@ -284,15 +312,30 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
         socket?.leave(game.code); socket?.emit('player:kicked')
         game.players.delete(player.id)
         handOff(game, player.id)
+        // One fewer player can carry a vote to skip the practice.
+        if (skipCarried(game)) return endTutorial(game)
       }
     }
     if (action === 'replay') {
       let prompts = game.prompts
       try { if (payload.prompts) prompts = cleanConfig({ prompts: payload.prompts }).prompts } catch {}
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', prompts, multipliers: multipliers(prompts.length), index: 0, round: null, pickTurn: 0, lastEvent: null })
+      leaveTutorial(game)
+      // A replay goes straight to the real clues: everyone has had the practice.
+      Object.assign(game, { status: 'lobby', config: { ...game.config, tutorial: false }, prompts, multipliers: multipliers(prompts.length), index: 0, round: null, pickTurn: 0, lastEvent: null })
       for (const player of game.players.values()) player.score = 0
     }
+    emitGame(game)
+  }
+
+  // Out of the practice and into the first real clue, with every score at 0: after the practice clue's scores, or
+  // when the host skips or the players vote to. A skip racing the end of the practice does nothing.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.round = null; game.index = 0
+    for (const player of game.players.values()) player.score = 0
+    if (game.status === 'playing') startClue(game)
     emitGame(game)
   }
 
@@ -316,5 +359,5 @@ export function createFibGames({ io, games, emitGame, schedule, clearGameTimers,
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }
+  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register, endTutorial }
 }
