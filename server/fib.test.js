@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createFibGames, multipliers, displayAnswer, POINTS, FIB_TIMES } from './fib.js'
+import { createFibGames, multipliers, displayAnswer, POINTS, FIB_TIMES, PRACTICE_CHOICES } from './fib.js'
+import { registerTutorial, publicTutorial, inTutorial } from './tutorial.js'
 
 // A game server without sockets or real timers: scheduled clocks run when a test calls fire().
 function harness() {
@@ -220,4 +221,145 @@ test('play again resets the scores and deals new clues', () => {
   assert.equal(game.status, 'lobby')
   assert.equal(game.prompts.length, 1)
   assert.equal(game.players.get('p0').score, 0)
+})
+
+// ---------- Practice round (the tutorial) ----------
+// The skip events as server/index.js registers them for every socket, ending the practice with the mode's own
+// endTutorial. `socketId` is the sender: 'host' is the TV in these tests, s0, s1… the players' phones.
+function tutorialEvent(h, game, socketId, event, payload = {}) {
+  const handlers = new Map()
+  registerTutorial({ id: socketId, data: {}, on: (name, fn) => handlers.set(name, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+  handlers.get(event)({ code: game.code, ...payload })
+}
+const practiceGame = (h, options = {}) => { const game = newGame(h, { tutorial: true, ...options }); game.hostSocketId = 'host'; return game }
+// The step the screens see: the mode's publicGame works it out, and server/index.js adds publicTutorial to it.
+const stepOf = (h, game) => { h.api.publicGame(game); return publicTutorial(game)?.step }
+const allZero = (game) => [...game.players.values()].every((player) => player.score === 0)
+
+test('with the practice option, the game starts on a practice clue with easy categories', () => {
+  const h = harness(), game = practiceGame(h)
+  assert.ok(inTutorial(game))
+  assert.equal(game.status, 'playing')
+  assert.equal(stepOf(h, game), 'pick')
+  assert.deepEqual(h.api.publicGame(game).round.categories, PRACTICE_CHOICES.map((clue) => clue.category))
+  assert.equal(game.round.chooserId, 'p0')
+  assert.ok(!inTutorial(newGame(harness())), 'no practice without the option')
+})
+
+test('the practice walks through pick, write, vote, reveal and the scores, and nothing scores', () => {
+  const h = harness(), game = practiceGame(h)
+  h.controller(game)
+  h.act(game, 'p0', 'pick', { choice: 0 })
+  assert.equal(stepOf(h, game), 'write')
+  assert.equal(game.round.clue.answer, 'Mars')
+  assert.equal(h.secrets.at(-1).data.index, -1, 'the practice secret is never taken for the first real clue’s')
+  assert.equal(h.act(game, 'p0', 'write', { fib: 'mars' }).fact, true, 'the real answer is still turned away')
+  writeAll(h, game, ['Venus', 'Pluto', 'The Moon'])
+  assert.equal(stepOf(h, game), 'vote')
+  const fact = optionText(game, 'Mars'), pluto = optionText(game, 'Pluto')
+  h.act(game, 'p0', 'vote', { optionId: pluto.id })
+  h.act(game, 'p1', 'vote', { optionId: fact.id })
+  h.act(game, 'p2', 'vote', { optionId: fact.id })
+  assert.equal(stepOf(h, game), 'reveal')
+  h.api.hostAction(game, 'next', {})
+  h.api.hostAction(game, 'next', {})
+  assert.equal(game.round.phase, 'scores')
+  assert.equal(stepOf(h, game), 'done')
+  // The scores screen shows what they would have won, but nobody's score moves.
+  assert.equal(game.round.awards.p1.points, POINTS.fooled + POINTS.fact)
+  assert.equal(game.round.awards.p2.points, POINTS.fact)
+  assert.ok(allZero(game))
+  // Skipping the practice's clue isn't a way out of it.
+  h.api.hostAction(game, 'skipClue', {})
+  assert.ok(inTutorial(game))
+})
+
+test('a hosted practice ends when the host moves on from its scores, into the first real clue at 0', () => {
+  const h = harness(), game = practiceGame(h, { players: 2 })
+  h.act(game, 'p0', 'pick', { choice: 1 })
+  writeAll(h, game, ['lime', 'pea'])
+  h.fire() // voting runs out with nobody voting, so the reveal goes straight to the fact
+  h.api.hostAction(game, 'next', {})
+  assert.equal(game.round.phase, 'scores')
+  assert.equal(h.timers.fib, undefined, 'the host starts the game')
+  game.players.get('p0').score = 500 // a host adjustment during the practice
+  h.api.hostAction(game, 'next', {})
+  assert.ok(!inTutorial(game))
+  assert.equal(publicTutorial(game), null)
+  assert.equal(game.index, 0)
+  assert.equal(game.round.phase, 'pick')
+  assert.deepEqual(h.api.publicGame(game).round.categories, ['RULERS', 'WARS'])
+  assert.equal(game.round.chooserId, 'p1', 'the next player picks the first real clue')
+  assert.ok(allZero(game))
+})
+
+test('a hostless practice moves on by itself into the first real clue', () => {
+  const h = harness(), game = practiceGame(h, { players: 2, hostless: true })
+  h.fire() // nobody picks in time
+  assert.equal(game.round.phase, 'write')
+  writeAll(h, game, ['Venus', 'Pluto'])
+  h.fire() // voting
+  h.fire() // the fact
+  assert.equal(game.round.phase, 'scores')
+  assert.equal(h.timers.fib.ms, FIB_TIMES.scoresMs)
+  h.fire()
+  assert.ok(!inTutorial(game))
+  assert.equal(game.index, 0)
+  assert.equal(game.round.choices[0].category, 'RULERS')
+  assert.ok(allZero(game))
+})
+
+test('the host can skip the practice; players can’t, and the skip can’t run twice', () => {
+  const h = harness(), game = practiceGame(h)
+  h.act(game, 'p0', 'pick', { choice: 0 })
+  h.act(game, 'p0', 'write', { fib: 'Venus' })
+  tutorialEvent(h, game, 's1', 'tutorial:skip')
+  assert.ok(inTutorial(game), 'a phone can’t skip a hosted practice')
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  assert.ok(inTutorial(game), 'and there’s no vote with a host')
+  tutorialEvent(h, game, 'host', 'tutorial:skip')
+  assert.ok(!inTutorial(game))
+  assert.equal(game.round.phase, 'pick')
+  assert.equal(game.round.choices[0].category, 'RULERS')
+  const round = game.round
+  h.api.endTutorial(game)
+  assert.equal(game.round, round, 'a second end does nothing')
+})
+
+test('without a host, a majority of the connected players skips the practice', () => {
+  const h = harness(), game = practiceGame(h, { players: 4, hostless: true })
+  tutorialEvent(h, game, 'host', 'tutorial:skip')
+  assert.ok(inTutorial(game), 'no host skip without a host')
+  tutorialEvent(h, game, 's0', 'tutorial:vote', { playerId: 'p0' })
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  assert.ok(inTutorial(game), '2 of 4 isn’t a majority')
+  assert.deepEqual(publicTutorial(game), { step: 'pick', steps: ['pick', 'write', 'vote', 'reveal', 'done'], votes: ['p0', 'p1'], connected: 4, needed: 3 })
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  assert.deepEqual(publicTutorial(game).votes, ['p0'], 'a second tap takes the vote back')
+  tutorialEvent(h, game, 's2', 'tutorial:vote', { playerId: 'p1' })
+  assert.deepEqual(publicTutorial(game).votes, ['p0'], 'only from their own phone')
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  tutorialEvent(h, game, 's2', 'tutorial:vote', { playerId: 'p2' })
+  assert.ok(!inTutorial(game))
+  assert.equal(game.round.choices[0].category, 'RULERS')
+  assert.ok(allZero(game))
+})
+
+test('kicking a player can carry the vote to skip, and play again has no practice', () => {
+  const h = harness(), game = practiceGame(h, { players: 3, hostless: true })
+  tutorialEvent(h, game, 's0', 'tutorial:vote', { playerId: 'p0' })
+  h.api.hostAction(game, 'kickPlayer', { playerId: 'p2' })
+  assert.ok(inTutorial(game), '1 of 2 isn’t a majority')
+  tutorialEvent(h, game, 's1', 'tutorial:vote', { playerId: 'p1' })
+  assert.ok(!inTutorial(game))
+  const h2 = harness(), other = practiceGame(h2, { players: 3, hostless: true })
+  tutorialEvent(h2, other, 's0', 'tutorial:vote', { playerId: 'p0' })
+  other.players.get('p1').socketId = null
+  h2.api.hostAction(other, 'kickPlayer', { playerId: 'p2' })
+  assert.ok(!inTutorial(other), 'with the others gone, 1 of 1 carries it')
+  h.api.hostAction(game, 'endGame', {})
+  h.api.hostAction(game, 'replay', {})
+  h.api.hostAction(game, 'start', {})
+  assert.ok(!inTutorial(game), 'play again goes straight to the real clues')
+  assert.equal(game.round.choices[0].category, 'RULERS')
 })

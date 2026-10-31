@@ -10,6 +10,7 @@ import { SwapIcon } from "../survey/SurveySays";
 import WORDS from "./words.json";
 import "./tongue.css";
 import { Money } from "../Flap";
+import { Coach } from "../Tutorial";
 
 // ---------- Dealing the words ----------
 const WORDS_PER_TURN = 7;
@@ -46,6 +47,51 @@ const STATUS = { got: "Got it", passed: "Passed", foul: "Foul", missed: "Missed"
 const Check = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const XIcon = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
 const teamNumber = (game, team) => game.teams.indexOf(team) + 1;
+// The turn's size and clock come with the turn (the practice turn is shorter); these are the real game's.
+const turnSize = (turn) => turn?.total || turn?.size || WORDS_PER_TURN;
+const turnSeconds = (turn) => turn?.seconds || 45;
+
+// ---------- Practice round ----------
+// The coach (see docs/tutorial.md): what to do at each step of the practice turn, on the TV, the host controller and
+// the phones. The steps come from the server (practiceStep in server/tongue.js): ready, clue, then got / pass / foul
+// after each word played, and done.
+const giverOf = (game) => game.turn?.clueGiverId;
+const isGuesserOf = (game, me) => guessersOf(game).includes(me);
+const typed = (game) => game.guessing === "typed";
+const watching = (game) => `${teamById(game, game.turn?.teamId)?.name || "One team"} plays the practice turn. Watch how it works: your team gets its own turns once the game starts.`;
+const TONGUE_COACH = {
+  ready: {
+    tv: ({ game, name }) => `A practice turn: ${name(giverOf(game))} gives the clues to ${names(game, guessersOf(game))}. ${name(giverOf(game))} sees a word on their phone and describes it without saying it. The clock starts when they tap Start.`,
+    controller: ({ game, name }) => `${name(giverOf(game))} taps Start on their phone when ready (or tap Start their clock here). You’ll see each word here too.`,
+    phone: ({ game, me, name }) => giverOf(game) === me ? `You give the clues. Each word shows up on your phone: describe it without saying it, or any part of it. Tap Start when you’re ready.`
+      : isGuesserOf(game, me) ? `${name(giverOf(game))} clues a word and you guess it. ${typed(game) ? "Type your guesses on your phone." : "Shout your guesses out loud."}` : watching(game),
+  },
+  clue: {
+    tv: ({ game }) => `The clock’s running: ${turnSeconds(game.turn)} seconds for ${turnSize(game.turn)} easy words. ${typed(game) ? "The guesser types guesses, and a right one" : "The guesser shouts guesses, and the clue-giver taps Got it for a right one. It"} scores a point and brings the next word.`,
+    controller: "You see the word too. Tap Got it when they say it (handy when guesses are shouted), Pass to skip it, or Foul if the clue-giver says it.",
+    phone: ({ game, me, name }) => giverOf(game) === me ? (typed(game) ? "Clue the word! Your partner types guesses and the game checks them. Stuck? Tap Pass." : "Clue the word! When your partner says it, tap Got it. Stuck? Tap Pass.")
+      : isGuesserOf(game, me) ? (typed(game) ? "Type your guess. Wrong guesses cost nothing, so keep trying!" : "Shout your guesses! A small slip is fine; keep going.") : "No shouting answers: only the partner guesses.",
+  },
+  got: {
+    tv: "Got it! A point, and the next word comes up. Stuck on one? Pass sends it to the back of the line.",
+    phone: ({ game, me }) => giverOf(game) === me ? "A point! Next word. If one’s too hard, tap Pass: it comes back later." : isGuesserOf(game, me) ? "A point! Keep going." : "A point for them. No shouting answers!",
+  },
+  pass: {
+    tv: "Passed: the word goes to the back of the line and comes round again. Passes are free, but the clock keeps running.",
+    phone: ({ game, me }) => giverOf(game) === me ? "Passed: it comes round again. If you slip and say a word, own up with Oops, I said it." : isGuesserOf(game, me) ? "Passed. A new word to guess!" : "They passed. That word comes round again later.",
+  },
+  foul: {
+    tv: "A foul! The clue-giver said the word (or part of it), so it’s thrown out with no point. Owning up is on your honour.",
+    controller: "A foul: the word is out with no point. Tap Foul whenever a clue-giver says the word.",
+    phone: ({ game, me }) => giverOf(game) === me ? "Foul: that word’s out with no point. Keep going with the next one!" : "A foul: the clue-giver said the word, so it’s out with no point.",
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! Each word got is a point, and clearing all seven in a real turn banks a point for every second left. Real turns are 45 seconds, every team plays one a round, and partners swap. Everyone starts at 0. ${game.hostless ? "Round one starts in a moment." : "The host starts round one."}`,
+    controller: "That’s the practice. Tap Start the game when everyone’s ready.",
+    phone: ({ game }) => `That’s the practice! Real turns are seven words in 45 seconds, and partners swap each round. Everyone starts at 0. ${game.hostless ? "Round one starts in a moment." : "The host starts round one."}`,
+    skip: "Start the game",
+  },
+};
 
 // The word for whoever is allowed to see it (the clue-giver, or a host controller), fetched each time it changes.
 function useWord(game, playerId, allowed) {
@@ -101,12 +147,13 @@ function useSecondsLeft(deadline, serverNow) {
   }, [deadline, serverNow]);
   return left;
 }
-// The studio clock: two amber seven-segment digits. Before the turn starts it waits on 45 with dim segments; in
+// The studio clock: two amber seven-segment digits. Before the turn starts it waits on its length (45, or the
+// practice turn's) with dim segments; in
 // the last five seconds it turns red.
-function StudioClock({ deadline, serverNow, className = "" }) {
-  const left = useSecondsLeft(deadline, serverNow), seconds = deadline ? left ?? 0 : 45;
+function StudioClock({ deadline, serverNow, className = "", idle = 45 }) {
+  const left = useSecondsLeft(deadline, serverNow), seconds = deadline ? left ?? 0 : idle;
   return (
-    <div className={"tt-clock" + (!deadline ? " is-idle" : seconds <= 5 ? " is-low" : "") + (className ? ` ${className}` : "")} role="timer" aria-label={deadline ? `${seconds} seconds left` : "45 seconds, not started"}>
+    <div className={"tt-clock" + (!deadline ? " is-idle" : seconds <= 5 ? " is-low" : "") + (className ? ` ${className}` : "")} role="timer" aria-label={deadline ? `${seconds} seconds left` : `${idle} seconds, not started`}>
       <Segments value={seconds} digits={2} />
     </div>
   );
@@ -169,6 +216,7 @@ export function TongueSetup({ onCreate }) {
     [guessing, setGuessing] = useState(() => read(GUESSING_KEY, ["typed", "aloud"], "typed")),
     [chosen, setChosen] = useState(readCategories),
     [hostless, setHostless] = useState(false),
+    [practice, setPractice] = useState(true),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   const choose = (list) => { setChosen(list); remember(CATEGORIES_KEY, JSON.stringify(list)); };
@@ -176,7 +224,7 @@ export function TongueSetup({ onCreate }) {
   const wordCount = new Set(wordsIn(chosen).map((w) => w.toLowerCase())).size, enough = wordCount >= WORDS_PER_TURN;
   const start = () => {
     setNotice(""); setBusy(true);
-    onCreate({ game: "tongue", words: dealWords(chosen), rounds, guessing, hostless }, (e) => { setBusy(false); setNotice(e); });
+    onCreate({ game: "tongue", words: dealWords(chosen), rounds, guessing, hostless, tutorial: practice }, (e) => { setBusy(false); setNotice(e); });
   };
   return (
     <main className="setup tt-setup">
@@ -222,6 +270,10 @@ export function TongueSetup({ onCreate }) {
           <label className="game-mode">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a host</b><small>The turns move on by themselves. With a host, the controller shows each word and can call Got it, Pass or Foul — handy when guesses are shouted out loud.</small></span>
+          </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>One short practice turn before round one: a team clues three easy words on a 25-second clock, with tips on the TV and every phone for Got it, Pass and fouls. Nothing scores. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
           </label>
         </section>
         <div className="final-row">
@@ -269,7 +321,7 @@ function Scoreboard({ game }) {
   );
 }
 const resultWords = (turn) => turn.results.map(({ text, status }) => ({ text, status }));
-const clearedWords = (turn) => Array.from({ length: turn.total || WORDS_PER_TURN }, (_, i) => (turn.got?.[i] ? { text: turn.got[i], status: "got" } : { text: "", status: "waiting" }));
+const clearedWords = (turn) => Array.from({ length: turnSize(turn) }, (_, i) => (turn.got?.[i] ? { text: turn.got[i], status: "got" } : { text: "", status: "waiting" }));
 // Got, of, and (for the clue-giver) how many are left in the pile, in seven-segment digits.
 function Tally({ turn, showLeft = false }) {
   return (
@@ -280,7 +332,7 @@ function Tally({ turn, showLeft = false }) {
     </p>
   );
 }
-const turnLabel = (game) => `Round ${game.roundIndex + 1} of ${game.rounds}`;
+const turnLabel = (game) => (game.tutorial ? "Practice turn" : `Round ${game.roundIndex + 1} of ${game.rounds}`);
 
 // ---------- Shared TV display ----------
 function Lobby({ game, onAction }) {
@@ -324,15 +376,15 @@ function TurnBoard({ game, foul }) {
       <div className="tt-console">
         <div className="tt-console-clock">
           <span className="label">Time</span>
-          <StudioClock deadline={live ? turn.deadline : null} serverNow={game.serverNow} />
+          <StudioClock deadline={live ? turn.deadline : null} serverNow={game.serverNow} idle={turnSeconds(turn)} />
         </div>
-        <div className="tt-console-words" aria-label={`${turn.points} of ${turn.total || WORDS_PER_TURN} words`}>
+        <div className="tt-console-words" aria-label={`${turn.points} of ${turnSize(turn)} words`}>
           <span className="label">Words</span>
-          <span className="tt-of"><Segments className="tt-of-n" value={turn.points} /><small>of</small><Segments value={turn.total || WORDS_PER_TURN} /></span>
+          <span className="tt-of"><Segments className="tt-of-n" value={turn.points} /><small>of</small><Segments value={turnSize(turn)} /></span>
         </div>
       </div>
       <div className="tt-board-wrap">
-        <MonitorWall words={clearedWords(turn)} label={`${turn.points} of ${turn.total || WORDS_PER_TURN} words cleared`} />
+        <MonitorWall words={clearedWords(turn)} label={`${turn.points} of ${turnSize(turn)} words cleared`} />
         {foul && <div className="tt-foul-flash" key={foul} aria-hidden="true"><span className="tt-foul-x"><XIcon /></span><span className="tt-foul-word">Foul!</span></div>}
       </div>
     </div>
@@ -340,7 +392,7 @@ function TurnBoard({ game, foul }) {
 }
 function Stage({ game, onAction, foul }) {
   const turn = game.turn, team = teamById(game, turn.teamId), giver = turn.clueGiverId;
-  const next = !game.hostless && turn.phase === "done";
+  const next = !game.hostless && turn.phase === "done" && !game.tutorial;
   return (
     <div className="tt-center">
       <p className="tt-round-label"><span className="tt-round-pill">{turnLabel(game)}</span>{team && <span className="tt-round-team"><span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>{team.name}</span>}</p>
@@ -361,7 +413,7 @@ function Stage({ game, onAction, foul }) {
       {turn.phase === "done" && (
         <>
           <h1 className="tt-headline tt-scored">
-            <span className="tt-scored-line"><em>{team?.name}</em> scored <Segments className="tt-scored-n" value={turn.points + turn.bonus} label={String(turn.points + turn.bonus)} /></span>
+            <span className="tt-scored-line"><em>{team?.name}</em> {game.tutorial ? "would have scored" : "scored"} <Segments className="tt-scored-n" value={turn.points + turn.bonus} label={String(turn.points + turn.bonus)} /></span>
             {turn.bonus ? <small>{turn.points} words + {turn.bonus} bonus for the seconds left</small> : null}
           </h1>
           {turn.results?.length ? <MonitorWall words={resultWords(turn)} label="The turn's words" /> : null}
@@ -383,10 +435,11 @@ export function TongueDisplay({ game, onAction }) {
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         {turn?.phase !== "play" && <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />}
       </header>
+      <Coach game={game} coach={TONGUE_COACH} place="tv" />
       {game.status === "lobby" || !turn ? <Lobby game={game} onAction={onAction} /> : (
         <div className="tt-stage"><Stage game={game} onAction={onAction} foul={foul} /><Scoreboard game={game} /></div>
       )}
-      {game.hostless && game.players.length > 0 && game.status === "playing" && (
+      {game.hostless && game.players.length > 0 && game.status === "playing" && !game.tutorial && (
         <details className="host-tools sv-host-tools">
           <summary>Host tools</summary>
           <div className="sv-round-controls">
@@ -458,7 +511,7 @@ function PlayerAction({ game, playerId }) {
     if (giver)
       return (
         <div className="tt-card-wrap">
-          <div className="sv-guess-top"><span className="sv-guess-label">You’re giving the clues to {names(game, guessersOf(game))}. Seven words, 45 seconds.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
+          <div className="sv-guess-top"><span className="sv-guess-label">You’re giving the clues to {names(game, guessersOf(game))}. {game.tutorial ? `${turnSize(turn)} practice words` : "Seven words"}, {turnSeconds(turn)} seconds.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
           <button className="primary tt-big" onClick={() => socket.emit("tongue:start", { code: game.code, playerId })}>Start</button>
         </div>
       );
@@ -471,7 +524,7 @@ function PlayerAction({ game, playerId }) {
   }
   return (
     <div className="tt-my-result">
-      <p className="player-status">{teamById(game, turn.teamId)?.name} scored <Segments className="tt-status-n" value={turn.points + turn.bonus} label={String(turn.points + turn.bonus)} /></p>
+      <p className="player-status">{teamById(game, turn.teamId)?.name} {game.tutorial ? "would have scored" : "scored"} <Segments className="tt-status-n" value={turn.points + turn.bonus} label={String(turn.points + turn.bonus)} /></p>
       {turn.results?.length ? <WordList words={resultWords(turn)} /> : null}
     </div>
   );
@@ -488,9 +541,10 @@ export function TonguePlayer({ game, playerId }) {
         <span className="tt-my-name">{team && <span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>}<span className="tt-my-text"><b>{team ? team.name : "No team yet"}</b>{team && <small>{pairNames(game, team)}</small>}</span></span>
         <Segments className="tt-my-score" value={team?.score ?? 0} digits={2} label={`${team?.score ?? 0} points`} />
       </div>
+      <Coach game={game} coach={TONGUE_COACH} place="phone" playerId={playerId} />
       {game.status === "lobby" || !turn ? <p className="player-status">You’re in! {team?.members.length < 2 ? "Waiting for a partner…" : "The game starts when everyone’s here."}</p> : (
         <>
-          <p className="player-clue-meta">{turnLabel(game)}{isLast(game) ? " · last round" : ""}</p>
+          <p className="player-clue-meta">{turnLabel(game)}{isLast(game) && !game.tutorial ? " · last round" : ""}</p>
           <PlayerAction game={game} playerId={playerId} />
         </>
       )}
@@ -523,6 +577,7 @@ export function TongueController({ game, onAction }) {
   return (
     <main className="controller tt">
       {header}
+      <Coach game={game} coach={TONGUE_COACH} place="controller" />
       <div className="sv-guess-top tt-ctrl-top">
         <p className="player-clue-meta">{turnLabel(game)} · {team?.name}</p>
         {turn.phase === "play" && <StudioClock className="is-small" deadline={turn.deadline} serverNow={game.serverNow} />}
@@ -540,8 +595,9 @@ export function TongueController({ game, onAction }) {
         </>
       )}
       {turn.phase === "done" && turn.results?.length > 0 && <WordList words={resultWords(turn)} />}
-      <button className="wide on" onClick={() => onAction("next")}>{turn.phase === "play" ? "Stop the clock" : turn.phase === "done" ? "Next turn" : turn.phase === "ready" ? "Start their clock" : "Skip ahead"}</button>
-      <div className="sv-round-controls"><button className="chip-btn" onClick={() => onAction("skipTurn")}>Skip this turn</button><button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button></div>
+      {/* After the practice turn, the coach's Start the game button takes over from Next turn. */}
+      {!(game.tutorial && turn.phase === "done") && <button className="wide on" onClick={() => onAction("next")}>{turn.phase === "play" ? "Stop the clock" : turn.phase === "done" ? "Next turn" : turn.phase === "ready" ? "Start their clock" : "Skip ahead"}</button>}
+      {!game.tutorial && <div className="sv-round-controls"><button className="chip-btn" onClick={() => onAction("skipTurn")}>Skip this turn</button><button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button></div>}
       <section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section>
     </main>
   );

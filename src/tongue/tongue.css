@@ -646,3 +646,26 @@ body:has(main.tt) .back-to-settings.is-controller { color: var(--steel); }
   .tt .tt-scores li { padding: 9px 10px; }
   .tt .tt-team-score { font-size: 1.9rem; }
 }
+
+/* ---------- Practice round ---------- */
+/* The coach (src/Tutorial.jsx) as a caption panel on the set: navy glass in a chrome trim, with an amber cue lamp
+   lit at its edge like the ON AIR light. */
+.tt .coach {
+  position: relative;
+  border-left: 0; border-radius: 6px; padding-left: 36px;
+  background: linear-gradient(180deg, var(--tt-navy), var(--tt-glass));
+  box-shadow: 0 0 0 1px #000, 0 0 0 3px var(--tt-chrome-lo), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+.tt .coach::before {
+  content: ""; position: absolute; left: 14px; top: 17px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--tt-amber); box-shadow: 0 0 0 2px #6b4107, 0 0 12px 2px rgb(255 178 46 / 0.55);
+}
+.tt .coach.is-phone, .tt .coach.is-controller { margin-top: 16px; }
+.tt .coach.is-controller { margin-bottom: 18px; }
+.tt .coach-label { color: var(--tt-amber); }
+.tt .coach-text { color: var(--tt-cream); }
+.tt .tutorial-skip-note { color: var(--steel); }
+.tt .tutorial-tally { color: var(--tt-amber-hi); }
+/* The practice turn's three results: the wall keeps its full width, so the screens stay the size of a real turn's. */
+.tt .tt-center > .tt-monitors:not(:has(> :nth-child(4))) { width: 100%; }

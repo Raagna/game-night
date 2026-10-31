@@ -10,6 +10,7 @@ import { useFibSounds } from "./sounds";
 import "./fib.css";
 import Flap, { Money } from "../Flap";
 import { CheckIcon } from "../survey/SurveySays";
+import { Coach } from "../Tutorial";
 
 // ---------- Picking clues ----------
 // Clues come from the built-in Jeopardy archive: a few seasons are loaded at random when setup opens, and
@@ -103,10 +104,10 @@ const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach(
 const LETTERS = "ABCDEFGHIJKL";
 // Mirrors the server's points, so the reveal can say what a choice was worth (votes are public by then).
 const POINTS = { fact: 1000, fooled: 500 };
-const isLast = (game) => game.index >= game.clueCount - 1;
-const roundLabel = (game) => (isLast(game) ? "Final clue" : `Clue ${game.index + 1} of ${game.clueCount}`);
+const isLast = (game) => !game.tutorial && game.index >= game.clueCount - 1;
+const roundLabel = (game) => (game.tutorial ? "Practice clue" : isLast(game) ? "Final clue" : `Clue ${game.index + 1} of ${game.clueCount}`);
 // The phone remembers its own fib for this clue (it survives a reload), so it can leave it out of the vote.
-const fibKey = (game) => `gameNight.fib.mine.${game.code}.${game.index}`;
+const fibKey = (game) => `gameNight.fib.mine.${game.code}.${game.tutorial ? "practice" : game.index}`;
 const readMine = (game) => { try { return sessionStorage.getItem(fibKey(game)) || ""; } catch { return ""; } };
 const writeMine = (game, fib) => { try { sessionStorage.setItem(fibKey(game), fib); } catch {} };
 
@@ -118,8 +119,42 @@ socket.on("fib:secret", (secret) => { lastSecret = secret; secretListeners.forEa
 function useSecret(game) {
   const [secret, setSecret] = useState(lastSecret);
   useEffect(() => { secretListeners.add(setSecret); return () => secretListeners.delete(setSecret); }, []);
-  return secret?.code === game.code && secret.index === game.index ? secret : null;
+  // The practice clue's secret comes with index -1.
+  return secret?.code === game.code && secret.index === (game.tutorial ? -1 : game.index) ? secret : null;
 }
+
+// ---------- Practice round ----------
+// The coach (see docs/tutorial.md): what to do at each step of the practice clue, on the TV, the host controller and
+// the phones. The steps come from the server (practiceStep in server/fib.js): pick, write, vote, reveal, done.
+const fooledPoints = points(POINTS.fooled), factPoints = points(POINTS.fact);
+const FIB_COACH = {
+  pick: {
+    tv: ({ game, name }) => `${name(game.round?.chooserId)} picks a category on their phone. Each clue, a different player gets to choose.`,
+    controller: ({ game, name }) => `${name(game.round?.chooserId)} picks on their phone. If they take too long, tap a category here for them.`,
+    phone: ({ game, me, name }) => game.round?.chooserId === me ? "Your pick! Tap a category. Each clue, a different player gets to choose." : `${name(game.round?.chooserId)} is picking a category. Each clue, a different player gets to choose.`,
+  },
+  write: {
+    tv: "Everyone writes a fib: a fake answer that sounds true, to fool the others. The real answer, or a copy of someone else’s fib, gets turned away.",
+    controller: "You can see the fact and every fib as it comes in. Throw out a rude one and its writer gets to write another.",
+    phone: ({ game, me }) => game.round?.submitted.includes(me) ? "Fib in! In a real game, the more believable it sounds, the more players it fools." : "Write a fake answer that could pass for the real one: something the others might believe.",
+  },
+  vote: {
+    tv: "Your fibs are shuffled in with the real answer (and, in a small game, a house fib or two). Vote for the one you think is the fact. You can’t vote for your own.",
+    controller: "Everyone votes on their phone. End voting now moves on early.",
+    phone: ({ game, me }) => game.round?.voted.includes(me) ? "Vote in. The reveal shows who fell for which fib." : "Which one is real? Tap it. Your own fib is greyed out.",
+  },
+  reveal: {
+    tv: ({ game }) => `The reveal: each fib that fooled someone wins its writer ${fooledPoints} for every player it fooled. The fact comes last: ${factPoints} to each player who found it.${game.hostless ? "" : " The host moves the reveal along."}`,
+    controller: `Tap Next reveal for each choice, then the fact. A fib wins ${fooledPoints} per player it fooled; the fact wins ${factPoints}.`,
+    phone: `Watch the TV. Your fib wins ${fooledPoints} for every player it fools, and finding the fact wins ${factPoints}.`,
+  },
+  done: {
+    tv: ({ game }) => `That’s the practice! Those are the points you would have won, but everyone starts at 0. Points double halfway through and triple on the final clue. ${game.hostless ? "The first clue is coming up." : "The host starts the game."}`,
+    controller: "That’s the practice. Tap Start the game when everyone’s ready.",
+    phone: ({ game }) => `That’s the practice! Everyone starts at 0. ${game.hostless ? "The first clue is coming up." : "The host starts the game."}`,
+    skip: "Start the game",
+  },
+};
 
 // What the clue is waiting for, in a headline and a line of detail.
 function phaseText(game) {
@@ -141,6 +176,7 @@ export function FibSetup({ onCreate }) {
     [loadError, setLoadError] = useState(""),
     [prompts, setPrompts] = useState([]),
     [hostless, setHostless] = useState(false),
+    [practice, setPractice] = useState(true),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -156,7 +192,7 @@ export function FibSetup({ onCreate }) {
   const start = () => {
     setNotice(""); setBusy(true);
     rememberPlayed(prompts.flatMap((prompt) => prompt.choices.map((clue) => clue.id)));
-    onCreate({ game: "fib", prompts: toConfig(prompts), hostless }, (error) => { setBusy(false); setNotice(error); });
+    onCreate({ game: "fib", prompts: toConfig(prompts), hostless, tutorial: practice }, (error) => { setBusy(false); setNotice(error); });
   };
   const ready = pool && prompts.length === length && prompts.every((prompt) => prompt.choices.length);
   const seasons = pool?.seasons || [];
@@ -207,6 +243,10 @@ export function FibSetup({ onCreate }) {
           <label className="game-mode">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a host</b><small>The game runs itself: 15 seconds to pick a category, 50 to write a fib and 25 to vote, and the reveals move on by themselves. With a host, the host controller shows the real answer and every fib as it comes in (so a rude one can be thrown out), and the host moves the reveals along.</small></span>
+          </label>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>One easy practice clue before the game, with tips on the TV and every phone: picking a category, writing a fib, voting for the fact and how the points work. Nothing scores. {hostless ? "Players can vote to skip it." : "The host can skip it."}</small></span>
           </label>
         </section>
         <div className="final-row">
@@ -433,7 +473,8 @@ function Lobby({ game, onAction }) {
 function Stage({ game, onAction }) {
   const round = game.round, { title, detail } = phaseText(game);
   const landed = useLanded(round.phase === "reveal" ? round.reveal.at(-1) : null);
-  const next = !game.hostless && (round.phase === "reveal" || round.phase === "scores");
+  // After the practice clue's scores, the coach's Start the game button takes over from Next.
+  const next = !game.hostless && (round.phase === "reveal" || (round.phase === "scores" && !game.tutorial));
   return (
     <div className={`fib-center is-${round.phase}`}>
       <RoundMeta game={game} />
@@ -444,7 +485,7 @@ function Stage({ game, onAction }) {
         </>
       ) : round.phase === "scores" ? (
         <>
-          <h1 className="fib-headline">{isLast(game) ? "Final scores" : "Scores"}</h1>
+          <h1 className="fib-headline">{game.tutorial ? "What you would have won" : isLast(game) ? "Final scores" : "Scores"}</h1>
           <ClueScores game={game} />
         </>
       ) : (
@@ -460,7 +501,7 @@ function Stage({ game, onAction }) {
         </>
       )}
       {next && <button className="primary sv-next" onClick={() => onAction("next")}>{round.phase === "scores" ? (isLast(game) ? "See final scores" : "Next clue") : "Next"}</button>}
-      {game.hostless && round.phase === "scores" && <p className="muted">{isLast(game) ? "Final scores" : "The next clue"} will appear in a few seconds.</p>}
+      {game.hostless && round.phase === "scores" && <p className="muted">{isLast(game) ? "Final scores" : game.tutorial ? "The first clue" : "The next clue"} will appear in a few seconds.</p>}
     </div>
   );
 }
@@ -478,6 +519,7 @@ export function FibDisplay({ game, onAction }) {
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={round && round.phase !== "scores" ? round.deadline : null} serverNow={game.serverNow} />
       </header>
+      <Coach game={game} coach={FIB_COACH} place="tv" />
       {game.status === "lobby" || !round ? <Lobby game={game} onAction={onAction} /> : (
         <div className="fib-stage">
           <Stage game={game} onAction={onAction} />
@@ -487,7 +529,7 @@ export function FibDisplay({ game, onAction }) {
       {game.hostless && game.players.length > 0 && (
         <details className="host-tools sv-host-tools">
           <summary>Host tools</summary>
-          {round && game.status === "playing" && <ClueControls game={game} onAction={onAction} />}
+          {round && game.status === "playing" && !game.tutorial && <ClueControls game={game} onAction={onAction} />}
           <PlayerTools game={game} onAction={onAction} />
         </details>
       )}
@@ -565,14 +607,15 @@ function VoteList({ game, playerId }) {
 // How this clue went for this player, once the scores are up.
 function MyResult({ game, playerId }) {
   const award = game.round.awards?.[playerId], place = ranked(game).findIndex((player) => player.id === playerId) + 1;
-  const lines = [];
-  if (award?.fact) lines.push(`You found the fact: +${points(award.fact)}`);
-  if (award?.fooledIds?.length) lines.push(`Your fib fooled ${names(game, award.fooledIds)}: +${points(award.fooled)}`);
-  if (!lines.length) lines.push("No points this time.");
+  // In the practice these are the points they would have won: nothing scores.
+  const lines = [], real = game.tutorial ? " in a real game" : "";
+  if (award?.fact) lines.push(`You found the fact: +${points(award.fact)}${real}`);
+  if (award?.fooledIds?.length) lines.push(`Your fib fooled ${names(game, award.fooledIds)}: +${points(award.fooled)}${real}`);
+  if (!lines.length) lines.push(game.tutorial ? "No points on this one. In a real game, try a fib that sounds more like the truth!" : "No points this time.");
   return (
     <div className="fib-my-result">
       {lines.map((line) => <p key={line} className="player-status">{line}</p>)}
-      <p className="muted">You’re in {ordinal(place)} place.</p>
+      {!game.tutorial && <p className="muted">You’re in {ordinal(place)} place.</p>}
     </div>
   );
 }
@@ -614,6 +657,7 @@ export function FibPlayer({ game, playerId }) {
         <span className="player-name">{player.name}</span>
       </header>
       <div className="fib-my-score"><span>Your score</span><Money value={points(player.score)} /></div>
+      <Coach game={game} coach={FIB_COACH} place="phone" playerId={playerId} />
       {game.status === "lobby" || !round ? <p className="player-status">You’re in! The game starts when everyone’s here.</p> : (
         <>
           <p className="player-clue-meta">{roundLabel(game)}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]}` : ""}</p>
@@ -644,9 +688,12 @@ export function FibController({ game, onAction }) {
     );
   const { title, detail } = phaseText(game);
   const nextLabel = { pick: "Pick for them at random", write: "End writing now", vote: "End voting now", reveal: "Next reveal", scores: isLast(game) ? "See final scores" : "Next clue" }[round.phase];
+  // After the practice clue's scores, the coach's Start the game button takes over from Next.
+  const practiceDone = game.tutorial && round.phase === "scores";
   return (
     <main className="controller fib">
       {header}
+      <Coach game={game} coach={FIB_COACH} place="controller" />
       <p className="player-clue-meta">{roundLabel(game)}{MULTIPLIER_NAME[game.multiplier] ? ` · ${MULTIPLIER_NAME[game.multiplier]}` : ""}</p>
       <div className="sv-ctrl-status" role="status"><b>{title}</b>{detail && <span>{detail}</span>}</div>
       {round.phase === "pick" && (
@@ -674,8 +721,8 @@ export function FibController({ game, onAction }) {
         </section>
       )}
       {round.phase === "scores" && <ClueScores game={game} />}
-      <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>
-      <ClueControls game={game} onAction={onAction} />
+      {!practiceDone && <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>}
+      {!game.tutorial && <ClueControls game={game} onAction={onAction} />}
       <section className="controller-players"><h2>Players</h2><PlayerTools game={game} onAction={onAction} /></section>
     </main>
   );
