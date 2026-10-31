@@ -1,19 +1,21 @@
 // Word Budget screens: host setup, the shared TV display, players' phones, the host controller and the end.
-// The card's five words only ever reach the two clue-givers' phones and the host controller (budget:card); the TV
-// shows the bidding, the words-left board, the clock and each word once it's been said.
+// The card's five words only ever reach the phones that need them and the host controller (budget:card); the TV
+// shows the bidding, the budget, the clock and each word once it's been said.
+//
+// Word Budget has its own look, a party card game on a TV set rather than the house departure board: bold paper
+// word cards with ink outlines on a cobalt stage, a yellow price tag for the bid, a budget meter of word pips and a
+// ring clock. Everything is drawn here and in budget.css; no flaps.
 import React, { useEffect, useRef, useState } from "react";
-import { socket, ClueTimer } from "../shared";
-import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
+import { socket } from "../shared";
+import { QRCode, useJoinBase, joinLink, displayAddress } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import { useSound, setMuted, isMuted, useEventSounds, playWinnersTune, playBuzz, playDing, playRoundWon, playTick } from "../survey/sounds";
 import { useClockTicks, playBlip, playSoClose } from "../wheel/sounds";
 import { playClue, playPop } from "../fib/sounds";
-import { SwapIcon } from "../survey/SurveySays";
 import { repeatHostTap } from "../../server/taps.js";
-import { standings } from "../../server/budget.js";
+import { standings, BUDGET_TIMES } from "../../server/budget.js";
 import WORDS from "../tongue/words.json";
 import "./budget.css";
-import Flap, { Brand, Money } from "../Flap";
 
 // ---------- Dealing the words ----------
 const CARD_SIZE = 5, START_BID = 25;
@@ -35,6 +37,8 @@ const SCORING = {
   cards: { label: "Most cards", note: "First team to the target number of cards wins. Saved words break a tie." },
   points: { label: "Points", note: "A card is worth 10 and every saved word 1. First team to 10 × the target wins." },
 };
+const secs = (ms) => Math.round(ms / 1000);
+const PHASE_MS = { peek: BUDGET_TIMES.peekMs, bid: BUDGET_TIMES.bidMs, play: BUDGET_TIMES.playMs, steal: BUDGET_TIMES.stealMs, done: BUDGET_TIMES.doneMs };
 
 // ---------- Small helpers ----------
 const nameOf = (game, id) => game.players.find((p) => p.id === id)?.name || "Nobody";
@@ -47,13 +51,16 @@ const leaderOf = (game) => game.teams.find((team) => progress(game, team) >= gam
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const clearPlayerSession = () => ["playerId", "gameCode", "playerName"].forEach((key) => sessionStorage.removeItem(key));
 const STATUS = { got: "Got it", stolen: "Stolen", missed: "Missed", waiting: "" };
-const Check = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-const XIcon = () => <svg className="tt-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+const Check = () => <svg className="wb-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const XIcon = () => <svg className="wb-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" /></svg>;
+const SwapIcon = () => <svg className="wb-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const left = (turn) => turn.marks.filter((m) => m === "waiting").length;
 const scoreLine = (game, team) => (game.scoring === "points" ? `${team.points} pts` : plural(team.cards, "card"));
+const teamIndex = (game, id) => Math.max(0, game.teams.findIndex((t) => t.id === id));
+const teamClass = (game, id) => `wb-team-${teamIndex(game, id)}`;
 
-// The card's words for whoever may see them (the clue-givers, the judge or a host controller), fetched for each
-// new card and whenever this phone gains or loses the right to see it.
+// The card's words for whoever may see them (the clue-givers, the judge without a host, or a host controller),
+// fetched for each new card and whenever this phone gains or loses the right to see it.
 function useCard(game, playerId, allowed) {
   const [card, setCard] = useState(null), id = game.turn?.id;
   useEffect(() => {
@@ -87,6 +94,98 @@ function useTvSounds(game) {
   });
 }
 
+// ---------- The look's pieces ----------
+// The wordmark: WORD in paper letters, BUDGET on a yellow price tag.
+const Logo = ({ className = "" }) => (
+  <span className={"wb-logo " + className} role="img" aria-label="Word Budget">
+    <span className="wb-logo-word" aria-hidden="true">Word</span>
+    <span className="wb-logo-tag" aria-hidden="true">Budget</span>
+  </span>
+);
+// Time left on a server deadline, ticking four times a second.
+function useRemaining(deadline, serverNow) {
+  const [remaining, setRemaining] = useState(null);
+  useEffect(() => {
+    if (!deadline) { setRemaining(null); return; }
+    const startedAt = Date.now(), start = Math.max(0, deadline - serverNow);
+    const update = () => setRemaining(Math.max(0, start - (Date.now() - startedAt)));
+    update(); const timer = setInterval(update, 250);
+    return () => clearInterval(timer);
+  }, [deadline, serverNow]);
+  return deadline ? remaining : null;
+}
+const clockText = (s) => (s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : String(s));
+// The clock: a ring that empties as the time runs out, the seconds in the middle. Red with a pulse in the last five.
+function Clock({ deadline, serverNow, total, label, className = "" }) {
+  const ms = useRemaining(deadline, serverNow);
+  if (ms == null) return null;
+  const s = Math.ceil(ms / 1000), frac = total ? Math.max(0, Math.min(1, ms / total)) : 1;
+  return (
+    <div className={"wb-clock" + (s <= 5 ? " is-low" : "") + (s >= 60 ? " is-long" : "") + (className ? ` ${className}` : "")} role="timer" aria-label={`${label ? `${label}: ` : ""}${s} seconds left`}>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle className="wb-clock-track" cx="50" cy="50" r="43" />
+        <circle className="wb-clock-fill" cx="50" cy="50" r="43" pathLength="100" strokeDasharray={`${(frac * 100).toFixed(2)} 100`} />
+      </svg>
+      <b aria-hidden="true">{clockText(s)}</b>
+      {label && <small aria-hidden="true">{label}</small>}
+    </div>
+  );
+}
+const PhaseClock = ({ game, label, className }) => <Clock deadline={game.turn?.deadline} serverNow={game.serverNow} total={PHASE_MS[game.turn?.phase]} label={label} className={className} />;
+// A team's number in a sticker dot of its colour, so teams are told apart by more than colour.
+const TeamDot = ({ game, team }) => <span className={`wb-dot ${teamClass(game, team?.id)}`} aria-hidden="true">{teamIndex(game, team?.id) + 1}</span>;
+// The bid on a price tag: the number big, who holds it underneath.
+function BidTag({ game, turn, size = "" }) {
+  const leader = teamById(game, turn.bid?.teamId);
+  return (
+    <div className={"wb-bidtag" + (leader ? ` ${teamClass(game, leader.id)}` : " is-idle") + (size ? ` is-${size}` : "")} role="status" aria-label={leader ? `${leader.name} bids ${turn.bid.amount} words` : `No bids yet: ${teamById(game, turn.starterId)?.name} takes it at ${START_BID}`}>
+      <span className="wb-bidtag-kicker" aria-hidden="true">{leader ? <><TeamDot game={game} team={leader} />{leader.name} can do it in</> : "Nobody has bid"}</span>
+      <b aria-hidden="true">{turn.bid?.amount ?? START_BID}</b>
+      <span className="wb-bidtag-unit" aria-hidden="true">{leader ? "words" : `${teamById(game, turn.starterId)?.name} takes it at ${START_BID}`}</span>
+    </div>
+  );
+}
+// The budget: words left big, then a pip for every word in the budget, crossed out as each clue word is counted.
+// Over budget it goes red with an X, and the extra words show as red pips.
+function BudgetMeter({ turn, size = "" }) {
+  const over = turn.used > turn.budget, rest = Math.max(0, turn.budget - turn.used);
+  return (
+    <div className={"wb-budget" + (over ? " is-over" : rest === 0 ? " is-last" : "") + (size ? ` is-${size}` : "")} role="status" aria-label={over ? `Over budget: ${turn.used} words of ${turn.budget}` : `${rest} words left of ${turn.budget}`}>
+      <span className="wb-budget-label" aria-hidden="true">{over ? "Over budget" : "Words left"}</span>
+      <b className="wb-budget-num" aria-hidden="true">{over && <XIcon />}{over ? turn.used : rest}</b>
+      <span className="wb-budget-sub" aria-hidden="true">{turn.used} of {turn.budget} said</span>
+      <span className="wb-pips" aria-hidden="true">
+        {Array.from({ length: Math.max(turn.budget, turn.used) }, (_, i) => <i key={i} className={i >= turn.budget ? "is-over" : i < turn.used ? "is-used" : ""} />)}
+      </span>
+    </div>
+  );
+}
+// The card: five words on a paper card. words: the text for each slot (null for a word the viewer can't see yet).
+// onTap makes each word a key; locked(mark) says which keys don't take taps. compact: slimmer rows (while bidding).
+function WordCard({ words, marks, onTap, locked = () => false, tapHint = "Tap", size = "", compact = false, label = "The card", loading = false }) {
+  return (
+    <ol className={"wb-card" + (size ? ` is-${size}` : "") + (compact ? " is-compact" : "") + (onTap ? " is-keys" : "")} aria-label={label}>
+      {marks.map((mark, i) => {
+        const word = words?.[i], hidden = !word;
+        const tag = STATUS[mark] || (onTap && !locked(mark) ? tapHint : "");
+        const inner = (
+          <>
+            <span className="wb-word-badge" aria-hidden="true">{mark === "got" || mark === "stolen" ? <Check /> : mark === "missed" ? <XIcon /> : i + 1}</span>
+            <span className="wb-word-text">{hidden ? <span className="wb-word-blank">{loading ? "Loading…" : <span className="sr-only">Not said yet</span>}</span> : word}</span>
+            {tag ? <em>{tag}</em> : null}
+          </>
+        );
+        return (
+          <li key={`${i}-${mark}-${hidden ? "h" : "s"}`} className={`wb-word is-${mark}` + (hidden ? " is-hidden" : "")}>
+            {onTap ? <button type="button" className="wb-word-row" disabled={locked(mark)} onClick={() => onTap(i)}>{inner}</button> : <div className="wb-word-row">{inner}</div>}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+const blankMarks = Array(CARD_SIZE).fill("waiting");
+
 // ---------- Setup ----------
 export function BudgetSetup({ onCreate }) {
   const [cardsToWin, setCardsToWin] = useState(() => Number(read(CARDS_KEY, ["5", "7", "10"], "10"))),
@@ -104,59 +203,55 @@ export function BudgetSetup({ onCreate }) {
     onCreate({ game: "budget", words: dealWords(chosen), cardsToWin, scoring, hostless }, (e) => { setBusy(false); setNotice(e); });
   };
   return (
-    <main className="setup wb-setup">
+    <main className="wb-setup">
       <BackToHub />
-      <Brand text="WORD BUDGET" className="wb-brand" />
-      <section className="setup-card">
-        <div className="setup-top">
-          <div>
-            <h1>Set up Word Budget</h1>
-            <p className="muted">Two teams. Both clue-givers see a card of five words, then bid down from 25: “we can get all five in 14 words.” The lowest bid plays, and the other clue-giver counts every word they say.</p>
-          </div>
-        </div>
-        <fieldset className="sv-fieldset tt-fieldset">
+      <Logo className="is-setup" />
+      <section className="wb-setup-card">
+        <h1>Set up Word Budget</h1>
+        <p className="wb-lede">Two teams. Both clue-givers get {secs(BUDGET_TIMES.peekMs)} seconds with a card of five words, then bid down from 25: “we can get all five in 14 words.” The lowest bid has {secs(BUDGET_TIMES.playMs)} seconds to get there, and every clue word counts.</p>
+        <fieldset className="wb-field">
           <legend>Cards to win</legend>
-          <div className="pc-choices" role="radiogroup" aria-label="Cards to win">
-            {[5, 7, 10].map((n) => <button key={n} role="radio" aria-checked={cardsToWin === n} onClick={() => { setCardsToWin(n); remember(CARDS_KEY, String(n)); }}>{n} cards</button>)}
+          <div className="wb-choices" role="radiogroup" aria-label="Cards to win">
+            {[5, 7, 10].map((n) => <button key={n} type="button" role="radio" aria-checked={cardsToWin === n} onClick={() => { setCardsToWin(n); remember(CARDS_KEY, String(n)); }}>{n} cards</button>)}
           </div>
-          <p className="muted sv-hint">About two minutes a card. Five cards is a short game; ten is the classic length.</p>
+          <p className="wb-hint">About three minutes a card. Five cards is a short game; ten is the classic length.</p>
         </fieldset>
-        <fieldset className="sv-fieldset tt-fieldset">
+        <fieldset className="wb-field">
           <legend>Winning</legend>
-          <div className="pc-choices" role="radiogroup" aria-label="Winning">
-            {Object.entries(SCORING).map(([id, { label }]) => <button key={id} role="radio" aria-checked={scoring === id} onClick={() => { setScoring(id); remember(SCORING_KEY, id); }}>{label}</button>)}
+          <div className="wb-choices" role="radiogroup" aria-label="Winning">
+            {Object.entries(SCORING).map(([id, { label }]) => <button key={id} type="button" role="radio" aria-checked={scoring === id} onClick={() => { setScoring(id); remember(SCORING_KEY, id); }}>{label}</button>)}
           </div>
-          <p className="muted sv-hint">{SCORING[scoring].note}</p>
+          <p className="wb-hint">{SCORING[scoring].note}</p>
         </fieldset>
-        <fieldset className="sv-fieldset tt-fieldset tt-cats-field">
+        <fieldset className="wb-field">
           <legend>Word categories</legend>
-          <p className="muted sv-hint">Each card is five random words from the categories you leave on, mixed together. Players never see a category.</p>
-          <div className="tt-cats-tools">
-            <button className="chip-btn" onClick={() => choose(ALL_CATEGORIES)} disabled={chosen.length === ALL_CATEGORIES.length}>All</button>
-            <button className="chip-btn" onClick={() => choose([])} disabled={!chosen.length}>None</button>
-            <span className="muted">{chosen.length} of {ALL_CATEGORIES.length} on · {wordCount} words</span>
+          <p className="wb-hint">Each card is five random words from the categories you leave on, mixed together. Players never see a category.</p>
+          <div className="wb-cats-tools">
+            <button type="button" className="wb-chip" onClick={() => choose(ALL_CATEGORIES)} disabled={chosen.length === ALL_CATEGORIES.length}>All</button>
+            <button type="button" className="wb-chip" onClick={() => choose([])} disabled={!chosen.length}>None</button>
+            <span>{chosen.length} of {ALL_CATEGORIES.length} on · {wordCount} words</span>
           </div>
-          <div className="tt-cats" role="group" aria-label="Word categories">
-            {ALL_CATEGORIES.map((name) => <button key={name} role="checkbox" aria-checked={chosen.includes(name)} onClick={() => toggle(name)}>{name}</button>)}
+          <div className="wb-cats" role="group" aria-label="Word categories">
+            {ALL_CATEGORIES.map((name) => <button key={name} type="button" role="checkbox" aria-checked={chosen.includes(name)} onClick={() => toggle(name)}>{name}</button>)}
           </div>
-          {!enough && <p className="notice" role="alert">Turn on categories with at least {CARD_SIZE * 2} words between them.</p>}
+          {!enough && <p className="wb-notice" role="alert">Turn on categories with at least {CARD_SIZE * 2} words between them.</p>}
         </fieldset>
-        <section className="game-options" aria-labelledby="wb-options-title">
-          <h2 id="wb-options-title">Game options</h2>
-          <label className="game-mode">
+        <section className="wb-field" aria-labelledby="wb-options-title">
+          <h2 id="wb-options-title" className="wb-legend">Game options</h2>
+          <label className="wb-option">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
-            <span><b>Play without a host</b><small>The judge and clue-giver run each card from their phones, and the game moves on by itself. With a host, the controller sees every card and can count, mark words, call a no-no or give a card to either team.</small></span>
+            <span><b>Play without a host</b><small>The team that isn’t guessing keeps track: the other clue-giver counts every clue word, checks off each word said and calls no-nos from their phone, and the game moves on by itself. With a host, the host does all of that from the controller, and phones only bid.</small></span>
           </label>
-          <label className="game-mode">
+          <label className="wb-option">
             <input type="checkbox" checked={sound} onChange={(e) => { setSound(e.target.checked); setMuted(!e.target.checked); }} />
             <span><b>Sound on the TV</b><small>A tick for every word counted, a ding for every word guessed, a buzzer for a no-no or a blown budget. You can switch it off on the TV any time.</small></span>
           </label>
         </section>
-        <div className="final-row">
-          <p className="muted start-summary">First to {scoring === "points" ? `${cardsToWin * 10} points` : `${cardsToWin} cards`} · two teams of two or more · up to 16 players</p>
-          <button className="primary" disabled={busy || !enough} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
+        <div className="wb-setup-go">
+          <p>First to {scoring === "points" ? `${cardsToWin * 10} points` : `${cardsToWin} cards`} · two teams of two or more · up to 16 players</p>
+          <button className="wb-btn is-go" disabled={busy || !enough} onClick={start}>{busy ? "Creating…" : "Create lobby"}</button>
         </div>
-        {notice && <p className="notice" role="alert">{notice}</p>}
+        {notice && <p className="wb-notice" role="alert">{notice}</p>}
       </section>
     </main>
   );
@@ -172,135 +267,114 @@ const SpeakerIcon = ({ off }) => (
 );
 function SoundToggle() {
   const [muted, toggle, waiting] = useSound();
-  return <button className="sv-sound" aria-pressed={!muted} onClick={toggle}><SpeakerIcon off={muted} />{muted ? "Sound off" : waiting ? "Click for sound" : "Sound on"}</button>;
+  return <button className="sv-sound wb-rail-btn" aria-pressed={!muted} onClick={toggle}><SpeakerIcon off={muted} />{muted ? "Sound off" : waiting ? "Click for sound" : "Sound on"}</button>;
 }
-const teamIndex = (game, id) => Math.max(0, game.teams.findIndex((t) => t.id === id));
-// A team's number on its quiet colour (never red), so the two teams are told apart by more than colour.
-const TeamNum = ({ game, team }) => <span className={`sv-team-num team-${teamIndex(game, team?.id)}`} aria-hidden="true">{teamIndex(game, team?.id) + 1}</span>;
-// Cards won as a row of square markers toward the target, filled as they're won (points mode shows the total).
-function CardLamps({ game, team }) {
+// Cards won as a row of card-shaped pips toward the target (points mode shows the total only).
+function CardPips({ game, team }) {
   if (game.scoring === "points") return null;
   return (
-    <span className="wb-lamps" role="img" aria-label={`${plural(team.cards, "card")} of ${game.target}`}>
-      {Array.from({ length: game.target }, (_, i) => <i key={i} className={i < team.cards ? "is-lit" : ""} />)}
+    <span className="wb-cardpips" role="img" aria-label={`${plural(team.cards, "card")} of ${game.target}`}>
+      {Array.from({ length: game.target }, (_, i) => <i key={i} className={i < team.cards ? "is-won" : ""} />)}
     </span>
   );
 }
 function Scoreboard({ game }) {
   const turn = game.turn;
   return (
-    <section className="wb-scores" aria-label="Scores">
-      <h2 className="label">First to {game.scoring === "points" ? `${game.target} points` : plural(game.target, "card")}</h2>
-      <ol>
-        {game.teams.map((team) => {
-          const playing = turn?.control === team.id && turn.phase === "play", stealing = turn?.stealTeamId === team.id && turn.phase === "steal";
-          return (
-            <li key={team.id} className={`team-${teamIndex(game, team.id)}` + (playing || stealing ? " is-turn" : "")}>
-              <span className="tt-team-head"><TeamNum game={game} team={team} /><b>{team.name}</b></span>
-              <Money className="wb-team-score" value={progress(game, team)} cells={2} />
-              <CardLamps game={game} team={team} />
-              <small>{names(game, team.members)}</small>
-              <small className="wb-saved">{game.scoring === "points" ? `${plural(team.cards, "card")} · ` : ""}{plural(team.bonus, "word")} saved</small>
-              {(playing || stealing) && <em className="tt-playing">{stealing ? "Stealing" : "Playing"}</em>}
-            </li>
-          );
-        })}
-      </ol>
+    <section className="wb-teams" aria-label="Scores">
+      <h2 className="wb-kicker">First to {game.scoring === "points" ? `${game.target} points` : plural(game.target, "card")}</h2>
+      {game.teams.map((team) => {
+        const playing = turn?.control === team.id && turn.phase === "play", stealing = turn?.stealTeamId === team.id && turn.phase === "steal";
+        return (
+          <article key={team.id} className={`wb-team ${teamClass(game, team.id)}` + (playing || stealing ? " is-turn" : "")}>
+            <header><TeamDot game={game} team={team} /><b>{team.name}</b>{(playing || stealing) && <em>{stealing ? "Stealing" : "Playing"}</em>}</header>
+            <p className="wb-team-score"><b>{progress(game, team)}</b><span>{game.scoring === "points" ? "points" : team.cards === 1 ? "card" : "cards"}</span></p>
+            <CardPips game={game} team={team} />
+            <small>{names(game, team.members)}</small>
+            <small className="wb-saved">{game.scoring === "points" ? `${plural(team.cards, "card")} · ` : ""}{plural(team.bonus, "word")} saved</small>
+          </article>
+        );
+      })}
     </section>
-  );
-}
-// The card's five rows: blank cells until a word is said (the text arrives in the public state only then).
-function Slots({ turn, compact = false }) {
-  const done = turn.phase === "done";
-  return (
-    <ol className={"tt-board wb-slots" + (compact ? " is-compact" : "")} aria-label="The card">
-      {turn.marks.map((mark, i) => (
-        <li key={i} className={`tt-row is-${mark}`}>
-          <span className="tt-mark">{(mark === "got" || mark === "stolen") && <Check />}</span>
-          <span className="tt-row-word">{turn.slots[i] ? <Flap text={turn.slots[i]} wrap intro /> : <Flap text="" cells={9} label="Not said yet" />}</span>
-          {done && STATUS[mark] ? <em>{STATUS[mark]}</em> : <em aria-hidden="true" />}
-        </li>
-      ))}
-    </ol>
   );
 }
 function resultLine(game, turn) {
   const r = turn.result, winner = teamById(game, r?.winnerId), control = teamById(game, turn.control), steal = teamById(game, turn.stealTeamId);
   if (!r) return { head: "", sub: "" };
   if (r.reason === "cleared") return { head: `${winner.name} wins the card!`, sub: !turn.used ? `All five without a single clue word: ${plural(r.bonus, "word")} saved.` : r.bonus ? `All five in ${turn.used} of ${turn.budget} words: ${plural(r.bonus, "word")} saved.` : `All five, right on budget at ${turn.budget} words.` };
-  if (r.reason === "nono") return { head: `No-no! The card goes to ${winner.name}.`, sub: `${nameOf(game, turn.judgeId)} called it on ${nameOf(game, turn.clueGiverId)}.` };
+  if (r.reason === "nono") return { head: `No-no! The card goes to ${winner.name}.`, sub: `${game.hostless ? nameOf(game, turn.judgeId) : "The host"} called it on ${nameOf(game, turn.clueGiverId)}.` };
   const why = r.failReason === "time" ? `${control?.name} ran out of time` : `${control?.name} went over budget (${turn.used} words of ${turn.budget})`;
   if (r.reason === "stolen") return { head: `${winner.name} steals the card!`, sub: `${why}, and ${winner.name} said every word left.` };
   if (r.reason === "stealMissed") return { head: "Nobody gets the card", sub: `${why}, and ${steal?.name} couldn’t steal it.` };
   return { head: winner ? `The host gives the card to ${winner.name}` : "The host voids the card", sub: "" };
 }
-// What went wrong (red, with an X cell) or right (the lamp) on a card.
-function ResultTags({ turn }) {
+// What went wrong (red, with an X) or right (green, with a check) on a card.
+function ResultTags({ turn, inline = false }) {
   const r = turn.result;
   if (!r) return null;
   const failed = r.failReason && ["stolen", "stealMissed"].includes(r.reason);
+  const Wrap = inline ? React.Fragment : "p";
   return (
-    <p className="wb-tags">
+    <Wrap {...(inline ? {} : { className: "wb-tags" })}>
       {r.reason === "nono" && <span className="wb-tag is-bad"><XIcon />No-no</span>}
       {failed && <span className="wb-tag is-bad"><XIcon />{r.failReason === "time" ? "Out of time" : "Over budget"}</span>}
       {r.reason === "stolen" && <span className="wb-tag is-good"><Check />Stolen</span>}
       {r.reason === "stealMissed" && <span className="wb-tag is-bad"><XIcon />Steal missed</span>}
       {r.reason === "cleared" && <span className="wb-tag is-good"><Check />Cleared{r.bonus ? ` · ${plural(r.bonus, "word")} saved` : ""}</span>}
-    </p>
+    </Wrap>
   );
 }
-// The words meter: how many of the budget are left (or, once it's blown, red with an X), and how many were said.
-function WordsMeter({ turn }) {
-  const over = turn.used > turn.budget, rest = Math.max(0, turn.budget - turn.used);
+// Who keeps track of the words on this card, for the screens' instructions.
+const trackerLine = (game, turn) => (game.hostless ? `${nameOf(game, turn.judgeId)} counts every word and checks them off` : "The host counts every word and checks them off");
+
+// ---------- Shared TV display ----------
+function JoinCorner({ code }) {
+  const base = useJoinBase();
   return (
-    <div className={"tt-meter wb-meter" + (over ? " is-over" : "")} role="status" aria-label={over ? `Over budget: ${turn.used} words of ${turn.budget}` : `${rest} words left of ${turn.budget}`}>
-      <span className="label">{over ? "Over budget" : "Words left"}</span>
-      <span className="wb-meter-main">{over && <span className="wb-x-cell"><XIcon /></span>}<Flap text={String(over ? turn.used : rest)} cells={2} align="right" /></span>
-      <span className="wb-meter-sub"><span className="label">Said</span><Flap text={String(turn.used)} /><span className="label">of</span><Flap text={String(turn.budget)} /></span>
+    <div className="wb-joincorner">
+      <QRCode value={joinLink(base, code)} label={`QR code to join game ${code}`} className="wb-qr-small" />
+      <span>Join at <b>{displayAddress(base)}</b><span className="wb-code is-small" aria-label={`code ${code.split("").join(" ")}`}>{code.split("").map((c, i) => <i key={i} aria-hidden="true">{c}</i>)}</span></span>
     </div>
   );
 }
-
-// ---------- Shared TV display ----------
 function Lobby({ game, onAction }) {
+  const base = useJoinBase();
   const connected = (id) => game.players.find((p) => p.id === id)?.connected;
   const ready = game.teams.every((team) => team.members.filter(connected).length >= 2);
   const smaller = [...game.teams].sort((a, b) => a.members.length - b.members.length)[0];
   return (
-    <div className="lobby wb-lobby">
-      <h1>Join the game</h1>
-      <LobbyJoin code={game.code} />
-      <Departures
-        head={["Player", "Team", "Status"]}
-        cols="1fr 0.8fr 0.5fr"
-        rows={game.teams.flatMap((team) => team.members.map((id) => ({
-          key: id,
-          state: connected(id) ? "ready" : "away",
-          label: `${nameOf(game, id)}, ${team.name}, ${connected(id) ? "ready" : "reconnecting"}`,
-          cells: [
-            <button type="button" onClick={() => onAction("movePlayer", { playerId: id, teamId: otherTeam(game, team.id).id })} aria-label={`Move ${nameOf(game, id)} to ${otherTeam(game, team.id).name}`}>{nameOf(game, id)}<SwapIcon /></button>,
-            <><TeamNum game={game} team={team} />{team.name}</>,
-            connected(id) ? "Ready" : "Away",
-          ],
-        })))}
-        openCells={game.players.length < 16 ? ["— — —", smaller?.name || "Either", "Waiting"] : null}
-      />
-      <p className="muted">New players join the smaller team. Tap a name to move them to the other team.</p>
-      <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
-      {!ready && <p className="muted">Each team needs at least two players.</p>}
-    </div>
-  );
-}
-function BidBoard({ game }) {
-  const turn = game.turn, leader = teamById(game, turn.bid?.teamId), starter = teamById(game, turn.starterId);
-  return (
-    <div className="tt-meters wb-bidboard">
-      <div className={"tt-meter wb-bid" + (leader ? "" : " is-idle")} role="status" aria-label={leader ? `${leader.name} bids ${turn.bid.amount} words` : `No bids yet, ${START_BID}`}>
-        <span className="label">{leader ? <>{leader.name} can do it in</> : "Nobody has bid"}</span>
-        <Flap text={String(turn.bid?.amount ?? START_BID)} cells={2} align="right" />
-        <span className="wb-meter-note">{leader ? `words · ${nameOf(game, turn.bid && turn.givers[turn.bid.teamId])}` : `${starter?.name} takes it at ${START_BID} if nobody bids`}</span>
+    <div className="wb-lobby">
+      <div className="wb-join">
+        <div className="wb-join-code">
+          <h1 className="wb-kicker">Join the game</h1>
+          <span className="wb-code" aria-label={`Room code ${game.code.split("").join(" ")}`}>{game.code.split("").map((c, i) => <i key={i} aria-hidden="true" style={{ "--i": i }}>{c}</i>)}</span>
+          <p>Scan the code, or open <b>{displayAddress(base)}</b> on your phone and key in the room code.</p>
+        </div>
+        <figure className="wb-qr">
+          <QRCode value={joinLink(base, game.code)} label={`QR code to join game ${game.code}`} />
+          <figcaption>Scan to join</figcaption>
+        </figure>
       </div>
-      <div className="tt-meter wb-shot"><span className="label">Shot clock</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
+      <div className="wb-lobby-teams">
+        {game.teams.map((team) => (
+          <section key={team.id} className={`wb-lobby-team ${teamClass(game, team.id)}`} aria-label={team.name}>
+            <h2><TeamDot game={game} team={team} />{team.name}<small>{plural(team.members.length, "player")}</small></h2>
+            <ul>
+              {team.members.map((id) => (
+                <li key={id} className={connected(id) ? "" : "is-away"}>
+                  <button type="button" onClick={() => onAction("movePlayer", { playerId: id, teamId: otherTeam(game, team.id).id })} aria-label={`${nameOf(game, id)}${connected(id) ? "" : " (reconnecting)"}: move to ${otherTeam(game, team.id).name}`}>
+                    <span>{nameOf(game, id)}</span>{!connected(id) && <small>Away</small>}<SwapIcon />
+                  </button>
+                </li>
+              ))}
+              {team === smaller && game.players.length < 16 && <li className="is-open"><span>Next to join</span></li>}
+            </ul>
+          </section>
+        ))}
+      </div>
+      <p className="wb-note">New players join the smaller team. Tap a name to move them to the other team.</p>
+      <button className="wb-btn is-go wb-start" disabled={!ready} onClick={() => onAction("start")}>Start game</button>
+      {!ready && <p className="wb-note">Each team needs at least two players.</p>}
     </div>
   );
 }
@@ -308,43 +382,59 @@ function Stage({ game, onAction }) {
   const turn = game.turn, control = teamById(game, turn.control), steal = teamById(game, turn.stealTeamId);
   const passed = turn.passes.map((id) => teamById(game, id)?.name);
   const won = leaderOf(game);
-  const phaseName = turn.phase === "peek" ? "Look" : turn.phase === "bid" ? "Bidding" : turn.phase === "play" ? control?.name : turn.phase === "steal" ? "Steal" : "Result";
+  const phaseName = { peek: "Look", bid: "Bidding", play: "Clue it", steal: "Steal", done: "Result" }[turn.phase];
   return (
-    <div className="tt-center wb-center">
-      <p className="tt-round-label"><Flap text={`Card ${turn.number}`} /><span className="tt-round-team">{turn.phase === "play" && control && <TeamNum game={game} team={control} />}{phaseName}</span></p>
+    <div className={`wb-center is-${turn.phase}`}>
+      <div className="wb-round">
+        <span className="wb-round-card">Card {turn.number}</span><span className="wb-round-phase">{phaseName}</span>
+        {turn.phase === "steal" && <span className="wb-tag is-bad"><XIcon />{turn.failReason === "time" ? "Time’s up" : "Over budget"}</span>}
+        {turn.phase === "done" && <ResultTags turn={turn} inline />}
+      </div>
       {turn.phase === "peek" && (
         <>
-          <h1 className="tt-headline"><em>{names(game, Object.values(turn.givers).filter(Boolean))}</em>: look at your phones<small>Five words, eyes only. Bidding opens in a moment.</small></h1>
-          <Slots turn={turn} />
+          <h1 className="wb-headline"><em>{names(game, Object.values(turn.givers).filter(Boolean))}</em>: look at your phones</h1>
+          <p className="wb-howto">Five words, eyes only. Bidding opens in a moment.</p>
+          <div className="wb-play">
+            <PhaseClock game={game} label="Look" className="is-big" />
+            <WordCard marks={turn.marks} words={turn.slots} size="tv" />
+          </div>
         </>
       )}
-      {turn.phase === "bid" && <><BidBoard game={game} /><p className="wb-howto">Bid lower on your phone. Every bid restarts the shot clock; when it runs out, the lowest bid plays.</p></>}
+      {turn.phase === "bid" && (
+        <>
+          <div className="wb-bidboard">
+            <BidTag game={game} turn={turn} size="tv" />
+            <PhaseClock game={game} label="Shot clock" className="is-huge" />
+          </div>
+          <p className="wb-howto">Bid lower on your phone. Every bid restarts the {secs(BUDGET_TIMES.bidMs)}-second shot clock; when it runs out, the lowest bid plays.</p>
+        </>
+      )}
       {["peek", "bid"].includes(turn.phase) && passed.length > 0 && <p className="wb-pass-note">{passed.join(" and ")} {passed.length > 1 ? "pass" : "wants a new card"}…</p>}
       {turn.phase === "play" && (
         <>
-          <h1 className="tt-headline wb-headline"><em>{nameOf(game, turn.clueGiverId)}</em> clues <em>{control?.name}</em><small>{nameOf(game, turn.judgeId)} counts every word</small></h1>
+          <h1 className="wb-headline"><em>{nameOf(game, turn.clueGiverId)}</em> clues <span className={`wb-teamname ${teamClass(game, control?.id)}`}>{control?.name}</span></h1>
+          <p className="wb-howto">{trackerLine(game, turn)}. No rhymes, no “sounds like”, no gestures.</p>
           <div className="wb-play">
             <div className="wb-meters">
-              <div className="tt-meter"><span className="label">Clock</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
-              <WordsMeter turn={turn} />
+              <PhaseClock game={game} label="Clock" className="is-big" />
+              <BudgetMeter turn={turn} size="tv" />
             </div>
-            <Slots turn={turn} />
+            <WordCard marks={turn.marks} words={turn.slots} size="tv" />
           </div>
         </>
       )}
       {turn.phase === "steal" && (
         <>
           <div className="wb-steal" key={turn.id}>
-            <p className="wb-tags"><span className="wb-tag is-bad"><XIcon />{turn.failReason === "time" ? "Time’s up" : "Over budget"}</span></p>
-            <h1 className="wb-steal-head"><Flap text={`${steal?.name}: steal it!`} wrap intro /></h1>
-            <p className="wb-howto">Say the {plural(left(turn), "word")} left, using only the clues you’ve heard. Get them all and the card is yours; miss one and nobody gets it. {nameOf(game, turn.judgeId)} knows the card: no help!</p>
+            <h1 className="wb-steal-head"><span className={`wb-teamname ${teamClass(game, steal?.id)}`}>{steal?.name}</span> steal it!</h1>
+            <p className="wb-howto">Say the {plural(left(turn), "word")} left, using only the clues you’ve heard. Get them all and the card is yours; miss one and nobody gets it. {game.hostless ? `${nameOf(game, turn.clueGiverId)} checks them off. ` : ""}{nameOf(game, turn.judgeId)} knows the card: no help!</p>
           </div>
           <div className="wb-play">
             <div className="wb-meters">
-              <div className="tt-meter wb-steal-clock"><span className="label">Steal clock</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
-              {turn.failReason !== "time" && <WordsMeter turn={turn} />}
+              <PhaseClock game={game} label="Steal" className="is-big is-steal" />
+              {turn.failReason !== "time" && <BudgetMeter turn={turn} size="tv" />}
             </div>
-            <Slots turn={turn} />
+            <WordCard marks={turn.marks} words={turn.slots} size="tv" />
           </div>
         </>
       )}
@@ -352,15 +442,14 @@ function Stage({ game, onAction }) {
         const { head, sub } = resultLine(game, turn), bad = !turn.result?.winnerId || turn.result?.reason === "nono";
         return (
           <>
-            <ResultTags turn={turn} />
-            <h1 className={"wb-result" + (bad ? " is-bad" : "")}><Flap text={head} wrap intro /></h1>
+            <h1 className={"wb-result" + (bad ? " is-bad" : "")}>{head}</h1>
             {sub && <p className="wb-howto">{sub}</p>}
-            <Slots turn={turn} />
+            <WordCard marks={turn.marks} words={turn.slots} size="tv" />
             {won && <p className="wb-pass-note">{won.name} reaches {game.scoring === "points" ? `${game.target} points` : plural(game.target, "card")}: that’s the game!</p>}
           </>
         );
       })()}
-      {!game.hostless && turn.phase === "done" && <button className="primary sv-next" onClick={() => onAction("next")}>{won ? "See the winners" : "Next card"}</button>}
+      {!game.hostless && turn.phase === "done" && <button className="wb-btn is-go wb-next" onClick={() => onAction("next")}>{won ? "See the winners" : "Next card"}</button>}
     </div>
   );
 }
@@ -370,66 +459,33 @@ export function BudgetDisplay({ game, onAction }) {
   useClockTicks(phase === "bid" ? turn.deadline : null, game.serverNow, 3);
   useClockTicks(phase === "play" || phase === "steal" ? turn.deadline : null, game.serverNow, 5);
   return (
-    <main className="display wb">
+    <main className="display wb wb-tv">
       <SoundToggle />
-      <header className="display-bar">
-        <Brand text="WORD BUDGET" className="wb-brand" />
+      <header className="wb-bar">
+        <Logo />
         {game.status !== "lobby" ? <JoinCorner code={game.code} /> : <span />}
-        {!["bid", "play", "steal"].includes(phase) && <ClueTimer deadline={turn?.deadline} serverNow={game.serverNow} />}
+        {phase === "done" && game.hostless ? <PhaseClock game={game} label="Next card" className="is-small" /> : <span />}
       </header>
       {game.status === "lobby" || !turn ? <Lobby game={game} onAction={onAction} /> : (
-        <div className="tt-stage wb-stage"><Stage game={game} onAction={onAction} /><Scoreboard game={game} /></div>
+        <div className="wb-stage"><Stage game={game} onAction={onAction} /><Scoreboard game={game} /></div>
       )}
       {game.hostless && game.players.length > 0 && game.status === "playing" && (
-        <details className="host-tools sv-host-tools">
+        <details className="host-tools wb-host-tools">
           <summary>Host tools</summary>
-          <div className="sv-round-controls">
-            {["peek", "bid"].includes(phase) && <button className="chip-btn" onClick={() => onAction("newCard")}>New card</button>}
-            <button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button>
+          <div className="wb-tools-row">
+            {["peek", "bid"].includes(phase) && <button className="wb-chip" onClick={() => onAction("newCard")}>New card</button>}
+            <button className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button>
           </div>
         </details>
       )}
       {!game.hostless && (
-        <a className="controller-link" href="?controller" onClick={(event) => { event.preventDefault(); sessionStorage.hostCode = game.code; window.open("?controller", "_blank"); }}>Open host controller</a>
+        <a className="controller-link wb-rail-btn" href="?controller" onClick={(event) => { event.preventDefault(); sessionStorage.hostCode = game.code; window.open("?controller", "_blank"); }}>Open host controller</a>
       )}
     </main>
   );
 }
 
 // ---------- Player phone ----------
-// The card as the clue-givers see it while they bid: five words on flaps, nothing to tap.
-function CardWords({ words, marks }) {
-  return (
-    <ol className="tt-board is-compact wb-card" aria-label="The card">
-      {(words || Array(CARD_SIZE).fill("")).map((word, i) => {
-        const mark = marks ? marks[i] : "waiting";
-        return (
-          <li key={i} className={`tt-row is-${mark}`}>
-            <span className="tt-mark">{(mark === "got" || mark === "stolen") && <Check />}</span>
-            <span className="tt-row-word">{word ? <Flap text={word} wrap intro /> : <Flap text="" cells={8} label="Loading" />}</span>
-            {mark !== "waiting" ? <em>{STATUS[mark]}</em> : <em aria-hidden="true" />}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-// The card as keys: tap a word when it's said. Said words take the lamp marker and stop taking taps.
-function TapCard({ words, marks, onTap, locked = (mark) => mark !== "waiting" }) {
-  return (
-    <ol className="tt-board is-compact wb-card wb-card-tap" aria-label="The card">
-      {(words || []).map((word, i) => (
-        <li key={i}>
-          <button className={`tt-row is-${marks[i]}`} disabled={locked(marks[i])} onClick={() => onTap(i)}>
-            <span className="tt-mark">{marks[i] !== "waiting" && marks[i] !== "missed" && <Check />}</span>
-            <span className="tt-row-word"><Flap text={word} wrap intro /></span>
-            <em>{STATUS[marks[i]] || "Tap"}</em>
-          </button>
-        </li>
-      ))}
-    </ol>
-  );
-}
 function BidPad({ game, playerId, words }) {
   const turn = game.turn, act = usePhoneAct(game, playerId), myTeam = teamOfPlayer(game, playerId);
   const [typed, setTyped] = useState("");
@@ -438,145 +494,162 @@ function BidPad({ game, playerId, words }) {
   const bid = (amount) => { if (amount >= 1 && amount < current) { act("bid", { amount }); setTyped(""); } };
   const n = Math.trunc(Number(typed));
   return (
-    <div className="tt-card-wrap">
-      <div className="sv-guess-top"><span className="sv-guess-label">{open ? "Bid lower to take the card" : "Bidding opens in a moment…"}</span>{open && <ClueTimer deadline={turn.deadline} serverNow={game.serverNow} />}</div>
-      <CardWords words={words} />
-      <p className="wb-phone-bid">{turn.bid ? <><span className="label">{leading ? "Your team" : teamById(game, turn.bid.teamId)?.name}</span><Flap text={String(turn.bid.amount)} /><span className="label">words</span></> : <span className="label">No bids yet · {teamById(game, turn.starterId)?.name} takes it at {START_BID}</span>}</p>
-      {leading ? <p className="player-status is-you">You’re lowest. Hold your nerve…</p> : (
+    <div className="wb-pad">
+      <div className="wb-pad-top"><p className="wb-say">{open ? "Bid lower to take the card" : "Learn the card: bidding opens in a moment"}</p><PhaseClock game={game} className="is-small" /></div>
+      <WordCard words={words} marks={blankMarks} size="phone" compact loading={!words} />
+      <BidTag game={game} turn={turn} size="phone" />
+      {leading ? <p className="wb-status is-you">You’re lowest. Hold your nerve…</p> : (
         <>
           <div className="wb-bid-steps">
-            {[1, 3, 5].map((step) => <button key={step} disabled={!open || current - step < 1} onClick={() => bid(current - step)}><b>{current - step >= 1 ? current - step : "–"}</b><small>−{step}</small></button>)}
+            {[1, 3, 5].map((step) => <button key={step} type="button" disabled={!open || current - step < 1} onClick={() => bid(current - step)}><b>{current - step >= 1 ? current - step : "–"}</b><small>−{step}</small></button>)}
           </div>
           <form className="wb-bid-type" onSubmit={(e) => { e.preventDefault(); bid(n); }}>
             <input aria-label="Your bid" inputMode="numeric" pattern="[0-9]*" maxLength="2" value={typed} disabled={!open} onChange={(e) => setTyped(e.target.value.replace(/\D/g, ""))} placeholder={`1–${Math.min(START_BID, current - 1)}`} />
-            <button className="primary" disabled={!open || !(n >= 1 && n < current)}>Bid {n >= 1 && n < current ? n : ""}</button>
+            <button className="wb-btn is-go" disabled={!open || !(n >= 1 && n < current)}>Bid {n >= 1 && n < current ? n : ""}</button>
           </form>
         </>
       )}
-      <button className="secondary wb-pass-btn" disabled={passed} onClick={() => act("pass")}>{passed ? `Waiting for ${otherTeam(game, myTeam?.id)?.name} to pass too…` : "Pass on this card"}</button>
+      <button type="button" className="wb-btn is-ghost" disabled={passed} onClick={() => act("pass")}>{passed ? `Waiting for ${otherTeam(game, myTeam?.id)?.name} to pass too…` : "Pass on this card"}</button>
     </div>
   );
 }
-// The clue-giver taps each word as their team says it. The judge can take one back.
-function ClueGiverCard({ game, playerId, words }) {
-  const turn = game.turn, act = usePhoneAct(game, playerId), over = turn.used > turn.budget;
+// The clue-giver: the card to clue from (who checks words off is someone else's job), the budget and the clock.
+function ClueGiverCard({ game, words }) {
+  const turn = game.turn;
   return (
-    <div className="tt-card-wrap">
-      <div className="sv-guess-top"><span className="sv-guess-label">Clue {teamById(game, turn.control)?.name}. Tap each word when they say it.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
-      <p className={"tt-tally wb-phone-left" + (over ? " is-over" : "")}><span className="label">Words left</span><Flap text={String(Math.max(0, turn.budget - turn.used))} /><span className="label">of</span><Flap text={String(turn.budget)} /></p>
-      <TapCard words={words} marks={turn.marks} onTap={(index) => act("mark", { index })} />
-      <p className="muted wb-rules">No rhymes, no “sounds like”, no gestures, and no part of an answer word.</p>
+    <div className="wb-pad">
+      <div className="wb-pad-top"><p className="wb-say">Clue <span className={`wb-teamname ${teamClass(game, turn.control)}`}>{teamById(game, turn.control)?.name}</span>! Any order.</p><PhaseClock game={game} className="is-small" /></div>
+      <BudgetMeter turn={turn} size="phone" />
+      <WordCard words={words} marks={turn.marks} size="phone" loading={!words} />
+      <p className="wb-note">{trackerLine(game, turn)}. No rhymes, no “sounds like”, no gestures, and no part of an answer word.</p>
     </div>
   );
 }
 function NoNo({ onConfirm, label = "No-no!" }) {
   const [asking, setAsking] = useState(false);
   useEffect(() => { if (!asking) return; const timer = setTimeout(() => setAsking(false), 5000); return () => clearTimeout(timer); }, [asking]);
-  if (!asking) return <button className="wb-nono" onClick={() => setAsking(true)}><XIcon />{label}</button>;
+  if (!asking) return <button type="button" className="wb-nono" onClick={() => setAsking(true)}><XIcon />{label}</button>;
   return (
     <div className="wb-nono-confirm" role="alertdialog" aria-label="Call a no-no?">
       <p>Call a no-no? The card goes to the other team.</p>
-      <button className="secondary" onClick={() => setAsking(false)}>Cancel</button>
-      <button className="wb-nono" onClick={() => { setAsking(false); onConfirm(); }}><XIcon />Yes, no-no</button>
+      <button type="button" className="wb-btn is-ghost" onClick={() => setAsking(false)}>Cancel</button>
+      <button type="button" className="wb-nono" onClick={() => { setAsking(false); onConfirm(); }}><XIcon />Yes, no-no</button>
     </div>
   );
 }
-// The judge's +1: the biggest key on the phone, with the count on flaps beside the budget.
+// The +1: the biggest key on the phone, a round yellow button with the count under it.
 function PlusKey({ turn, onCount }) {
   const last = turn.used >= turn.budget;
   return (
-    <button className={"wb-plus" + (last ? " is-last" : "")} onClick={onCount} aria-label={`Count a word: ${turn.used} of ${turn.budget}`}>
+    <button type="button" className={"wb-plus" + (last ? " is-last" : "")} onClick={onCount} aria-label={`Count a clue word: ${turn.used} of ${turn.budget}`}>
       <b>+1</b>
-      <span className="wb-plus-count"><Flap text={String(turn.used)} /><small>of</small><Flap text={String(turn.budget)} /><small>words</small></span>
+      <span className="wb-plus-count">{turn.used} of {turn.budget} words</span>
       {last && <span className="wb-plus-warn"><XIcon />One more ends it</span>}
     </button>
   );
 }
-// The judge: a huge +1 for every word the clue-giver says, undo, the no-no, and the card to dispute marked words.
+// Tap a waiting word to check it off, a checked one to take it back.
+const toggler = (marks, act) => (i) => act(marks[i] === "waiting" ? "mark" : "unmark", { index: i });
+// The judge, without a host: +1 for every clue word, undo, the no-no, and the card to check off each word said.
 function JudgePad({ game, playerId, words }) {
   const turn = game.turn, act = usePhoneAct(game, playerId);
   return (
-    <div className="tt-card-wrap">
-      <div className="sv-guess-top"><span className="sv-guess-label">You’re the judge. Count every word {nameOf(game, turn.clueGiverId)} says.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
+    <div className="wb-pad">
+      <div className="wb-pad-top"><p className="wb-say">You keep track. Count every word {nameOf(game, turn.clueGiverId)} says.</p><PhaseClock game={game} className="is-small" /></div>
       <PlusKey turn={turn} onCount={() => act("countWord")} />
-      <div className="wb-judge-row">
-        <button className="tt-pass-btn" disabled={!turn.used} onClick={() => act("uncount")}>Undo</button>
+      <div className="wb-row2">
+        <button type="button" className="wb-btn is-ghost" disabled={!turn.used} onClick={() => act("uncount")}>Undo</button>
         <NoNo onConfirm={() => act("nono")} />
       </div>
-      <ol className="tt-board is-compact wb-card" aria-label="The card">
-        {(words || []).map((word, i) => (
-          <li key={i} className={`tt-row is-${turn.marks[i]}`}>
-            <span className="tt-mark">{turn.marks[i] === "got" && <Check />}</span>
-            <span className="tt-row-word"><Flap text={word} wrap intro /></span>
-            {turn.marks[i] === "got" ? <button className="chip-btn" onClick={() => act("unmark", { index: i })}>Not it</button> : <em aria-hidden="true" />}
-          </li>
-        ))}
-      </ol>
+      <p className="wb-say is-small">Tap each word when {teamById(game, turn.control)?.name} says it:</p>
+      <WordCard words={words} marks={turn.marks} size="phone" loading={!words} onTap={toggler(turn.marks, act)} locked={(m) => m !== "waiting" && m !== "got"} />
     </div>
   );
 }
-// A steal without a host: the clue-giver who lost the card confirms the other team's words.
-function StealConfirm({ game, playerId, words }) {
-  const turn = game.turn, act = usePhoneAct(game, playerId);
+// The clue-giver during a steal: the card with the words their team already got, and the ones the other team still
+// needs. Without a host they check off the stealing team's words; with one, they just follow along.
+function StealCard({ game, playerId, words }) {
+  const turn = game.turn, act = usePhoneAct(game, playerId), steal = teamById(game, turn.stealTeamId);
+  const confirm = game.hostless;
   return (
-    <div className="tt-card-wrap">
-      <div className="sv-guess-top"><span className="sv-guess-label">{teamById(game, turn.stealTeamId)?.name} is stealing. Tap each word they say. Play fair: the TV shows the whole card after.</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div>
-      <TapCard words={words} marks={turn.marks} onTap={(index) => act("mark", { index })} />
+    <div className="wb-pad">
+      <div className="wb-pad-top"><p className="wb-say"><span className={`wb-teamname ${teamClass(game, steal?.id)}`}>{steal?.name}</span> is stealing: {plural(left(turn), "word")} to go.</p><PhaseClock game={game} className="is-small" /></div>
+      <WordCard words={words} marks={turn.marks} size="phone" loading={!words} label="The card in the steal"
+        {...(confirm ? { onTap: toggler(turn.marks, act), locked: (m) => m !== "waiting" && m !== "stolen", tapHint: "Tap if said" } : {})} />
+      <p className="wb-note">{confirm ? "Tap each word they say. Play fair: the TV shows the whole card after." : "The host checks off what they say. Not a word from you!"}</p>
     </div>
   );
+}
+function Waiting({ children, you = false, sub }) {
+  return <div className="wb-wait"><p className={"wb-status" + (you ? " is-you" : "")}>{children}</p>{sub && <p className="wb-note">{sub}</p>}</div>;
 }
 function PlayerAction({ game, playerId }) {
   const turn = game.turn, myTeam = teamOfPlayer(game, playerId);
   const giver = Object.values(turn.givers).includes(playerId), clueGiver = turn.clueGiverId === playerId, judge = turn.judgeId === playerId;
-  const sees = (["peek", "bid"].includes(turn.phase) && giver) || (["play", "steal"].includes(turn.phase) && (clueGiver || judge));
+  // The same rule as the server's maySeeCard.
+  const sees = (["peek", "bid"].includes(turn.phase) && giver) || (["play", "steal"].includes(turn.phase) && clueGiver) || (game.hostless && turn.phase === "play" && judge);
   const words = useCard(game, playerId, sees);
   const control = teamById(game, turn.control), steal = teamById(game, turn.stealTeamId);
   if (["peek", "bid"].includes(turn.phase)) {
     if (giver) return <BidPad game={game} playerId={playerId} words={words} />;
     return (
-      <div className="tt-card-wrap">
-        <p className="player-status">{names(game, Object.values(turn.givers).filter(Boolean))} {turn.phase === "peek" ? "are looking at the card" : "are bidding"}…</p>
-        <p className="wb-phone-bid">{turn.bid ? <><span className="label">{teamById(game, turn.bid.teamId)?.name}</span><Flap text={String(turn.bid.amount)} /><span className="label">words</span></> : <span className="label">No bids yet</span>}</p>
+      <div className="wb-pad">
+        <Waiting sub={turn.phase === "peek" ? "They’re learning the card. Bidding opens in a moment." : "The lowest bid when the shot clock runs out plays the card."}>{names(game, Object.values(turn.givers).filter(Boolean))} {turn.phase === "peek" ? "are looking at the card" : "are bidding"}…</Waiting>
+        <BidTag game={game} turn={turn} size="phone" />
       </div>
     );
   }
   if (turn.phase === "play") {
-    if (clueGiver) return <ClueGiverCard game={game} playerId={playerId} words={words} />;
-    if (judge) return <JudgePad game={game} playerId={playerId} words={words} />;
-    if (myTeam?.id === turn.control) return <div className="tt-card-wrap"><p className="player-status is-you">Guess out loud! Any order.</p><p className="tt-tally"><span className="label">To go</span><Flap text={String(left(turn))} /><span className="label">of 5 · clue words left</span><Flap text={String(Math.max(0, turn.budget - turn.used))} /></p></div>;
-    return <p className="player-status">{control?.name} is playing<br /><small className="muted">No shouting answers! If they blow it, you get to steal.</small></p>;
+    if (clueGiver) return <ClueGiverCard game={game} words={words} />;
+    if (judge && game.hostless) return <JudgePad game={game} playerId={playerId} words={words} />;
+    if (myTeam?.id === turn.control) return (
+      <div className="wb-pad">
+        <Waiting you>Guess out loud! Any order.</Waiting>
+        <div className="wb-mini"><p><b>{left(turn)}</b><span>of 5 to go</span></p><BudgetMeter turn={turn} size="phone" /></div>
+        <PhaseClock game={game} label="Clock" />
+      </div>
+    );
+    return <div className="wb-pad"><Waiting sub="No shouting answers! If they blow it, you get to steal.">{control?.name} is playing</Waiting><PhaseClock game={game} label="Clock" /></div>;
   }
   if (turn.phase === "steal") {
-    if (clueGiver && game.hostless) return <StealConfirm game={game} playerId={playerId} words={words} />;
-    if (judge) return <p className="player-status is-you">You know the card. Not a word!<br /><small className="muted">Your team is stealing: {plural(left(turn), "word")} to go.</small></p>;
-    if (myTeam?.id === turn.stealTeamId) return <div className="tt-card-wrap wb-phone-steal"><h2 className="wb-steal-head"><Flap text="Steal it!" intro /></h2><p className="player-status is-you">Shout the {plural(left(turn), "word")} left.</p><div className="wb-phone-clock"><span className="label">Steal clock</span><ClueTimer deadline={turn.deadline} serverNow={game.serverNow} /></div></div>;
-    return <p className="player-status">{steal?.name} is trying to steal the card…</p>;
+    if (clueGiver) return <StealCard game={game} playerId={playerId} words={words} />;
+    if (judge) return <div className="wb-pad"><Waiting you sub={`Your team is stealing: ${plural(left(turn), "word")} to go.`}>You know the card. Not a word!</Waiting><PhaseClock game={game} label="Steal" /></div>;
+    if (myTeam?.id === turn.stealTeamId) return (
+      <div className="wb-pad wb-phone-steal">
+        <h2 className="wb-steal-head">Steal it!</h2>
+        <Waiting you sub="Only the clues you’ve already heard.">Shout the {plural(left(turn), "word")} left.</Waiting>
+        <PhaseClock game={game} label="Steal" className="is-big" />
+      </div>
+    );
+    return <div className="wb-pad"><Waiting>{steal?.name} is trying to steal the card…</Waiting><PhaseClock game={game} label="Steal" /></div>;
   }
   const { head, sub } = resultLine(game, turn);
-  return <div className="tt-my-result"><ResultTags turn={turn} /><p className="player-status">{head}</p>{sub && <p className="muted">{sub}</p>}<Slots turn={turn} compact /></div>;
+  return <div className="wb-pad"><ResultTags turn={turn} /><p className="wb-status">{head}</p>{sub && <p className="wb-note">{sub}</p>}<WordCard marks={turn.marks} words={turn.slots} size="phone" /></div>;
 }
 export function BudgetPlayer({ game, playerId }) {
   const player = game.players.find((p) => p.id === playerId), turn = game.turn, team = teamOfPlayer(game, playerId);
   const giver = turn && Object.values(turn.givers).includes(playerId);
-  const myMove = turn && ((["peek", "bid"].includes(turn.phase) && giver) || (turn.phase === "play" && (turn.clueGiverId === playerId || turn.judgeId === playerId)));
+  const myMove = turn && ((["peek", "bid"].includes(turn.phase) && giver) || (turn.phase === "play" && (turn.clueGiverId === playerId || (game.hostless && turn.judgeId === playerId))) || (turn.phase === "steal" && game.hostless && turn.clueGiverId === playerId));
   useEffect(() => { if (myMove) { try { navigator.vibrate?.(150); } catch {} } }, [myMove, turn?.phase, turn?.id]);
-  if (!player) return <main className="player wb"><p className="status-card">You’re no longer in this game.</p></main>;
+  if (!player) return <main className="player wb wb-phone"><p className="wb-status">You’re no longer in this game.</p></main>;
   const other = team && otherTeam(game, team.id);
   return (
-    <main className="player wb">
-      <header className="player-bar"><Brand text="WORD BUDGET" className="wb-brand" /><span className="player-name">{player.name}</span></header>
-      <div className={"tt-my-team" + (team ? ` team-${teamIndex(game, team.id)}` : "")}>
-        <span className="tt-my-name">{team && <TeamNum game={game} team={team} />}<span className="tt-my-text"><b>{team ? team.name : "No team yet"}</b>{team && <small>{scoreLine(game, team)} · {names(game, team.members)}</small>}</span></span>
-        <Money value={team ? progress(game, team) : 0} />
+    <main className="player wb wb-phone">
+      <header className="wb-phone-bar"><Logo className="is-small" /><span className="wb-phone-name">{player.name}</span></header>
+      <div className={"wb-myteam" + (team ? ` ${teamClass(game, team.id)}` : "")}>
+        {team && <TeamDot game={game} team={team} />}
+        <span className="wb-myteam-text"><b>{team ? team.name : "No team yet"}</b>{team && <small>{names(game, team.members)}</small>}</span>
+        <span className="wb-myteam-score"><b>{team ? progress(game, team) : 0}</b><small>{team ? scoreLine(game, team).replace(/^\d+ /, "") : ""}</small></span>
       </div>
       {game.status === "lobby" || !turn ? (
-        <>
-          <p className="player-status">You’re in! {team && team.members.length < 2 ? "Waiting for a teammate…" : "The game starts when everyone’s here."}</p>
-          {game.status === "lobby" && other && <button className="secondary wb-switch" onClick={() => socket.emit("budget:team", { code: game.code, playerId, teamId: other.id })}><SwapIcon />Switch to {other.name}</button>}
-        </>
+        <div className="wb-pad">
+          <Waiting you>You’re in!</Waiting>
+          <p className="wb-note">{team && team.members.length < 2 ? "Waiting for a teammate…" : "The game starts when everyone’s here."}</p>
+          {game.status === "lobby" && other && <button type="button" className="wb-btn is-ghost" onClick={() => socket.emit("budget:team", { code: game.code, playerId, teamId: other.id })}><SwapIcon />Switch to {other.name}</button>}
+        </div>
       ) : (
         <>
-          <p className="player-clue-meta">Card {turn.number} · first to {game.target}</p>
+          <p className="wb-meta">Card {turn.number} · first to {game.target}</p>
           <PlayerAction game={game} playerId={playerId} />
         </>
       )}
@@ -587,14 +660,14 @@ export function BudgetPlayer({ game, playerId }) {
 // ---------- Host controller ----------
 function TeamTools({ game, onAction }) {
   return (
-    <ul className="tt-team-tools">
+    <ul className="wb-teamtools">
       {game.teams.map((team) => (
-        <li key={team.id} className={`team-${teamIndex(game, team.id)}`}>
-          <TeamNum game={game} team={team} />
+        <li key={team.id} className={teamClass(game, team.id)}>
+          <TeamDot game={game} team={team} />
           <input aria-label={`${team.name}’s name`} defaultValue={team.name} key={team.name} maxLength="24" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== team.name && onAction("renameTeam", { teamId: team.id, name: e.target.value })} />
-          <span className="wb-tool-cards"><Money value={team.cards} /><small>{team.cards === 1 ? "card" : "cards"}</small></span>
-          <button className="chip-btn add" onClick={() => onAction("adjustScore", { teamId: team.id, amount: 1 })}>+1</button>
-          <button className="chip-btn subtract" onClick={() => onAction("adjustScore", { teamId: team.id, amount: -1 })}>−1</button>
+          <span className="wb-teamtools-cards"><b>{team.cards}</b><small>{team.cards === 1 ? "card" : "cards"}</small></span>
+          <button className="wb-chip" aria-label={`Give ${team.name} a card`} onClick={() => onAction("adjustScore", { teamId: team.id, amount: 1 })}>+1</button>
+          <button className="wb-chip is-danger" aria-label={`Take a card from ${team.name}`} onClick={() => onAction("adjustScore", { teamId: team.id, amount: -1 })}>−1</button>
         </li>
       ))}
     </ul>
@@ -603,61 +676,61 @@ function TeamTools({ game, onAction }) {
 export function BudgetController({ game, onAction }) {
   const turn = game.turn, phase = turn?.phase;
   const words = useCard(game, undefined, !game.hostless && !!turn && phase !== "done");
-  const header = <header className="controller-bar"><Brand text="WORD BUDGET" className="wb-brand" /><Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} /></header>;
+  const header = <header className="wb-phone-bar"><Logo className="is-small" /><span className="wb-code is-small" aria-label={`Game code ${game.code.split("").join(" ")}`}>{game.code.split("").map((c, i) => <i key={i} aria-hidden="true">{c}</i>)}</span></header>;
   if (game.status === "lobby" || !turn)
-    return <main className="controller wb">{header}<h1>Lobby</h1><p className="muted">Start the game from the main screen. Move players between teams by tapping their names there.</p><section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section></main>;
+    return <main className="controller wb wb-phone">{header}<h1 className="wb-ctrl-title">Lobby</h1><p className="wb-note">Start the game from the main screen. Move players between teams by tapping their names there.</p><section className="wb-ctrl-teams"><h2 className="wb-kicker">Teams</h2><TeamTools game={game} onAction={onAction} /></section></main>;
   const current = turn.bid?.amount ?? START_BID + 1, control = teamById(game, turn.control);
   const toggle = (i) => onAction(turn.marks[i] === "waiting" ? "mark" : "unmark", { index: i });
   const nextLabel = { peek: "Open the bidding", bid: "Close the bidding", play: "Stop the clock (a fail)", steal: "End the steal", done: leaderOf(game) ? "See the winners" : "Next card" }[phase];
   return (
-    <main className="controller wb">
+    <main className="controller wb wb-phone">
       {header}
-      <div className="sv-guess-top tt-ctrl-top">
-        <p className="player-clue-meta">Card {turn.number} · {phase === "play" ? control?.name : phase}</p>
-        {["bid", "play", "steal"].includes(phase) && <ClueTimer deadline={turn.deadline} serverNow={game.serverNow} />}
+      <div className="wb-pad-top">
+        <p className="wb-meta">Card {turn.number} · {phase === "play" ? control?.name : { peek: "the look", bid: "bidding", steal: "the steal", done: "result" }[phase]}</p>
+        <PhaseClock game={game} className="is-small" />
       </div>
       {["peek", "bid"].includes(phase) && (
-        <>
-          <CardWords words={words} />
-          <p className="wb-phone-bid">{turn.bid ? <><span className="label">{teamById(game, turn.bid.teamId)?.name} leads at</span><Flap text={String(turn.bid.amount)} /><span className="label">words</span></> : <span className="label">No bids · {teamById(game, turn.starterId)?.name} takes it at {START_BID}</span>}</p>
-          {turn.passes.length > 0 && <p className="status-note">{turn.passes.map((id) => teamById(game, id)?.name).join(" and ")} passed.</p>}
+        <div className="wb-pad">
+          <WordCard words={words} marks={blankMarks} size="phone" loading={!words} />
+          <BidTag game={game} turn={turn} size="phone" />
+          {turn.passes.length > 0 && <p className="wb-note">{turn.passes.map((id) => teamById(game, id)?.name).join(" and ")} passed.</p>}
           {phase === "bid" && current > 1 && (
-            <div className="wb-judge-row">
-              {game.teams.filter((t) => t.id !== turn.bid?.teamId).map((team) => <button key={team.id} className="tt-pass-btn" onClick={() => onAction("bid", { teamId: team.id, amount: current - 1 })}>{team.name} bids {current - 1}</button>)}
+            <div className="wb-row2">
+              {game.teams.filter((t) => t.id !== turn.bid?.teamId).map((team) => <button key={team.id} type="button" className="wb-btn is-ghost" onClick={() => onAction("bid", { teamId: team.id, amount: current - 1 })}>{team.name} bids {current - 1}</button>)}
             </div>
           )}
-          <button className="chip-btn wb-newcard" onClick={() => onAction("newCard")}>New card</button>
-        </>
+          <button type="button" className="wb-chip" onClick={() => onAction("newCard")}>New card</button>
+        </div>
       )}
       {phase === "play" && (
-        <>
-          <p className="status-note">{nameOf(game, turn.clueGiverId)} clues; {nameOf(game, turn.judgeId)} judges. Tap a word to mark it (tap again to take it back).</p>
-          <TapCard words={words} marks={turn.marks} onTap={toggle} locked={() => false} />
+        <div className="wb-pad">
+          <p className="wb-say is-small">{nameOf(game, turn.clueGiverId)} clues {control?.name}. You keep track: +1 for every clue word, and tap each word when they say it (tap again to take it back).</p>
           <PlusKey turn={turn} onCount={() => onAction("countWord")} />
-          <div className="wb-judge-row"><button className="tt-pass-btn" disabled={!turn.used} onClick={() => onAction("uncount")}>Undo</button><NoNo onConfirm={() => onAction("nono")} /></div>
-        </>
+          <div className="wb-row2"><button type="button" className="wb-btn is-ghost" disabled={!turn.used} onClick={() => onAction("uncount")}>Undo</button><NoNo onConfirm={() => onAction("nono")} /></div>
+          <WordCard words={words} marks={turn.marks} size="phone" loading={!words} onTap={toggle} />
+        </div>
       )}
       {phase === "steal" && (
-        <>
+        <div className="wb-pad">
           <p className="wb-tags"><span className="wb-tag is-bad"><XIcon />{turn.failReason === "time" ? "Time’s up" : "Over budget"}</span></p>
-          <p className="status-note">{teamById(game, turn.stealTeamId)?.name} is stealing. Tap each word they say.</p>
-          <TapCard words={words} marks={turn.marks} onTap={toggle} locked={(mark) => mark === "got"} />
-        </>
+          <p className="wb-say is-small">{teamById(game, turn.stealTeamId)?.name} is stealing. Tap each word they say.</p>
+          <WordCard words={words} marks={turn.marks} size="phone" loading={!words} onTap={toggle} locked={(mark) => mark === "got"} tapHint="Tap if said" />
+        </div>
       )}
       {phase === "done" && (
-        <>
+        <div className="wb-pad">
           <ResultTags turn={turn} />
-          <p className="status-note">{resultLine(game, turn).head}</p>
-          <Slots turn={turn} compact />
-          <div className="wb-judge-row wb-award">
-            {game.teams.map((team) => <button key={team.id} className="chip-btn" disabled={turn.result?.winnerId === team.id} onClick={() => onAction("award", { teamId: team.id })}>Give it to {team.name}</button>)}
-            <button className="chip-btn" disabled={!turn.result?.winnerId} onClick={() => onAction("award", { teamId: null })}>Nobody</button>
+          <p className="wb-status">{resultLine(game, turn).head}</p>
+          <WordCard marks={turn.marks} words={turn.slots} size="phone" />
+          <div className="wb-row2 wb-award">
+            {game.teams.map((team) => <button key={team.id} type="button" className="wb-chip" disabled={turn.result?.winnerId === team.id} onClick={() => onAction("award", { teamId: team.id })}>Give it to {team.name}</button>)}
+            <button type="button" className="wb-chip" disabled={!turn.result?.winnerId} onClick={() => onAction("award", { teamId: null })}>Nobody</button>
           </div>
-        </>
+        </div>
       )}
-      <button className="wide on" onClick={() => onAction("next")}>{nextLabel}</button>
-      <div className="sv-round-controls"><button className="chip-btn danger" onClick={() => onAction("endGame")}>End game early</button></div>
-      <section className="controller-players"><h2>Teams</h2><TeamTools game={game} onAction={onAction} /></section>
+      <button type="button" className="wb-btn is-go wb-wide" onClick={() => onAction("next")}>{nextLabel}</button>
+      <div className="wb-tools-row"><button type="button" className="wb-chip is-danger" onClick={() => onAction("endGame")}>End game early</button></div>
+      <section className="wb-ctrl-teams"><h2 className="wb-kicker">Teams</h2><TeamTools game={game} onAction={onAction} /></section>
     </main>
   );
 }
@@ -672,27 +745,27 @@ export function BudgetEnd({ game, host, display, onAction }) {
     if (display && finished && game.serverNow - finished.at < 15000) return playWinnersTune();
   }, [display]);
   return (
-    <main className="end wb">
+    <main className={"end wb wb-end" + (display ? " wb-tv" : " wb-phone")}>
       {display && <SoundToggle />}
-      <Brand text="WORD BUDGET" className="wb-brand" />
-      <h1><Flap text={tie ? "It’s a tie!" : `${ranked[0].name} wins!`} wrap intro /></h1>
-      {byBonus && <p className="muted">Level on {game.scoring === "points" ? "points" : "cards"}, so saved words decide it.</p>}
-      <ol className="podium">
+      <Logo />
+      <h1 className={"wb-winner" + (tie ? "" : ` ${teamClass(game, ranked[0].id)}`)}>{tie ? "It’s a tie!" : <><span className="wb-teamname">{ranked[0].name}</span> wins!</>}</h1>
+      {byBonus && <p className="wb-note">Level on {game.scoring === "points" ? "points" : "cards"}, so saved words decide it.</p>}
+      <ol className="wb-podium">
         {ranked.map((t, i) => (
-          <li className={`place place-${i + 1} team-${teamIndex(game, t.id)}`} key={t.id}>
-            <span className="rank">{i + 1}</span>
-            <span className="tt-place-name"><b><TeamNum game={game} team={t} />{t.name}</b><small>{names(game, t.members)} · {plural(t.bonus, "word")} saved</small></span>
-            <span className="wb-place-score"><Flap className="money" text={String(game.scoring === "points" ? t.points : t.cards)} intro /><small>{game.scoring === "points" ? "points" : t.cards === 1 ? "card" : "cards"}</small></span>
+          <li className={`wb-place is-${i + 1} ${teamClass(game, t.id)}`} key={t.id}>
+            <span className="wb-place-rank">{i + 1}</span>
+            <span className="wb-place-name"><b><TeamDot game={game} team={t} />{t.name}</b><small>{names(game, t.members)} · {plural(t.bonus, "word")} saved</small></span>
+            <span className="wb-place-score"><b>{game.scoring === "points" ? t.points : t.cards}</b><small>{game.scoring === "points" ? "points" : t.cards === 1 ? "card" : "cards"}</small></span>
           </li>
         ))}
       </ol>
       {host ? (
-        <div className="sv-end-buttons">
-          <button className="primary" onClick={() => onAction("replay", { words: dealWords(readCategories()) })}>Play again with new cards</button>
+        <div className="wb-end-buttons">
+          <button className="wb-btn is-go" onClick={() => onAction("replay", { words: dealWords(readCategories()) })}>Play again with new cards</button>
           <a href="./" onClick={() => sessionStorage.removeItem("displayCode")}>Back to Game Night</a>
         </div>
       ) : (
-        <div className="player-end"><p>Thanks for playing!</p><button className="primary" onClick={() => { clearPlayerSession(); location.assign("./"); }}>Join another game</button></div>
+        <div className="wb-end-buttons"><p>Thanks for playing!</p><button className="wb-btn is-go" onClick={() => { clearPlayerSession(); location.assign("./"); }}>Join another game</button></div>
       )}
     </main>
   );

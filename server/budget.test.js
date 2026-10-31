@@ -84,6 +84,36 @@ describe('setting up', () => {
   })
 })
 
+describe('the clocks', () => {
+  test('ten seconds to look, a ten-second shot clock, a minute and a half to play, 35 seconds to steal', () => {
+    assert.deepEqual(BUDGET_TIMES, { peekMs: 10000, bidMs: 10000, playMs: 90000, stealMs: 35000, doneMs: 18000 })
+  })
+  test('each phase runs on its own clock, and without a host the result moves on by itself', () => {
+    const h = harness(), game = newGame(h)
+    assert.equal(h.timers.budget.ms, 10000, 'the look')
+    h.fire()
+    assert.equal(h.timers.budget.ms, 10000, 'the shot clock')
+    h.fire()
+    assert.equal(game.turn.phase, 'play')
+    assert.equal(h.timers.budget.ms, 90000, 'the card')
+    assert.equal(game.turn.deadline, h.clock.now + 90000, 'the clock the screens show')
+    h.fire()
+    assert.equal(game.turn.phase, 'steal')
+    assert.equal(h.timers.budget.ms, 35000, 'the steal')
+    h.fire()
+    assert.equal(game.turn.phase, 'done')
+    assert.equal(h.timers.budget.ms, 18000, 'the result')
+  })
+  test('with a host, the result stays up until the host moves on', () => {
+    const h = harness(), game = newGame(h, { hostless: false })
+    toPlay(h, game); h.fire(); h.fire()
+    assert.equal(game.turn.phase, 'done')
+    assert.equal(h.timers.budget, undefined)
+    h.host(game, 'next')
+    assert.equal(game.turn.number, 2)
+  })
+})
+
 describe('bidding', () => {
   test('both clue-givers look at the card first, then the bidding opens on a shot clock', () => {
     const h = harness(), game = newGame(h)
@@ -214,17 +244,17 @@ describe('playing a card', () => {
     const h = harness(), game = newGame(h)
     toPlay(h, game, [[T1, 19]])
     for (let i = 0; i < 14; i++) { h.tick(150); h.phone(game, 'p1', 'countWord') }
-    for (let i = 0; i < 5; i++) h.phone(game, 'p0', 'mark', { index: i })
+    for (let i = 0; i < 5; i++) h.phone(game, 'p1', 'mark', { index: i }) // the judge checks off each word
     assert.equal(game.turn.phase, 'done')
     assert.deepEqual(game.turn.result, { winnerId: T1, reason: 'cleared', bonus: 5, failReason: null })
     assert.equal(game.teams[0].cards, 1)
     assert.equal(game.teams[0].bonus, 5)
     assert.equal(h.api.publicGame(game).turn.slots.every(Boolean), true, 'the whole card shows once it’s over')
   })
-  test('the judge can dispute a marked word', () => {
+  test('the judge can take back a word they checked off', () => {
     const h = harness(), game = newGame(h)
     toPlay(h, game)
-    h.phone(game, 'p0', 'mark', { index: 2 })
+    h.phone(game, 'p1', 'mark', { index: 2 })
     assert.equal(game.turn.words[2].status, 'got')
     h.phone(game, 'p1', 'unmark', { index: 2 })
     assert.equal(game.turn.words[2].status, 'waiting')
@@ -232,7 +262,7 @@ describe('playing a card', () => {
   test('a no-no forfeits the card to the judge’s team, with no steal', () => {
     const h = harness(), game = newGame(h)
     toPlay(h, game, [[T1, 12]])
-    h.phone(game, 'p0', 'mark', { index: 0 })
+    h.phone(game, 'p1', 'mark', { index: 0 })
     h.phone(game, 'p1', 'nono')
     assert.equal(game.turn.phase, 'done')
     assert.deepEqual(game.turn.result, { winnerId: T2, reason: 'nono', bonus: 0, failReason: null })
@@ -248,10 +278,13 @@ describe('playing a card', () => {
 })
 
 describe('the steal', () => {
+  // Team 1 (p0 clues, p1 judges) gets two words, then blows a budget of 2. Without a host the judge keeps track;
+  // with one, the host does.
   function toSteal(h, game) {
     toPlay(h, game, [[T1, 2]])
-    h.phone(game, 'p0', 'mark', { index: 0 }); h.phone(game, 'p0', 'mark', { index: 1 })
-    for (let i = 0; i < 3; i++) { h.tick(200); h.phone(game, 'p1', 'countWord') }
+    const track = (action, payload) => game.hostless ? h.phone(game, 'p1', action, payload) : h.host(game, action, payload)
+    track('mark', { index: 0 }); track('mark', { index: 1 })
+    for (let i = 0; i < 3; i++) { h.tick(200); track('countWord') }
     assert.equal(game.turn.phase, 'steal')
   }
   test('saying every word left steals the card', () => {
@@ -294,7 +327,7 @@ describe('winning', () => {
   function winCard(h, game, teamId) {
     toPlay(h, game, [[teamId, 10]])
     for (let i = 0; i < 6; i++) { h.tick(150); h.phone(game, game.turn.judgeId, 'countWord') }
-    for (let i = 0; i < 5; i++) h.phone(game, game.turn.clueGiverId, 'mark', { index: i })
+    for (let i = 0; i < 5; i++) h.phone(game, game.turn.judgeId, 'mark', { index: i })
     assert.equal(game.turn.result.winnerId, teamId)
     h.fire()
   }
@@ -323,7 +356,7 @@ describe('winning', () => {
   test('the host can give a finished card to the other team, or to nobody', () => {
     const h = harness(), game = newGame(h, { hostless: false })
     toPlay(h, game, [[T1, 10]])
-    for (let i = 0; i < 5; i++) h.phone(game, 'p0', 'mark', { index: i })
+    for (let i = 0; i < 5; i++) h.host(game, 'mark', { index: i })
     assert.deepEqual([game.teams[0].cards, game.teams[0].bonus], [1, 10])
     h.host(game, 'award', { teamId: T2 })
     assert.deepEqual(game.teams.map((t) => [t.cards, t.bonus]), [[0, 0], [1, 0]])
@@ -334,7 +367,7 @@ describe('winning', () => {
 })
 
 describe('who can see and do what', () => {
-  test('the card goes to both clue-givers while bidding, then the clue-giver, the judge and the host', () => {
+  test('with a host, the card goes to both clue-givers while bidding, then to the clue-giver and the host', () => {
     const h = harness(), game = newGame(h, { hostless: false })
     assert.equal(h.card(game, 'p0').ok, true)
     assert.equal(h.card(game, 'p1').ok, true)
@@ -343,20 +376,69 @@ describe('who can see and do what', () => {
     const pub = JSON.stringify(h.api.publicGame(game))
     for (const word of h.card(game, 'p0').words) assert.ok(!pub.includes(word), `${word} isn’t in the public state`)
     toPlay(h, game)
-    assert.equal(h.card(game, 'p0').ok, true)
-    assert.equal(h.card(game, 'p1').ok, true)
+    assert.equal(h.card(game, 'p0').ok, true, 'the clue-giver')
+    assert.equal(h.card(game, 'p1').ok, false, 'the other clue-giver has nothing to judge: the host keeps track')
     assert.equal(h.card(game, 'p3').ok, false)
-    h.phone(game, 'p0', 'mark', { index: 1 })
+    assert.equal(h.controllerCard(game).ok, true)
+    h.host(game, 'mark', { index: 1 })
     assert.deepEqual(h.api.publicGame(game).turn.slots, [null, game.turn.words[1].text, null, null, null], 'a guessed word shows on the TV')
+    h.host(game, 'next') // the host stops the clock: a steal
+    assert.equal(game.turn.phase, 'steal')
+    assert.equal(h.card(game, 'p0').ok, true, 'the clue-giver follows the steal on their phone')
+    for (const id of ['p1', 'p2', 'p3']) assert.equal(h.card(game, id).ok, false, `${id} is on the stealing team or a guesser`)
+    h.host(game, 'next')
+    assert.equal(h.card(game, 'p0').ok, false, 'once the card is over, the TV shows it')
+    assert.equal(h.controllerCard(game).ok, false)
   })
-  test('only the judge counts or calls a no-no, and only the clue-giver marks', () => {
+  test('without a host, the judge sees the card while it’s played, and the clue-giver through the steal', () => {
+    const h = harness(), game = newGame(h)
+    assert.equal(h.controllerCard(game).ok, false, 'no controller in a game without a host')
+    toPlay(h, game) // Team 1 plays: p0 clues, p1 judges
+    assert.equal(h.card(game, 'p0').ok, true)
+    assert.equal(h.card(game, 'p1').ok, true, 'the judge checks off the words')
+    assert.equal(h.card(game, 'p2').ok, false)
+    h.fire() // out of time: Team 2 steals
+    assert.equal(h.card(game, 'p0').ok, true, 'the clue-giver checks off the steal')
+    assert.equal(h.card(game, 'p1').ok, false, 'the judge’s team is stealing')
+    assert.equal(h.card(game, 'p3').ok, false)
+  })
+  test('without a host, the other team keeps track: only the judge counts, checks off words or calls a no-no', () => {
     const h = harness(), game = newGame(h)
     toPlay(h, game) // Team 1 plays: p0 clues, p1 judges
-    for (const id of ['p0', 'p2', 'p3']) { h.phone(game, id, 'countWord'); h.phone(game, id, 'nono') }
+    for (const id of ['p0', 'p2', 'p3']) { h.phone(game, id, 'countWord'); h.phone(game, id, 'nono'); h.phone(game, id, 'mark', { index: 0 }) }
     assert.equal(game.turn.used, 0)
     assert.equal(game.turn.phase, 'play')
-    for (const id of ['p1', 'p2', 'p3']) h.phone(game, id, 'mark', { index: 0 })
-    assert.equal(game.turn.words[0].status, 'waiting')
+    assert.equal(game.turn.words[0].status, 'waiting', 'not even the clue-giver checks off their own team’s words')
+    h.phone(game, 'p1', 'mark', { index: 0 })
+    for (const id of ['p0', 'p2', 'p3']) h.phone(game, id, 'unmark', { index: 0 })
+    assert.equal(game.turn.words[0].status, 'got')
+    h.tick(200); h.phone(game, 'p1', 'countWord')
+    assert.equal(game.turn.used, 1)
+  })
+  test('with a host, phones only bid and pass: the host counts, checks off words and calls no-nos', () => {
+    const h = harness(), game = newGame(h, { hostless: false })
+    h.phone(game, 'p0', 'pass')
+    assert.deepEqual(game.turn.passes, [T1], 'a clue-giver can still pass')
+    h.fire()
+    h.phone(game, 'p1', 'bid', { amount: 12 })
+    assert.deepEqual(game.turn.bid, { teamId: T2, amount: 12 }, 'and bid')
+    h.fire() // Team 2 plays: p1 clues, p0 is the other clue-giver
+    for (const id of ['p0', 'p1', 'p2', 'p3']) {
+      h.tick(200)
+      for (const [action, payload] of [['countWord'], ['mark', { index: 0 }], ['nono']]) h.phone(game, id, action, payload)
+    }
+    assert.equal(game.turn.used, 0, 'no phone counts')
+    assert.equal(game.turn.words[0].status, 'waiting', 'no phone checks off a word')
+    assert.equal(game.turn.phase, 'play', 'no phone calls a no-no')
+    h.host(game, 'mark', { index: 0 }); h.host(game, 'countWord')
+    for (const id of ['p0', 'p1']) { h.phone(game, id, 'unmark', { index: 0 }); h.phone(game, id, 'uncount') }
+    assert.equal(game.turn.words[0].status, 'got')
+    assert.equal(game.turn.used, 1)
+    h.host(game, 'next') // a fail: Team 1 steals
+    for (const id of ['p0', 'p1', 'p2', 'p3']) h.phone(game, id, 'mark', { index: 1 })
+    assert.equal(game.turn.words[1].status, 'waiting', 'not in a steal either')
+    h.host(game, 'mark', { index: 1 })
+    assert.equal(game.turn.words[1].status, 'stolen')
   })
   test('a phone can only act for its own player', () => {
     const h = harness(), game = newGame(h)
