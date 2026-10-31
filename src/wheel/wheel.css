@@ -1,34 +1,10 @@
-/* Spin & Solve — the board with a magenta lamp. The puzzle board is a flap module: each letter is a pale flap
-   (the show's lit-but-blank tile) that lights in the lamp colour when it's found and then flips over; unused
-   tiles are dark gaps. The wheel stays a wheel, in matte paints inside a steel frame. Each contestant has a quiet
-   colour (never red: red is for Bankrupt, misses and lock-outs) and always a number beside the name. */
-
-.wheel-game, .ws-setup {
-  --tile-face: #e9e8e2;
-  --tile-face-lo: #dcdbd4;
-  --tile-ink: #131417;
-  --gap-face: #1b1c1f;
-  --gap-face-lo: #18191c;
-}
-.c-0 { --c: #74a9d8; }
-.c-1 { --c: #93c48b; }
-.c-2 { --c: #d6bf72; }
-.c-3 { --c: #b3a2dc; }
-.c-4 { --c: #6cc3bd; }
-.c-5 { --c: #c9a68a; }
-/* A contestant's number on a small cell, so nobody is told apart by colour alone. */
-.ws-num {
-  display: inline-grid; place-items: center; flex-shrink: 0;
-  width: 1.15em; height: 1.3em; margin-right: 0.45em;
-  border-radius: 2px; background: var(--c, var(--steel)); color: #0d0e10;
-  font: 700 0.9em/1 var(--flap-font); letter-spacing: 0; vertical-align: 0.06em;
-}
-/* A row marker: hollow steel square, filled with the lamp when it's that row's turn. */
-.ws-marker { flex-shrink: 0; display: inline-block; width: 10px; height: 10px; border: 2px solid var(--steel-mid); }
-.ws-icon { width: 26px; height: 26px; }
+/* Spin & Solve — a wheel game-show set: a deep purple studio with starlight, gold trim, a bright many-coloured wheel
+   in a gold rim of bulbs, and the puzzle board as rows of green-framed tiles. Hidden letters are blank white tiles;
+   a found letter glows blue, then the tile turns to show it, black on bright white. Contestants stand at bright
+   podiums, each in its own colour (never red: red is for misses and lock-outs) and always with its number. */
 
 /* ---------- Setup ---------- */
-/* (.ws-fieldset is shared with Price Check and Word Budget setup.) */
+/* (.ws-fieldset is shared with Price Check and Word Budget setup; these rules stay as they were.) */
 .ws-fieldset { margin: 26px 0 0; padding: 0; border: 0; display: grid; gap: 12px; max-width: 560px; min-width: 0; }
 .ws-fieldset legend { padding: 0; margin-bottom: 12px; font: 600 0.85rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel); }
 .ws-rounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -44,15 +20,15 @@
 .ws-packs { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .ws-packs button { min-height: 40px; padding: 0 14px; font-size: 0.9rem; }
 .ws-puzzle-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
-.ws-puzzle-list li { display: flex; align-items: center; gap: 16px; padding: 8px 8px 8px 14px; border-radius: 2px; background: var(--flap-face); }
-.ws-p-round { flex-shrink: 0; width: 150px; font: 600 0.85rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel); }
-.ws-p-category { flex: 1; min-width: 0; font: 600 1.15rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.ws-puzzle-list li { display: flex; align-items: center; gap: 16px; padding: 8px 8px 8px 14px; border-radius: 8px; background: var(--ws-panel); box-shadow: var(--ws-panel-edge); }
+.ws-p-round { flex-shrink: 0; width: 150px; font: 600 0.85rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--table); }
+.ws-p-category { flex: 1; min-width: 0; font: 600 1.15rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: #fff; }
 .ws-p-size { font-size: 0.95rem; }
-.ws-bonus-setup { margin: 16px 0 8px; padding: 14px 16px; border-radius: 3px; background: var(--well); border-top: 1px solid var(--rule-strong); display: grid; gap: 12px; }
-.ws-bonus-setup .game-mode { background: transparent; padding: 0; }
+.ws-bonus-setup { margin: 16px 0 8px; padding: 14px 16px; border-radius: 10px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule-strong), inset 0 3px 0 var(--table); display: grid; gap: 12px; }
+.ws-bonus-setup .game-mode { background: transparent !important; box-shadow: none !important; padding: 0; }
 .ws-bonus-setup.is-off .game-mode b { color: var(--steel-hi); }
 .ws-bonus-cats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 34px; }
-.ws-bonus-cats span { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 2px; background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); font: 600 0.95rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
+.ws-bonus-cats span { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--ws-strip); box-shadow: inset 0 0 0 1px rgb(170 200 255 / 0.5); color: #fff; font: 600 0.95rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
 @media (max-width: 760px) {
   .ws-puzzles-head { flex-wrap: wrap; }
   .ws-packs { order: 3; flex: 1 0 100%; margin: 0; }
@@ -63,46 +39,170 @@
   .ws-bonus-cats { padding-left: 0; }
 }
 
+/* ---------- The set ---------- */
+/* The house tokens are re-set to the studio's purples and gold, so shared pieces (fields, chips, host tools, the
+   clock and the room code) take the look too. Two classes, so these win over styles.css whatever order the sheets
+   load in. */
+:is(.display, .player, .controller, .end).wheel-game, .setup.ws-setup {
+  --ws-gold: #ffcf3f;
+  --ws-gold-hi: #ffe9a0;
+  --ws-gold-lo: #a86c00;
+  --board: #1a0b45;
+  --well: #12073a;
+  --flap-face: #2b1670;
+  --flap-face-lo: #24125f;
+  --flap-gap: #0a0420;
+  --rule: rgb(190 150 255 / 0.22);
+  --rule-strong: rgb(205 175 255 / 0.45);
+  --steel: #c3b3ec;
+  --steel-hi: #e0d6fc;
+  --steel-mid: #7d63c4;
+  --steel-lo: #2a1866;
+  --paint: #ffffff;
+  --paint-dim: #9a89cf;
+  --table: #ffcf3f;
+  --on-table: #2a1800;
+  --red: #ff3b3b;
+  --red-text: #ff9a9a;
+  /* A panel lit from inside (podiums, lobby, lists), and the blue strip the category sits on. */
+  --ws-panel: linear-gradient(180deg, #3a1f8c 0%, #2a1572 48%, #1f0f5c 52%, #170a49 100%);
+  --ws-panel-edge: inset 0 0 0 1px rgb(200 170 255 / 0.4), inset 0 2px 0 rgb(255 255 255 / 0.14);
+  --ws-strip: linear-gradient(180deg, #3d7bff 0%, #2357e0 50%, #1a44be 100%);
+  /* The puzzle board's paints. */
+  --tile-green: linear-gradient(180deg, #4fdc8a 0%, #24a95c 55%, #17853f 100%);
+  --tile-white: linear-gradient(180deg, #ffffff 0%, #f1f4f2 60%, #dfe6e1 100%);
+  --tile-ink: #0d0a14;
+  background:
+    radial-gradient(ellipse 50% 42% at 26% 48%, rgb(186 100 255 / 0.3), transparent 72%),
+    radial-gradient(ellipse 46% 40% at 74% 30%, rgb(70 140 255 / 0.22), transparent 72%),
+    radial-gradient(circle, rgb(255 255 255 / 0.55) 0 1px, transparent 1.6px) 13px 21px / 97px 89px,
+    radial-gradient(circle, rgb(255 228 150 / 0.5) 0 1px, transparent 1.6px) 61px 7px / 131px 113px,
+    radial-gradient(circle, rgb(190 170 255 / 0.4) 0 1.2px, transparent 1.8px) 37px 53px / 173px 157px,
+    linear-gradient(180deg, #2c105f 0%, #190a43 52%, #0b0527 100%);
+  box-shadow: 0 0 0 1px #000, 0 0 0 4px #241058, 0 0 0 6px var(--ws-gold-lo);
+  border-radius: 6px;
+}
+.wheel-game .c-0 { --c: #ff6f9c; }
+.wheel-game .c-1 { --c: #ffd23f; }
+.wheel-game .c-2 { --c: #4aa8ff; }
+.wheel-game .c-3 { --c: #3fd987; }
+.wheel-game .c-4 { --c: #b88cff; }
+.wheel-game .c-5 { --c: #ff9f45; }
+/* The frame around the set is the dark studio, not the menu's steel. */
+body:has(main.wheel-game), body:has(main.ws-setup:not([hidden] *)) { background: #07020f; }
+body:has(main.controller.wheel-game) .back-to-settings.is-controller { color: var(--ws-gold-hi, #ffe9a0); }
+body:has(main.controller.wheel-game) .back-to-settings.is-controller:hover { color: #fff; }
+
+/* The show's name on a gold-rimmed plate, with a little wheel, in place of the split-flap brand. */
+.ws-title { display: inline-flex; align-items: center; justify-self: start; }
+.ws-title span {
+  display: inline-block; padding: 0.16em 0.75em 0.1em 1.55em; margin-left: -1.1em; border-radius: 0 999px 999px 0;
+  font: italic 800 clamp(1.6rem, 2.8vw, 2.6rem)/1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+  color: var(--ws-gold-hi);
+  background: radial-gradient(ellipse at 50% 15%, #6b3bd6, #2c1078 72%);
+  box-shadow: inset 0 0 0 3px var(--ws-gold), inset 0 0 0 5px #5a3a00, inset 0 0 0 6px var(--ws-gold-hi), 0 0 22px rgb(255 205 90 / 0.3);
+  text-shadow: 0 3px 0 #4a2a00, 0 0 14px rgb(255 214 110 / 0.5);
+}
+.ws-title-wheel {
+  position: relative; z-index: 1; flex-shrink: 0; width: 1.9em; height: 1.9em; border-radius: 50%;
+  font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+  background:
+    radial-gradient(circle, #ffe08a 0 13%, #6b4400 14% 17%, transparent 18%),
+    conic-gradient(#e8443a 0 45deg, #ffb321 0 90deg, #2f7de1 0 135deg, #38b54a 0 180deg, #ff6fae 0 225deg, #8a4fd8 0 270deg, #ffe14d 0 315deg, #18b7c9 0 360deg);
+  box-shadow: 0 0 0 0.09em var(--ws-gold), 0 0 0 0.13em #5a3a00, 0 4px 14px rgb(0 0 0 / 0.45);
+}
+.ws-title.is-small span, .ws-title.is-small .ws-title-wheel { font-size: 1.05rem; }
+.ws-title.is-small span { box-shadow: inset 0 0 0 2px var(--ws-gold), 0 0 12px rgb(255 205 90 / 0.3); text-shadow: 0 2px 0 #4a2a00; }
+.setup.ws-setup .ws-title span, .setup.ws-setup .ws-title-wheel { font-size: clamp(2rem, 4vw, 3rem); }
+.display.wheel-game .display-bar { border-bottom: 2px solid rgb(255 207 63 / 0.35); }
+.display.wheel-game .display-bar .ws-title span, .display.wheel-game .display-bar .ws-title-wheel { font-size: clamp(1.4rem, 2.3vw, 2.2rem); }
+.end.wheel-game > .ws-title { justify-self: center; margin-top: 12px; }
+
+/* Codes, the clock and the room code are on the shared flaps: on this set they're small white puzzle tiles. */
+:is(.display, .player, .controller, .end).wheel-game .flap .flap-c, .setup.ws-setup .flap .flap-c {
+  background: var(--tile-white); color: var(--tile-ink); border-radius: 0.1em;
+  box-shadow: 0 0 0 0.06em #1f9e54, inset 0 -0.05em 0 rgb(0 0 0 / 0.12);
+}
+:is(.display, .player, .controller, .end).wheel-game .flap .flap-c::after { background: transparent; }
+.wheel-game .clue-timer.is-low .flap-c { background: linear-gradient(180deg, #ffe58a, #ffc21f) !important; }
+
+/* The one lit button: a gold pill. */
+:is(.display, .player, .controller, .end).wheel-game .primary, .setup.ws-setup .primary {
+  border-radius: 999px; background: linear-gradient(180deg, #ffe9a0 0%, #ffc632 52%, #e09a12 100%); color: #2a1800;
+  box-shadow: inset 0 -3px 0 rgb(110 64 0 / 0.45), 0 0 0 2px #7a5208, 0 6px 18px rgb(0 0 0 / 0.4);
+}
+:is(.display, .player, .controller, .end).wheel-game .primary:disabled, .setup.ws-setup .primary:disabled { background: #2a1668; color: var(--paint-dim); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+:is(.display, .player, .controller, .end).wheel-game :is(.secondary, .chip-btn), .setup.ws-setup :is(.secondary, .chip-btn) { border-radius: 999px; }
+.setup.ws-setup .setup-card { border-top-color: rgb(255 207 63 / 0.4); }
+.setup.ws-setup h1 { color: #fff; }
+.setup.ws-setup .game-mode { border-radius: 10px; background: rgb(30 12 80 / 0.75); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.setup.ws-setup :is(.ws-rounds, .ws-packs) button { border-radius: 999px; }
+.setup.ws-setup .field input { background: var(--well); }
+
+/* A contestant's number on a small cell, so nobody is told apart by colour alone. */
+.ws-num {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  width: 1.3em; height: 1.3em; margin-right: 0.45em;
+  border-radius: 50%; background: var(--c, var(--steel)); color: #120a24;
+  font: 800 0.86em/1 var(--flap-font); letter-spacing: 0; vertical-align: 0.06em;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35);
+}
+/* A row marker: a hollow ring, filled gold when it's that contestant's turn. */
+.ws-marker { flex-shrink: 0; display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; opacity: 0.7; }
+.ws-icon { width: 26px; height: 26px; }
+/* Money on a readout: tabular digits, so it doesn't jitter as it counts. */
+.ws-cash { font-family: var(--flap-font); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.03em; white-space: nowrap; }
+
 /* ---------- The puzzle board ---------- */
-/* Four rows of fourteen cells (the short rows' corners don't exist). Sizes come from --tile, the width of one
-   cell; a cell is a little taller than it is wide. */
+/* Four rows of fourteen tiles (the short rows' corners don't exist) in a gold-trimmed frame. Every tile has a green
+   frame: unused ones are solid green, letters sit on a white face. Sizes come from --tile, the width of one tile;
+   a tile is a little taller than it is wide. */
 .wb-board {
   --tile: clamp(18px, min(3.2vw, 4.7vh), 64px);
-  --tile-gap: calc(var(--tile) * 0.08);
+  --tile-gap: calc(var(--tile) * 0.07);
   display: grid; grid-template-columns: repeat(14, var(--tile)); grid-auto-rows: calc(var(--tile) * 1.25); gap: var(--tile-gap);
   justify-content: center; width: max-content; max-width: 100%; margin: 0 auto;
-  padding: 8px; border-radius: 3px;
-  background: var(--flap-gap);
-  box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+  padding: calc(var(--tile) * 0.2); border-radius: calc(var(--tile) * 0.22);
+  background: linear-gradient(180deg, #0d3d25, #072616);
+  box-shadow: 0 0 0 2px #031009, 0 0 0 calc(var(--tile) * 0.1 + 3px) var(--ws-gold, #ffcf3f), 0 0 0 calc(var(--tile) * 0.1 + 5px) #5a3a00, 0 0 calc(var(--tile) * 0.9) rgb(80 255 160 / 0.16), 0 14px 34px rgb(0 0 0 / 0.5);
 }
-.wb-cell { position: relative; display: grid; min-width: 0; padding: 0; border: 0; border-radius: 2px; font-size: calc(var(--tile) * 0.94); }
+.wb-cell {
+  position: relative; display: grid; min-width: 0; padding: max(1.5px, calc(var(--tile) * 0.075)); border: 0;
+  border-radius: max(2px, calc(var(--tile) * 0.09)); background: var(--tile-green, #24a95c);
+  box-shadow: inset 0 0 0 1px rgb(0 40 15 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.3);
+  color: var(--tile-ink, #0d0a14);
+}
 .wb-cell.is-void { visibility: hidden; }
-/* An unused tile: a dark gap with the flaps' split. */
-.wb-cell.is-empty { background: linear-gradient(180deg, var(--gap-face) 0 50%, var(--gap-face-lo) 50% 100%); }
-.wb-cell.is-empty::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - 1px); height: 2px; background: var(--flap-gap); }
-/* Each letter cell holds one flap, stretched to fill it. */
-.wb-cell > .flap { display: flex; width: 100%; height: 100%; }
-.wb-cell .flap-cells { display: flex; width: 100%; height: 100%; }
-.wb-cell .flap-c {
-  width: 100%; height: 100%; border-radius: 2px;
-  background: linear-gradient(180deg, var(--tile-face) 0 50%, var(--tile-face-lo) 50% 100%);
-  color: var(--tile-ink); font-weight: 700;
-  box-shadow: inset 0 -0.04em 0 rgb(0 0 0 / 0.14);
+/* An unused tile: solid green, with a slightly sunken centre panel. */
+.wb-cell.is-empty::after {
+  content: ""; border-radius: max(1px, calc(var(--tile) * 0.05));
+  background: linear-gradient(180deg, #1f9a52, #2bb766); box-shadow: inset 0 1px 2px rgb(0 40 15 / 0.35);
 }
-.wb-cell .flap-c::after { background: rgb(0 0 0 / 0.3); height: max(1px, 0.04em); }
-.wb-cell .fg { padding-top: 0.06em; }
-/* Found, and waiting for the letter turner: the tile lights in the lamp colour, then flips over. */
-.wb-cell.is-lit .flap-c { background: linear-gradient(180deg, var(--table) 0 50%, color-mix(in srgb, var(--table) 88%, #000) 50% 100%); }
-.wb-cell.is-lit .flap-c::after { background: rgb(0 0 0 / 0.35); }
-/* The solve screen: tap a blank to move to it; typed letters are in lamp ink, the cursor a lamp bar. */
+/* A letter's face: blank white while hidden, black letter on bright white once shown. */
+.wb-face {
+  display: grid; place-items: center; min-width: 0; border-radius: max(1px, calc(var(--tile) * 0.05));
+  background: linear-gradient(180deg, #eef1ee 0%, #dde3de 100%);
+  font: 800 calc(var(--tile) * 0.86)/1 var(--flap-font); text-transform: uppercase; color: var(--tile-ink, #0d0a14);
+  padding-top: 0.04em;
+}
+.wb-cell.is-shown .wb-face { background: var(--tile-white); box-shadow: 0 0 calc(var(--tile) * 0.25) rgb(255 255 255 / 0.35); }
+/* Found, and waiting for the letter turner: the tile glows blue, then turns to show its letter. */
+.wb-cell.is-lit { background: linear-gradient(180deg, #8cc4ff, #2f7de1); }
+.wb-cell.is-lit .wb-face { background: radial-gradient(ellipse at 50% 40%, #e6f3ff 0%, #7cb8ff 55%, #3a86ee 100%); box-shadow: 0 0 calc(var(--tile) * 0.5) rgb(90 170 255 / 0.85); }
+.wb-cell.is-turned.is-shown .wb-face { animation: wb-turn 420ms cubic-bezier(0.3, 0.7, 0.4, 1) both; }
+@keyframes wb-turn { from { transform: perspective(240px) rotateY(-90deg); filter: brightness(1.5); } to { transform: none; filter: none; } }
+/* The solve screen: tap a blank to move to it; typed letters are in purple, the cursor a gold outline. */
 button.wb-cell { cursor: pointer; }
-.wb-cell.is-typed .flap-c { color: color-mix(in srgb, var(--table) 62%, #000); }
-.wb-cell.is-cursor .flap-c { box-shadow: inset 0 0 0 2px var(--table), inset 0 -0.16em 0 var(--table); }
-.wb-cell.is-cursor { animation: wb-cursor 1.1s steps(1) infinite; }
-@keyframes wb-cursor { 50% { filter: brightness(0.92); } }
-.wb-board.is-small { --tile: min(calc((100vw - 64px) / 15.2), 26px); padding: 5px; margin: 12px auto 6px; box-shadow: 0 0 0 1px #000, 0 0 0 3px var(--steel-lo); }
-.wb-board.is-small .wb-cell, .wb-board.is-small .wb-cell .flap-c { border-radius: 1px; }
-@media (prefers-reduced-motion: reduce) { .wb-cell.is-cursor { animation: none; } }
+.wb-cell.is-typed .wb-face { background: var(--tile-white); color: #5a23b8; }
+.wb-cell.is-cursor { background: linear-gradient(180deg, #ffe58a, #ffb800); }
+.wb-cell.is-cursor .wb-face { box-shadow: inset 0 -0.16em 0 #ffb800; animation: wb-cursor 1.1s steps(1) infinite; }
+@keyframes wb-cursor { 50% { filter: brightness(0.9); } }
+.wb-board.is-small { --tile: min(calc((100vw - 64px) / 15.2), 26px); margin: 14px auto 8px; box-shadow: 0 0 0 1px #031009, 0 0 0 3px var(--ws-gold, #ffcf3f), 0 8px 20px rgb(0 0 0 / 0.45); }
+@media (prefers-reduced-motion: reduce) {
+  .wb-cell.is-cursor .wb-face { animation: none; }
+  .wb-cell.is-turned.is-shown .wb-face { animation: wb-fade 300ms ease-out both; }
+}
+@keyframes wb-fade { from { opacity: 0.2; } }
 
 /* ---------- TV ---------- */
 /* The wheel on the left; the board, the category and what's happening on the right; the podiums along the foot.
@@ -118,122 +218,196 @@ button.wb-cell { cursor: pointer; }
   .display.wheel-game > .ws-stage { flex: 1 1 0; min-height: 0; }
   .display.wheel-game > .ws-host-tools { flex-shrink: 0; margin-top: 12px; }
   .ws-main { container-type: size; }
-  /* The board's cell: as wide as the column allows, or as tall as the room above the status lines. */
-  .ws-main .wb-board { --tile: max(16px, min(66px, calc((100cqw - 24px) / 15.12), calc((100cqh - var(--ws-below, 176px) - 16px) / 5.24))); }
-  .ws-main:has(.ws-speedup, .ws-prize-puzzle) { --ws-below: 212px; }
-  .ws-main:has(.ws-next) { --ws-below: 196px; }
+  /* The board's tile: as wide as the column allows, or as tall as the room above the status lines. */
+  .ws-main .wb-board { --tile: max(16px, min(64px, calc((100cqw - 40px) / 15.4), calc((100cqh - var(--ws-below, 236px) - 24px) / 5.3))); }
+  .ws-main:has(.ws-speedup, .ws-prize-puzzle) { --ws-below: 272px; }
+  .ws-main:has(.ws-next) { --ws-below: 256px; }
 }
 .ws-wheel-wrap { grid-area: wheel; position: relative; min-height: 0; display: grid; place-items: center; }
 .ws-wheel { width: 100%; height: 100%; min-height: 0; }
-.ws-wheel svg { display: block; width: 100%; height: 100%; filter: drop-shadow(0 10px 18px rgb(0 0 0 / 0.4)); }
-.ws-wedge-text { font-family: var(--flap-font); font-weight: 700; letter-spacing: 0.04em; }
-.ws-hub-lamp { fill: var(--table); }
-/* The board stays put at the top of its column and the called letters along the foot; what's happening sits
+.ws-wheel svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 12px 22px rgb(0 0 0 / 0.5)) drop-shadow(0 0 26px rgb(255 200 80 / 0.22)); }
+.ws-wedge-text { font-family: var(--flap-font); font-weight: 800; letter-spacing: 0.02em; }
+.ws-hub-lamp { fill: #fff3c0; }
+/* The rim's bulbs take turns, a slow chase. Reduced motion: all lit, still. */
+.ws-bulb { fill: #fff6cf; animation: ws-bulb 1.3s steps(1) infinite; }
+.ws-bulb.is-odd { animation-delay: -0.65s; }
+@keyframes ws-bulb { 50% { fill: #b08422; } }
+@media (prefers-reduced-motion: reduce) { .ws-bulb { animation: none !important; fill: #fff6cf; } }
+/* The board stays put at the top of its column and the used-letter board along the foot; what's happening sits
    between them, so nothing jumps as lines come and go. */
 .ws-main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 12px; }
 .ws-main > .ws-used { margin-top: auto; }
 .ws-podiums { grid-area: podiums; }
-.ws-board-wrap { display: grid; justify-items: center; gap: 12px; width: 100%; }
+.ws-board-wrap { display: grid; justify-items: center; gap: 16px; width: 100%; padding-top: 8px; }
 
-/* Under the board: the round and the category, on flaps. */
-.ws-category { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 18px; margin: 0; font-size: clamp(1.05rem, 1.7vw, 1.5rem); }
-.ws-category .ws-round-flap .flap-c { color: var(--table); }
+/* Under the board: the round on a gold tag, and the category on a blue strip. */
+.ws-category { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 14px; margin: 0; font-size: clamp(1.05rem, 1.7vw, 1.5rem); }
+.ws-round-tag {
+  display: inline-flex; align-items: center; min-height: 1.7em; padding: 0 0.8em; border-radius: 999px;
+  background: rgb(20 8 56 / 0.85); box-shadow: inset 0 0 0 2px var(--ws-gold, #ffcf3f);
+  font: 700 0.72em var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ws-gold-hi, #ffe9a0); white-space: nowrap;
+}
+.ws-cat-name {
+  display: inline-flex; align-items: center; min-height: 1.75em; padding: 0 1.1em; border-radius: 8px;
+  background: var(--ws-strip); box-shadow: inset 0 0 0 2px rgb(170 205 255 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.3), 0 0 18px rgb(60 130 255 / 0.4);
+  font: 800 1em var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 0 rgb(0 20 80 / 0.5);
+}
 
-/* A big word over the wheel where it stopped: red flaps for Bankrupt and Lose a Turn, the lamp for a win. */
+/* Where the wheel stopped, on a plate across it: Bankrupt black, Lose a Turn white, money and prizes in gold. */
 .ws-flash { position: absolute; inset: 0; display: grid; place-items: center; padding: 0 6%; pointer-events: none; animation: ws-flash 1.8s ease-out both; }
-.ws-flash > .flap { font-size: clamp(1.8rem, 3.9vw, 3.4rem); padding: 0.14em; border-radius: 3px; background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo), 0 14px 30px rgb(0 0 0 / 0.55); }
-.ws-flash .flap-cells { justify-content: center; }
-.ws-flash.is-bankrupt .flap-c, .ws-flash.is-loseTurn .flap-c { color: var(--red-text); }
-.ws-flash.is-million .flap-c, .ws-flash.is-mysteryWin .flap-c, .ws-flash.is-gift .flap-c { color: var(--table); }
+.ws-flash-plate {
+  display: inline-block; max-width: 100%; padding: 0.22em 0.6em 0.16em; border-radius: 16px; text-align: center;
+  font: italic 800 clamp(2rem, 4.2vw, 3.8rem)/1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; overflow-wrap: anywhere;
+  background: linear-gradient(180deg, #fff1b0 0%, #ffc935 52%, #e39a10 100%); color: #2a1800;
+  box-shadow: 0 0 0 3px #5a3a00, 0 0 0 7px var(--ws-gold-hi, #ffe9a0), 0 0 40px rgb(255 205 70 / 0.6), 0 18px 40px rgb(0 0 0 / 0.55);
+  animation: ws-plate 420ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.ws-flash.is-bankrupt .ws-flash-plate { background: linear-gradient(180deg, #2b2b30, #050507); color: #fff; box-shadow: 0 0 0 3px #000, 0 0 0 7px #d8d8de, 0 18px 40px rgb(0 0 0 / 0.6); }
+.ws-flash.is-loseTurn .ws-flash-plate { background: linear-gradient(180deg, #ffffff, #e2e2dc); color: #16101f; box-shadow: 0 0 0 3px #16101f, 0 0 0 7px #fff, 0 18px 40px rgb(0 0 0 / 0.6); }
+.ws-flash.is-million .ws-flash-plate { background: linear-gradient(180deg, #7ff0a8, #1fae54); color: #04230f; }
+.ws-flash.is-mystery .ws-flash-plate { background: linear-gradient(180deg, #9a6ae6, #4a1f8c); color: #fff; }
+.ws-flash.is-gift .ws-flash-plate { background: linear-gradient(180deg, #d4f1ff, #63c6f7); color: #061f33; }
+.ws-flash.is-express .ws-flash-plate { background: linear-gradient(180deg, #ecff9c, #a7d22a); color: #1a2400; }
 @keyframes ws-flash { 0% { opacity: 0; } 8%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ws-plate { from { transform: scale(0.6); } }
 
-/* Where the wheel goes in a toss-up: the value, big, on a plate in the frame. */
+/* Where the wheel goes in a toss-up: the value, big, on a gold-rimmed plate. */
 .ws-tossup-panel { align-content: center; }
 .ws-tossup-plate {
   display: grid; justify-items: center; gap: 14px; width: min(100%, 460px); padding: 34px 20px 28px;
-  border-radius: 3px; background: var(--well); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo), inset 0 3px 0 var(--table);
+  border-radius: 18px; background: var(--ws-panel);
+  box-shadow: var(--ws-panel-edge), 0 0 0 4px var(--ws-gold), 0 0 0 6px #5a3a00, 0 0 40px rgb(255 205 70 / 0.25);
 }
-.ws-tossup-plate .label { font-size: 1rem; color: var(--table); }
-.ws-tossup-value { font-size: clamp(2.6rem, 5.4vw, 4.6rem); }
+.ws-tossup-plate .label { font-size: 1rem; color: var(--ws-gold-hi); }
+.ws-tossup-value { font-size: clamp(2.8rem, 5.6vw, 4.8rem); color: var(--ws-gold-hi); text-shadow: 0 0 22px rgb(255 205 70 / 0.6), 0 3px 0 #5a3a00; }
 .ws-tossup-plate p { min-height: 1.4em; font: 600 1.2rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-hi); }
 
-/* What's happening: the headline in the lamp colour, then the detail in set type. */
+/* What's happening: the headline in gold, then the detail in set type. */
 .ws-status { display: grid; justify-items: center; gap: 6px; width: 100%; }
-.ws-status h2 { max-width: 100%; font: 600 clamp(1.35rem, 2.3vw, 2rem)/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--table); text-wrap: balance; }
+.ws-status h2 { max-width: 100%; font: 700 clamp(1.35rem, 2.3vw, 2rem)/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ws-gold, #ffcf3f); text-wrap: balance; text-shadow: 0 0 16px rgb(255 205 70 / 0.35); }
 .ws-status > p { font-size: 1.12rem; line-height: 1.3; color: var(--steel-hi); }
 .ws-news { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font: 600 1.2rem/1.25 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; animation: ws-news 300ms ease-out; }
 .ws-news.is-good { color: var(--paint); }
-.ws-news.is-good .ws-marker { background: var(--table); border-color: var(--table); }
+.ws-news.is-good .ws-marker { background: var(--ws-gold, #ffcf3f); border-color: var(--ws-gold, #ffcf3f); opacity: 1; }
 .ws-news.is-bad { color: var(--red-text); }
 .ws-news-x { flex-shrink: 0; width: 0.95em; height: 0.95em; color: var(--red); }
 @keyframes ws-news { from { opacity: 0; transform: translateY(6px); } }
-.ws-paused { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: 2px; border: 1px solid var(--steel-mid); font: 600 0.9rem var(--flap-font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--steel-hi); }
-/* The speed-up, the Express and the Prize Puzzle: a lit cell and an outlined one, no pulsing. */
-.ws-speedup, .ws-prize-puzzle { display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 14px; border-radius: 2px; font: 700 0.95rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; }
-.ws-speedup { background: var(--table); color: var(--on-table); }
-.ws-speedup::before { content: ""; width: 8px; height: 8px; background: currentColor; }
-.ws-prize-puzzle { border: 1px solid var(--table); color: var(--table); }
+.ws-paused { display: inline-flex; align-items: center; min-height: 30px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--steel-mid); font: 600 0.9rem var(--flap-font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--steel-hi); }
+/* The speed-up, the Express and the Prize Puzzle: a lit gold tag and an outlined one. */
+.ws-speedup, .ws-prize-puzzle { display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 14px; border-radius: 999px; font: 700 0.95rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; }
+.ws-speedup, .ws-status > .ws-speedup { background: linear-gradient(180deg, #ffe58a, #ffc21f); color: #2a1800; font-size: 0.95rem; }
+.ws-speedup::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.ws-prize-puzzle, .ws-status > .ws-prize-puzzle { border: 2px solid var(--ws-gold, #ffcf3f); color: var(--ws-gold-hi, #ffe9a0); font-size: 0.95rem; }
 .ws-speedup-in { font-weight: 500; letter-spacing: 0.04em; text-transform: none; color: var(--steel); }
 .ws-next { margin-top: 6px; min-width: 240px; min-height: 52px; }
 
-/* The letters called, as a strip of flaps: dim once found, red and struck when they missed. */
-.ws-used { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 4px; font-size: clamp(0.95rem, 1.45vw, 1.3rem); }
-.ws-used-cell { position: relative; display: inline-flex; }
-.ws-used-cell .flap-c { width: 0.82em; }
-.ws-used-cell.is-vowel .flap-c { box-shadow: inset 0 -0.14em 0 color-mix(in srgb, var(--table) 70%, transparent); }
-.ws-used-cell.is-hit .flap-c { color: var(--paint-dim); background: linear-gradient(180deg, var(--gap-face) 0 50%, var(--gap-face-lo) 50% 100%); }
-.ws-used-cell.is-miss .flap-c { color: var(--red-text); background: linear-gradient(180deg, var(--gap-face) 0 50%, var(--gap-face-lo) 50% 100%); }
+/* The used-letter board: every letter lit on a blue tile until it's called (vowels on purple), then dark if it was
+   in the puzzle, or red and struck through if it wasn't. */
+.ws-used {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; padding: 7px 9px; border-radius: 10px;
+  background: rgb(12 5 38 / 0.85); box-shadow: inset 0 0 0 1px rgb(255 207 63 / 0.45), 0 6px 16px rgb(0 0 0 / 0.35);
+  font-size: clamp(0.95rem, 1.45vw, 1.3rem);
+}
+.ws-used-cell {
+  position: relative; display: inline-grid; place-items: center; width: 1.12em; height: 1.36em; border-radius: 0.14em;
+  background: linear-gradient(180deg, #4b8bff, #2155d8); color: #fff;
+  font: 800 1em/1 var(--flap-font); text-shadow: 0 1px 0 rgb(0 20 80 / 0.6);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3);
+}
+.ws-used-cell.is-vowel { background: linear-gradient(180deg, #a77cff, #6a37d8); }
+.ws-used-cell.is-hit, .ws-used-cell.is-miss { background: rgb(40 24 90 / 0.6); box-shadow: inset 0 0 0 1px rgb(150 120 220 / 0.25); text-shadow: none; }
+.ws-used-cell.is-hit { color: #6d5ca8; }
+.ws-used-cell.is-miss { color: var(--red-text); }
 .ws-used-cell.is-miss::after { content: ""; position: absolute; left: 8%; right: 8%; top: calc(50% - 1px); height: 2px; background: var(--red); transform: rotate(-52deg); pointer-events: none; }
 
-/* Podiums: the contestant's colour along the top edge, a number cell and the name, the total, and the round's
-   bank on big flaps. In control: the lamp outline and a filled marker. */
-.ws-podiums { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+/* Podiums: a nameplate in the contestant's colour, then the round's money on a big lit readout and the total.
+   In control: a gold ring and glow, and the marker filled. */
+.ws-podiums { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .ws-podium {
   container-type: inline-size;
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name total" "extras bank" "members members";
-  align-items: center; gap: 6px 12px; min-width: 0; padding: 12px 14px 10px;
-  border-radius: 3px; background: var(--well); box-shadow: inset 0 3px 0 var(--c); text-align: left;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name name" "total bank" "extras extras" "members members";
+  align-items: center; gap: 8px 12px; min-width: 0; padding: 0 12px 10px; overflow: hidden;
+  border-radius: 12px; background: var(--ws-panel); box-shadow: var(--ws-panel-edge), inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); text-align: left;
   transition: box-shadow 200ms ease-out;
 }
-.ws-podium-name { grid-area: name; display: flex; align-items: center; gap: 8px; min-width: 0; font: 600 1.2rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
-.ws-podium-name .ws-num { margin-right: 0; }
+.ws-podium-name {
+  grid-area: name; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 -12px; padding: 6px 12px 5px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 82%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 80%, #000));
+  color: #120a24; font: 800 1.2rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.ws-podium-name .ws-num { margin-right: 0; background: #120a24; color: var(--c); box-shadow: none; }
+.ws-podium-name .ws-marker { color: #120a24; }
 .ws-podium-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-podium-name small { flex-shrink: 0; font: 600 0.75rem var(--flap-font); letter-spacing: 0.16em; color: var(--paint-dim); }
-.ws-podium-total { grid-area: total; justify-self: end; display: inline-flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+.ws-podium-name small { flex-shrink: 0; font: 700 0.75rem var(--flap-font); letter-spacing: 0.16em; opacity: 0.75; }
+.ws-podium-total { grid-area: total; display: inline-flex; align-items: baseline; gap: 8px; font-size: 1.05rem; color: var(--steel-hi); }
 .ws-podium-total .label { font-size: 0.72rem; }
-.ws-podium-bank { grid-area: bank; justify-self: end; font-size: clamp(1.4rem, 2.2vw, 2rem); }
+.ws-podium-bank {
+  grid-area: bank; justify-self: end; min-width: 4.6em; padding: 0.08em 0.42em 0.02em; border-radius: 8px; text-align: right;
+  background: #07021a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 3px 8px rgb(0 0 0 / 0.8);
+  font-size: clamp(1.5rem, 2.3vw, 2.1rem); color: #fff; text-shadow: 0 0 12px rgb(255 255 255 / 0.45);
+}
 .ws-podium .ws-extras { grid-area: extras; justify-self: start; justify-content: flex-start; margin: 0; }
-.ws-podium.is-control { box-shadow: inset 0 3px 0 var(--c), inset 0 0 0 2px var(--table); }
-.ws-podium.is-control .ws-podium-name { color: var(--table); }
-.ws-podium.is-control .ws-marker { background: var(--table); border-color: var(--table); }
-.ws-podium.is-winner { box-shadow: inset 0 3px 0 var(--c), inset 0 0 0 2px var(--table); }
-.ws-podium.is-winner .ws-podium-total .flap-c { color: var(--table); }
-.ws-podium.is-winner .ws-marker { background: var(--table); border-color: var(--table); }
-.ws-podium.is-away .ws-podium-who, .ws-podium.is-away .flap-c { color: var(--paint-dim); }
+.ws-podium.is-control, .ws-podium.is-winner { box-shadow: var(--ws-panel-edge), inset 0 0 0 3px var(--ws-gold), 0 0 26px rgb(255 205 70 / 0.45); }
+.ws-podium.is-control .ws-marker, .ws-podium.is-winner .ws-marker { background: #120a24; opacity: 1; }
+.ws-podium.is-control .ws-podium-bank, .ws-podium.is-winner .ws-podium-bank { color: var(--ws-gold-hi); text-shadow: 0 0 14px rgb(255 205 70 / 0.6); }
+.ws-podium.is-away { opacity: 0.72; }
 .ws-podium.is-away .ws-marker { border-style: dashed; }
-/* Locked out of a toss-up: red name and an X. Not in a tiebreaker: dim letters. */
-.ws-podium-x { flex-shrink: 0; width: 14px; height: 14px; color: var(--red); }
-.ws-podium.is-struck .ws-podium-who { color: var(--red-text); }
-.ws-podium.is-struck .flap-c, .ws-podium.is-out .flap-c, .ws-podium.is-out .ws-podium-who { color: var(--paint-dim); }
-.ws-podium.is-out .ws-num { opacity: 0.5; }
+/* Locked out of a toss-up: a red X on the nameplate. Not in a tiebreaker: dimmed. */
+.ws-podium-x { flex-shrink: 0; width: 15px; height: 15px; color: #b3001b; }
+.ws-podium.is-struck { box-shadow: var(--ws-panel-edge), inset 0 0 0 2px var(--red); }
+.ws-podium.is-struck .ws-podium-name { filter: saturate(0.4) brightness(0.8); }
+.ws-podium.is-struck .ws-podium-bank, .ws-podium.is-out .ws-podium-bank { color: var(--paint-dim); text-shadow: none; }
+.ws-podium.is-out { opacity: 0.55; }
 /* A narrow podium (five or six players): name, then the bank, then the total. */
 @container (max-width: 250px) {
-  .ws-podium { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "bank" "total" "extras" "members"; gap: 4px; }
-  .ws-podium-bank, .ws-podium-total { justify-self: start; }
+  .ws-podium { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "bank" "total" "extras" "members"; gap: 6px; }
+  .ws-podium-bank { justify-self: stretch; }
 }
-/* The Wild Card, the Million Dollar wedge and gifts a contestant is holding: small marked cells. */
+/* The Wild Card, the Million Dollar wedge and gifts a contestant is holding: small tags. */
 .ws-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; }
-.ws-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--steel-mid); font: 600 0.72rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--paint); white-space: nowrap; }
-.ws-chip.is-wild { border-color: var(--paint); }
-.ws-chip.is-million { background: var(--paint); border-color: var(--paint); color: #121316; }
-.ws-chip.is-million.is-pending { background: transparent; color: var(--paint); border-style: dashed; }
-.ws-chip.is-gift { color: var(--steel-hi); }
+.ws-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--steel-mid); font: 700 0.72rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--paint); white-space: nowrap; }
+.ws-chip.is-wild { background: #fff; border-color: #fff; color: #c2185b; }
+.ws-chip.is-million { background: #2fbf5b; border-color: #2fbf5b; color: #04230f; }
+.ws-chip.is-million.is-pending { background: transparent; color: #7ff0a8; border-style: dashed; border-color: #7ff0a8; }
+.ws-chip.is-gift { border-color: #7fd6ff; color: #bfeaff; }
 .ws-podium-members { grid-area: members; display: flex; flex-wrap: wrap; gap: 2px 10px; font: 600 0.8rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
-.ws-podium-members .is-up { color: var(--table); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.ws-podium-members .is-up { color: var(--ws-gold-hi); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .ws-podium-members .is-away { color: var(--paint-dim); }
 
-/* The lobby's departure rows. */
-.ws-lobby .departures li > span .ws-num, .ws-lobby .departures li > button .ws-num { font-size: 0.8em; margin-right: 0.2em; }
+/* ---------- Lobby ---------- */
+/* The contestants' podiums in a row, each with its big number, the name, and Ready or Away. */
+.ws-lobby-podiums { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.ws-lobby-podium {
+  display: grid; justify-items: center; align-content: start; gap: 10px; min-width: 0; padding: 0 14px 16px; overflow: hidden;
+  border-radius: 14px; background: var(--ws-panel); box-shadow: var(--ws-panel-edge), inset 0 0 0 2px color-mix(in srgb, var(--c, #7d63c4) 60%, transparent);
+  border-top: 10px solid var(--c, #7d63c4);
+}
+.ws-lobby-num {
+  display: grid; place-items: center; width: 2.2em; height: 2.2em; margin-top: 16px; border-radius: 50%;
+  background: var(--c); color: #120a24; font: 800 1.6rem/1 var(--flap-font);
+  box-shadow: 0 0 0 4px rgb(0 0 0 / 0.3), 0 0 22px color-mix(in srgb, var(--c) 50%, transparent);
+}
+.ws-lobby-podium > .ws-lobby-name { max-width: 100%; font: 800 1.5rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: #fff; text-align: center; overflow-wrap: anywhere; }
+.ws-lobby-status { display: inline-flex; align-items: center; gap: 7px; font: 700 0.85rem var(--flap-font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ws-gold-hi); }
+.ws-lobby-status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.ws-lobby-podium.is-away .ws-lobby-status, .ws-lobby-members .is-away .ws-lobby-status { color: var(--paint-dim); }
+.ws-lobby-podium.is-away .ws-lobby-status::before, .ws-lobby-members .is-away .ws-lobby-status::before { background: transparent; border: 2px dashed currentColor; box-shadow: none; }
+.ws-lobby-podium.is-open { --c: #4a3a8a; border-top-style: dashed; background: rgb(20 8 56 / 0.5); box-shadow: inset 0 0 0 2px rgb(150 120 220 / 0.3); }
+.ws-lobby-podium.is-open .ws-lobby-num { background: transparent; color: var(--paint-dim); box-shadow: inset 0 0 0 3px rgb(150 120 220 / 0.45); }
+.ws-lobby-podium.is-open > .ws-lobby-name { color: var(--paint-dim); }
+/* Teams: a nameplate, then the team's players; tap a name to move them to the next team. */
+.ws-lobby-podiums.is-teams { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.ws-lobby-podiums.is-teams .ws-lobby-podium { justify-items: stretch; padding: 0 0 12px; }
+.ws-lobby-head { display: flex; align-items: center; margin: 0; padding: 10px 14px; background: var(--c); color: #120a24; font: 800 1.35rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.ws-lobby-head .ws-num { background: #120a24; color: var(--c); box-shadow: none; }
+.ws-lobby-members { list-style: none; margin: 0; padding: 0 12px; display: grid; gap: 6px; }
+.ws-lobby-members li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; background: rgb(10 4 34 / 0.55); }
+.ws-lobby-members button { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 0; border: 0; background: none; color: #fff; font: 700 1.2rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.ws-lobby-members button .ws-lobby-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-lobby-members button .dep-swap { flex-shrink: 0; width: 18px; height: 18px; color: var(--steel); }
+.ws-lobby-members button:hover .dep-swap, .ws-lobby-members button:focus-visible .dep-swap { color: var(--ws-gold); }
+.ws-lobby-members li.is-open { justify-content: center; color: var(--paint-dim); font: 600 0.95rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; border: 1px dashed rgb(150 120 220 / 0.4); background: transparent; }
+@media (max-width: 760px) { .ws-lobby-podiums { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ws-lobby-podiums.is-teams { grid-template-columns: 1fr; } }
 
 /* Host tools on a TV with no host, and on the host controller. */
 .ws-host-tools .ws-round-tools, .ws-host-tools .ws-player-tools { padding: 12px 16px; }
@@ -241,20 +415,20 @@ button.wb-cell { cursor: pointer; }
 .ws-round-tools .danger { margin-left: auto; }
 .ws-player-tools ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .ws-player-tools li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ws-player-tools li input { flex: 1 1 140px; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--well); font: 600 1rem var(--set); }
+.ws-player-tools li input { flex: 1 1 140px; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--well); font: 600 1rem var(--set); }
 .ws-player-tools li input:focus, .ws-player-tools select:focus { border-color: var(--table); outline: none; box-shadow: 0 0 0 1px var(--table); }
-.ws-player-tools li .money { font-size: 1.15rem; }
+.ws-player-tools li .money { font-size: 1.15rem; color: var(--ws-gold-hi, #ffe9a0); }
 .ws-player-tools .inline-field { padding: 0; }
 .ws-player-tools .inline-field input { width: 100px; min-height: 40px; padding: 6px 10px; }
-.ws-player-tools select { min-height: 40px; padding: 4px 8px; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--well); font: 600 0.95rem var(--set); }
+.ws-player-tools select { min-height: 40px; padding: 4px 8px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--well); font: 600 0.95rem var(--set); }
 .ws-team-tools { margin-top: 12px !important; }
-.ws-team-tools li { padding: 8px 10px; border-radius: 2px; background: var(--flap-face); box-shadow: inset 3px 0 0 var(--c); }
+.ws-team-tools li { padding: 8px 10px; border-radius: 8px; background: var(--flap-face); box-shadow: inset 4px 0 0 var(--c); }
 
 @media (max-width: 900px) {
   .ws-stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "main" "wheel" "podiums"; }
   .ws-main { container-type: inline-size; }
-  .ws-main .wb-board { --tile: min(48px, calc((100cqw - 24px) / 15.12)); }
-  .ws-wheel { width: min(100%, 60vh); height: auto; aspect-ratio: 220 / 228; }
+  .ws-main .wb-board { --tile: min(48px, calc((100cqw - 40px) / 15.4)); }
+  .ws-wheel { width: min(100%, 60vh); height: auto; aspect-ratio: 232 / 246; }
   .ws-used { display: grid; grid-template-columns: repeat(13, max-content); justify-content: center; }
 }
 
@@ -262,45 +436,52 @@ button.wb-cell { cursor: pointer; }
 .player.wheel-game .player-bar + .ws-my-podium { margin-top: 14px; }
 .ws-my-podium {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name name" "bank total";
-  align-items: end; gap: 8px 12px; padding: 12px 14px; border-radius: 3px;
-  background: var(--well); box-shadow: inset 0 3px 0 var(--c); text-align: left;
+  align-items: end; gap: 10px 12px; padding: 0 14px 12px; overflow: hidden;
+  border-radius: 12px; background: var(--ws-panel); box-shadow: var(--ws-panel-edge), inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); text-align: left;
 }
-.ws-my-name { grid-area: name; display: flex; align-items: center; min-width: 0; font: 600 1.05rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; overflow-wrap: anywhere; }
+.ws-my-name {
+  grid-area: name; display: flex; align-items: center; min-width: 0; margin: 0 -14px; padding: 7px 14px 6px;
+  background: var(--c); color: #120a24; font: 800 1.1rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; overflow-wrap: anywhere;
+}
+.ws-my-name .ws-num { background: #120a24; color: var(--c); box-shadow: none; }
 .ws-my-bank, .ws-my-total { display: grid; gap: 4px; }
-.ws-my-bank { grid-area: bank; justify-items: start; font-size: 1.85rem; }
-.ws-my-total { grid-area: total; justify-items: end; font-size: 1.2rem; }
+.ws-my-bank { grid-area: bank; justify-items: start; font-size: 1.9rem; }
+.ws-my-bank .ws-cash { padding: 0.04em 0.4em 0; border-radius: 8px; background: #07021a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 3px 8px rgb(0 0 0 / 0.8); color: #fff; text-shadow: 0 0 12px rgb(255 255 255 / 0.45); }
+.ws-my-total { grid-area: total; justify-items: end; font-size: 1.25rem; color: var(--ws-gold-hi); }
 .ws-my-bank .label, .ws-my-total .label { font-size: 0.72rem; }
 .player .ws-extras { margin-top: 8px; }
 .player.wheel-game .player-clue-meta { margin-top: 14px; }
 .player.wheel-game .ws-meta, .controller.wheel-game .ws-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; margin-top: 14px; }
-.ws-meta .flap { font-size: 1.05rem; letter-spacing: 0; }
-.player.wheel-game .ws-used { display: grid; grid-template-columns: repeat(13, max-content); justify-content: center; gap: 3px; margin: 16px auto 0; font-size: 1.32rem; }
+.ws-meta .ws-cat-name { font-size: 1.02rem; letter-spacing: 0.1em; }
+.player.wheel-game .ws-used { display: grid; grid-template-columns: repeat(13, max-content); justify-content: center; gap: 3px; width: max-content; max-width: 100%; margin: 16px auto 0; padding: 6px 7px; font-size: 1.16rem; }
 .player.wheel-game .ws-news { display: flex; font-size: 1.05rem; margin-top: 6px; }
 .player.wheel-game .clue-timer { margin: 6px auto; justify-content: center; }
 .player.wheel-game .player-status { margin: 12px 0 6px; }
+.player.wheel-game .player-status.is-you { color: var(--ws-gold); }
 
-/* Spin: the machine's big key, lit in the lamp colour, with a small wheel that turns when it's pressed. */
+/* Spin: a big purple key in a gold ring with a little wheel that turns when it's pressed. */
 .ws-turn { display: grid; gap: 10px; margin-top: 8px; }
 .ws-spin {
   position: relative; display: grid; grid-template-columns: auto auto; grid-template-areas: "icon word" "icon hint";
   justify-content: center; align-items: center; column-gap: 18px; row-gap: 2px;
-  width: 100%; min-height: 124px; padding: 14px 18px;
-  border-radius: 6px; background: var(--table); color: var(--on-table);
-  box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--steel-mid), inset 0 -5px 0 rgb(0 0 0 / 0.25);
-  margin: 10px 0 12px;
+  width: 100%; min-height: 124px; padding: 14px 18px; margin: 10px 0 12px;
+  border: 0; border-radius: 22px; color: var(--ws-gold-hi);
+  background: radial-gradient(ellipse at 50% 0%, #8a52ff 0%, #4a1fb0 55%, #2a0f75 100%);
+  box-shadow: inset 0 0 0 3px var(--ws-gold), inset 0 0 0 5px #5a3a00, 0 0 0 3px rgb(255 207 63 / 0.25), 0 0 28px rgb(255 205 70 / 0.35), inset 0 -6px 0 rgb(0 0 0 / 0.3);
   touch-action: manipulation; user-select: none;
   transition: transform 80ms ease-out, box-shadow 80ms ease-out;
 }
-.ws-spin-icon { grid-area: icon; width: 64px; height: 64px; transition: transform 1.1s cubic-bezier(0.3, 0, 0.4, 1); }
-.ws-spin-word { grid-area: word; justify-self: start; font: 700 2.6rem/1 var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; }
-.ws-spin small { grid-area: hint; justify-self: start; font: 600 0.82rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.8; }
-.ws-spin:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--steel-mid), inset 0 -2px 0 rgb(0 0 0 / 0.25); }
-.ws-spin:active:not(:disabled) .ws-spin-icon { transform: rotate(-120deg); }
-.ws-spin:disabled { background: var(--flap-face); color: var(--paint-dim); box-shadow: 0 0 0 6px var(--well), 0 0 0 8px var(--rule-strong), inset 0 0 0 1px var(--rule-strong); }
+.ws-spin-icon { grid-area: icon; width: 70px; height: 70px; filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.5)); transition: transform 1.1s cubic-bezier(0.3, 0, 0.4, 1); }
+.ws-spin-word { grid-area: word; justify-self: start; font: italic 800 2.8rem/1 var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; text-shadow: 0 3px 0 #3a1a00, 0 0 16px rgb(255 214 110 / 0.5); }
+.ws-spin small { grid-area: hint; justify-self: start; font: 700 0.82rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: #fff; opacity: 0.85; }
+.ws-spin:active:not(:disabled) { transform: translateY(3px); }
+.ws-spin:active:not(:disabled) .ws-spin-icon { transform: rotate(-200deg); }
+.ws-spin:disabled { background: #22125a; color: var(--paint-dim); box-shadow: inset 0 0 0 2px var(--rule-strong); }
+.ws-spin:disabled .ws-spin-icon { filter: grayscale(1) opacity(0.5); }
 .ws-turn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ws-turn-row button { display: grid; place-content: center; gap: 4px; min-height: 60px; padding: 6px 10px; font-size: 1.08rem; }
+.ws-turn-row button { display: grid; place-content: center; gap: 4px; min-height: 60px; padding: 6px 10px; font-size: 1.08rem; border-radius: 18px !important; }
 .ws-turn-row small { font: 600 0.75rem var(--flap-font); letter-spacing: 0.12em; opacity: 0.85; }
-.ws-wild-btn { display: grid !important; gap: 3px; min-height: 58px; border-color: var(--paint) !important; }
+.ws-wild-btn { display: grid !important; gap: 3px; min-height: 58px; border-color: #fff !important; }
 .ws-wild-btn small { font: 500 0.85rem var(--set); letter-spacing: 0; text-transform: none; color: var(--steel-hi); }
 .ws-choice { margin-top: 12px; }
 .ws-choice button { min-height: 78px; font-size: 1.15rem; }
@@ -308,51 +489,50 @@ button.wb-cell { cursor: pointer; }
 .ws-vowels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .ws-cancel { width: 100%; }
 
-/* Letter keys: dark keys with painted letters, split like a flap. Keys you can't press go dim. */
+/* Letter keys: white tiles with black letters, like the board's. Keys you can't press go dark. */
 .ws-keyboard { display: grid; gap: 6px; margin-top: 12px; }
 .ws-key-row { display: flex; justify-content: center; gap: 4px; }
 .ws-key-row button, .ws-vowels button {
   position: relative; flex: 0 1 9.4%; min-width: 0; min-height: 50px; padding: 0;
-  border-radius: 3px; border: 1px solid var(--steel-mid);
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  color: var(--paint); font: 600 1.35rem/1 var(--flap-font);
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.4);
+  border-radius: 7px; border: 2px solid #1f9e54;
+  background: var(--tile-white); color: var(--tile-ink); font: 800 1.4rem/1 var(--flap-font);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.14), 0 2px 0 rgb(0 0 0 / 0.4);
   touch-action: manipulation; transition: background-color 120ms ease-out, transform 80ms ease-out;
 }
-.ws-vowels button { min-height: 66px; font-size: 1.9rem; }
-.ws-key-row button:active:not(:disabled), .ws-vowels button:active:not(:disabled) { transform: translateY(1px); }
-.ws-key-row button.is-off, .ws-key-row button:disabled, .ws-vowels button:disabled { color: var(--paint-dim); border-color: var(--rule); background: var(--well); box-shadow: none; }
-.ws-key-row button.is-chosen { background: var(--table); border-color: var(--table); color: var(--on-table); }
+.ws-vowels button { min-height: 66px; font-size: 1.9rem; border-color: #8a5cf0; }
+.ws-key-row button:active:not(:disabled), .ws-vowels button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.14); }
+.ws-key-row button.is-off, .ws-key-row button:disabled, .ws-vowels button:disabled { color: #5d4d99; border-color: rgb(120 90 200 / 0.35); background: rgb(30 14 80 / 0.7); box-shadow: none; }
+.ws-key-row button.is-chosen { background: linear-gradient(180deg, #ffe58a, #ffc21f); border-color: #a86c00; color: #2a1800; }
 .ws-key-actions { margin-top: 4px; }
 .ws-key-actions button { flex: 0 0 auto; display: grid; place-items: center; padding: 0 16px; }
-.ws-key-actions button.primary { flex: 1; display: inline-flex; font-size: 1.05rem; border: 0; background: var(--table); color: var(--on-table); }
-.ws-key-actions button.primary:disabled { background: var(--flap-face); color: var(--paint-dim); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.ws-key-actions .ws-key-back { background: rgb(30 14 80 / 0.9); color: #fff; border-color: var(--steel-mid); }
+.ws-key-actions button.primary { flex: 1; display: inline-flex; font-size: 1.05rem; border: 0; }
 .ws-solve { margin-top: 8px; }
-.ws-solve-top { display: flex; align-items: center; justify-content: center; gap: 14px; font: 600 1.15rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--table); }
+.ws-solve-top { display: flex; align-items: center; justify-content: center; gap: 14px; font: 700 1.15rem var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ws-gold); }
 .ws-solve-top .clue-timer { margin: 0 !important; font-size: 1.8rem; }
 .ws-solve > .muted { margin-top: 6px; }
 .ws-solve-now { width: 100%; margin-top: 12px; min-height: 56px; font-size: 1.1rem; }
 
-/* Picking a team on the phone. */
+/* Picking a team on the phone: a card per team in its colour. */
 .ws-team-pick-buttons { display: grid; gap: 8px; margin-top: 12px; }
 .ws-team-pick-buttons button {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 64px; padding: 0 16px;
-  border-radius: 3px; background: var(--flap-face); border: 1px solid var(--steel-mid); box-shadow: inset 4px 0 0 var(--c);
-  font: 600 1.2rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; text-align: left;
+  border-radius: 12px; background: var(--ws-panel); border: 0; box-shadow: var(--ws-panel-edge), inset 6px 0 0 var(--c);
+  font: 800 1.2rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; text-align: left; color: #fff;
 }
 .ws-pick-name { display: flex; align-items: center; min-width: 0; overflow-wrap: anywhere; }
 .ws-team-pick-buttons small { flex-shrink: 0; font: 500 0.9rem var(--set); letter-spacing: 0; text-transform: none; color: var(--steel); }
-.ws-team-pick-buttons button[aria-checked="true"] { border-color: var(--table); box-shadow: inset 4px 0 0 var(--c), inset 0 0 0 1px var(--table); background: var(--well); }
-.ws-team-pick-buttons button[aria-checked="true"] small::before { content: "Your team · "; color: var(--table); }
+.ws-team-pick-buttons button[aria-checked="true"] { box-shadow: inset 6px 0 0 var(--c), inset 0 0 0 3px var(--ws-gold), 0 0 18px rgb(255 205 70 / 0.35); }
+.ws-team-pick-buttons button[aria-checked="true"] small::before { content: "Your team · "; color: var(--ws-gold); }
 
 /* ---------- Host controller ---------- */
 .controller.wheel-game .ws-meta { justify-content: flex-start; margin: 0 0 10px; }
-.ws-answer { display: grid; gap: 6px; margin: 10px 0; padding: 14px 16px; border-radius: 2px; background: var(--flap-face); box-shadow: inset 0 2px 0 var(--table); text-align: left; }
-.ws-answer span { font: 600 0.8rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--table); }
-.ws-answer b { font: 600 1.45rem/1.2 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; }
-.controller.wheel-game .wb-board.is-small { --tile: min(calc((100vw - 60px) / 15.2), 30px); margin: 14px auto 12px; }
-.ws-ctrl-status { display: grid; gap: 4px; margin: 10px 0; padding: 12px 14px; border-radius: 2px; background: var(--well); text-align: left; }
-.ws-ctrl-status b { font: 600 1.15rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--table); }
+.ws-answer { display: grid; gap: 6px; margin: 10px 0; padding: 14px 16px; border-radius: 12px; background: var(--ws-panel); box-shadow: var(--ws-panel-edge), inset 0 0 0 2px var(--ws-gold); text-align: left; }
+.ws-answer span { font: 700 0.8rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ws-gold); }
+.ws-answer b { font: 700 1.45rem/1.2 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: #fff; }
+.controller.wheel-game .wb-board.is-small { --tile: min(calc((100vw - 64px) / 15.2), 30px); margin: 16px auto 12px; }
+.ws-ctrl-status { display: grid; gap: 4px; margin: 10px 0; padding: 12px 14px; border-radius: 10px; background: var(--well); box-shadow: inset 0 0 0 1px var(--rule); text-align: left; }
+.ws-ctrl-status b { font: 700 1.15rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ws-gold); }
 .ws-ctrl-status span { color: var(--steel-hi); }
 .ws-ctrl-status .ws-news { justify-content: flex-start; font-size: 1rem; }
 .ws-ctrl-status .ws-news.is-good { color: var(--paint); }
@@ -360,93 +540,123 @@ button.wb-cell { cursor: pointer; }
 .controller.wheel-game .ws-round-tools { margin: 18px 0 0; }
 
 /* ---------- End ---------- */
-/* Final standings as an arrivals board: place, the name with the contestant's colour along its edge, the total. */
-.ws-final { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 6px; width: 100%; max-width: 640px; }
-.ws-final li {
-  display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; align-items: center; gap: 14px;
-  min-height: 66px; padding: 8px 16px 8px 10px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  box-shadow: inset 4px 0 0 var(--c); text-align: left;
+/* The winner in big gold letters, then the final standings as podium rows, each total counting up. */
+.end.wheel-game .ws-winner-title {
+  margin: 8px 0 0; font: italic 800 clamp(2.4rem, 6vw, 4.6rem)/1.05 var(--flap-font); letter-spacing: 0.03em; text-transform: uppercase; text-align: center; text-wrap: balance;
+  color: var(--ws-gold-hi); text-shadow: 0 4px 0 #5a3a00, 0 0 30px rgb(255 205 70 / 0.55);
 }
-.ws-final-rank { font: 700 1.6rem var(--flap-font); color: var(--steel); text-align: center; }
+.ws-final { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 8px; width: 100%; max-width: 660px; }
+.ws-final li {
+  display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  min-height: 68px; padding: 8px 12px 8px 12px; border-radius: 12px;
+  background: var(--ws-panel); box-shadow: var(--ws-panel-edge), inset 8px 0 0 var(--c); text-align: left;
+}
+.ws-final-rank { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; margin-left: 6px; border-radius: 50%; background: var(--c); color: #120a24; font: 800 1.3rem var(--flap-font); }
 .ws-final-who { display: grid; gap: 3px; min-width: 0; }
-.ws-final-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font: 600 1.5rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.ws-final-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font: 800 1.5rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: #fff; overflow-wrap: anywhere; }
 .ws-final-who small { font-size: 0.92rem; color: var(--steel-hi); }
-.ws-final li > .money { font-size: 1.8rem; }
-.ws-final li.is-winner { min-height: 86px; box-shadow: inset 4px 0 0 var(--c), inset 0 0 0 2px var(--table); }
-.ws-final li.is-winner .ws-final-rank, .ws-final li.is-winner .ws-final-name { color: var(--table); }
-.ws-final li.is-winner .ws-final-name { font-size: 2rem; }
-.ws-final li.is-winner > .money { font-size: 2.3rem; }
-.ws-final li.is-winner > .money .flap-c { color: var(--table); }
-.ws-winner-tag { display: inline-flex; align-items: center; gap: 6px; font: 600 0.8rem var(--flap-font); font-style: normal; letter-spacing: 0.2em; color: var(--table); }
-.ws-winner-tag::before { content: ""; width: 8px; height: 8px; background: currentColor; }
-.ws-bonus-result { max-width: 50ch; font-size: 1.12rem; line-height: 1.5; color: var(--steel-hi); }
-.ws-bonus-result b { color: var(--paint); font-weight: 600; }
+.ws-final li > .money { padding: 0.06em 0.45em 0; border-radius: 8px; background: #07021a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 3px 8px rgb(0 0 0 / 0.8); font-size: 1.8rem; color: #fff; text-shadow: 0 0 12px rgb(255 255 255 / 0.4); }
+.ws-final li.is-winner { min-height: 88px; box-shadow: var(--ws-panel-edge), inset 8px 0 0 var(--c), inset 0 0 0 3px var(--ws-gold), 0 0 30px rgb(255 205 70 / 0.4); }
+.ws-final li.is-winner .ws-final-name { font-size: 2rem; color: var(--ws-gold-hi); }
+.ws-final li.is-winner > .money { font-size: 2.4rem; color: var(--ws-gold-hi); text-shadow: 0 0 16px rgb(255 205 70 / 0.6); }
+.ws-winner-tag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 9px; border-radius: 999px; background: var(--ws-gold); font: 800 0.75rem var(--flap-font); font-style: normal; letter-spacing: 0.18em; color: #2a1800; }
+.ws-bonus-result { max-width: 52ch; font-size: 1.12rem; line-height: 1.5; color: var(--steel-hi); text-align: center; }
+.ws-bonus-result b { color: #fff; font-weight: 600; }
+.ws-bonus-result b.money { color: var(--ws-gold-hi); }
 .ws-end-buttons { display: grid; justify-items: center; gap: 14px; }
 .ws-end-buttons a { font: 600 0.95rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
 @media (max-width: 560px) {
-  .ws-final li { grid-template-columns: 1.8rem minmax(0, 1fr) auto; gap: 10px; padding-right: 12px; }
+  .ws-final li { grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: 10px; padding-right: 10px; }
+  .ws-final-rank { width: 1.8rem; height: 1.8rem; font-size: 1.1rem; }
   .ws-final-name { font-size: 1.2rem; }
   .ws-final li.is-winner .ws-final-name { font-size: 1.45rem; }
-  .ws-final li > .money { font-size: 1.35rem; }
+  .ws-final li > .money { font-size: 1.3rem; }
   .ws-final li.is-winner > .money { font-size: 1.6rem; }
 }
 
 /* ---------- Bonus round ---------- */
 .ws-bonus { display: grid; justify-items: center; gap: 18px; max-width: 1200px; margin: 0 auto; }
-.ws-bonus-label { font: 600 1rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--table); }
-.ws-bonus-choices { list-style: none; margin: 3vh 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; width: 100%; }
+.ws-bonus-label { display: inline-flex; align-items: center; min-height: 34px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 2px var(--ws-gold); font: 700 1rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ws-gold-hi); }
+/* Three category cards, lit blue in gold frames, dealt one after another. */
+.ws-bonus-choices { list-style: none; margin: 3vh 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; width: 100%; }
 .ws-bonus-choices li {
-  display: grid; place-items: center; min-height: 30vh; padding: 18px; border-radius: 3px;
-  background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
-  font-size: clamp(1.6rem, 3.3vw, 3rem);
+  display: grid; place-items: center; min-height: 30vh; padding: 22px; border-radius: 18px; text-align: center;
+  background: radial-gradient(ellipse at 50% 20%, #4f8cff, #1a44be 70%, #122f8e 100%);
+  box-shadow: inset 0 0 0 2px rgb(190 215 255 / 0.6), 0 0 0 5px var(--ws-gold), 0 0 0 7px #5a3a00, 0 0 34px rgb(80 140 255 / 0.45);
+  font: 800 clamp(1.6rem, 3.2vw, 2.9rem)/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; color: #fff; text-shadow: 0 3px 0 rgb(0 20 80 / 0.55);
+  animation: ws-deal 500ms cubic-bezier(0.3, 1.3, 0.5, 1) both; animation-delay: calc(var(--i, 0) * 160ms);
 }
-.ws-bonus .wb-board { --tile: clamp(24px, min(4.4vw, 6.6vh), 66px); }
+@keyframes ws-deal { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
+.ws-bonus .wb-board { --tile: clamp(24px, min(4.4vw, 6.4vh), 64px); }
 /* Once the envelope opens it stands beside the headline, so the board keeps its size. */
 .ws-bonus .ws-status:has(> .ws-envelope) { grid-template-columns: auto minmax(0, max-content); justify-content: center; justify-items: start; align-items: center; column-gap: 30px; row-gap: 6px; text-align: left; }
 .ws-bonus .ws-status > .ws-envelope { grid-row: span 3; }
 .ws-bonus .ws-status:has(> .ws-envelope) .ws-next { margin: 0; }
-.ws-bonus-choices li .flap-cells { justify-content: center; }
-.ws-bonus-choices.is-phone { grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.ws-bonus-choices.is-phone { grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
 .ws-bonus-choices.is-phone button {
-  min-height: 72px; padding: 0 16px; border-radius: 3px; border: 1px solid var(--steel-mid);
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  font: 600 1.35rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase;
+  min-height: 72px; padding: 0 16px; border-radius: 14px; border: 0;
+  background: radial-gradient(ellipse at 50% 10%, #4f8cff, #1a44be 75%);
+  box-shadow: inset 0 0 0 2px rgb(190 215 255 / 0.6), 0 0 0 3px var(--ws-gold);
+  font: 800 1.35rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; color: #fff;
 }
-.ws-bonus-choices.is-phone button:active { background: var(--table); color: var(--on-table); }
+.ws-bonus-choices.is-phone button:active { background: linear-gradient(180deg, #ffe58a, #ffc21f); color: #2a1800; }
 .ws-bonus .ws-wheel-wrap { grid-area: auto; }
-.ws-bonus-wheel { width: min(520px, 90vw); height: min(520px, calc(100dvh - 330px)); }
-.ws-bonus-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; font-size: 1.7rem; }
-.ws-bonus-letters .is-picked .flap-c { background: var(--table); color: var(--on-table); }
+.ws-bonus-wheel { width: min(520px, 90vw); height: min(540px, calc(100dvh - 330px)); }
+/* R S T L N E and the player's picks as board tiles; the picks are gold. */
+.ws-bonus-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; font-size: 1.7rem; }
+.ws-bonus-tile {
+  display: grid; place-items: center; width: 1.25em; height: 1.5em; border-radius: 0.16em;
+  background: var(--tile-white); color: var(--tile-ink); box-shadow: 0 0 0 0.09em #1f9e54, 0 3px 8px rgb(0 0 0 / 0.4);
+  font: 800 1em/1 var(--flap-font);
+}
+.ws-bonus-tile.is-picked { background: linear-gradient(180deg, #fff1b0, #ffc935); box-shadow: 0 0 0 0.09em #a86c00, 0 0 16px rgb(255 205 70 / 0.5); animation: ws-plate 360ms cubic-bezier(0.3, 1.5, 0.5, 1) both; }
 .player .ws-bonus-letters { font-size: 1.3rem; }
-.ws-envelope { display: grid; justify-items: center; gap: 10px; padding: 18px 34px; border-radius: 3px; background: var(--well); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo); }
-.ws-envelope .money { font-size: clamp(2.4rem, 5.4vw, 4.4rem); }
-.ws-envelope.is-won { box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo), inset 0 0 0 2px var(--table); }
-.ws-envelope.is-won .money .flap-c { color: var(--table); }
-.ws-envelope:not(.is-won) .money .flap-c { color: var(--steel-hi); }
+/* The envelope: a gold card. */
+.ws-envelope {
+  display: grid; justify-items: center; gap: 8px; padding: 18px 36px; border-radius: 14px;
+  background: linear-gradient(160deg, #fff4c4 0%, #ffd04a 45%, #e8a316 100%); color: #2a1800;
+  box-shadow: 0 0 0 3px #5a3a00, 0 0 0 6px var(--ws-gold-hi), 0 14px 30px rgb(0 0 0 / 0.5);
+  animation: ws-plate 500ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.ws-envelope .label { color: #5a3a00; }
+.ws-envelope .money { font-size: clamp(2.4rem, 5.4vw, 4.4rem); color: #2a1800; text-shadow: 0 2px 0 rgb(255 255 255 / 0.45); }
+.ws-envelope.is-won { box-shadow: 0 0 0 3px #5a3a00, 0 0 0 6px var(--ws-gold-hi), 0 0 50px rgb(255 205 70 / 0.7), 0 14px 30px rgb(0 0 0 / 0.5); }
+.ws-envelope:not(.is-won) { filter: saturate(0.55); }
 .ws-bonus-pick { display: grid; gap: 8px; }
 /* (The shared clock places itself in a header's third column; here it just sits in line.) */
 .ws-bonus-pick .clue-timer, .player.wheel-game .clue-timer, .controller.wheel-game .clue-timer { grid-column: auto; justify-self: center; }
 .ws-bonus-vowels { margin-top: 6px; }
+.ws-bonus-vowels button { border-color: #8a5cf0; }
 @media (max-width: 760px) { .ws-bonus-choices { grid-template-columns: 1fr; } .ws-bonus-choices li { min-height: 14vh; } }
+@media (prefers-reduced-motion: reduce) { .ws-bonus-choices li, .ws-envelope, .ws-bonus-tile.is-picked, .ws-flash-plate { animation: none; } }
 
 /* A 720p TV or a short laptop screen: slimmer podiums and smaller status lines. */
 @media (max-height: 800px) and (min-width: 901px) {
   .ws-stage { gap: 10px 26px; }
-  .ws-main { gap: 8px; --ws-below: 158px; }
-  .ws-board-wrap { gap: 8px; }
-  .ws-main:has(.ws-speedup, .ws-prize-puzzle) { --ws-below: 190px; }
-  .ws-main:has(.ws-next) { --ws-below: 178px; }
+  .ws-main { gap: 8px; --ws-below: 180px; }
+  .ws-board-wrap { gap: 12px; }
+  .ws-main:has(.ws-speedup, .ws-prize-puzzle) { --ws-below: 208px; }
+  .ws-main:has(.ws-next) { --ws-below: 206px; }
   .ws-status { gap: 4px; }
   .ws-status h2 { font-size: clamp(1.25rem, 2.1vw, 1.7rem); }
   .ws-status > p { font-size: 1.02rem; }
   .ws-news { font-size: 1.05rem; }
-  .ws-podium { padding: 9px 12px 8px; gap: 4px 12px; }
+  .ws-podium { padding-bottom: 8px; gap: 6px 12px; }
+  .ws-podium-name { padding: 4px 12px 3px; font-size: 1.05rem; }
   .ws-podium-bank { font-size: clamp(1.3rem, 2.1vw, 1.75rem); }
   .ws-next { min-height: 46px; }
   .ws-bonus-choices li { min-height: 20vh; }
-  .ws-bonus:has(.ws-envelope) .wb-board { --tile: clamp(24px, min(4.4vw, 5.8vh), 66px); }
+  .ws-bonus:has(.ws-envelope) .wb-board { --tile: clamp(24px, min(4.4vw, 5.6vh), 64px); }
   .ws-envelope { padding: 12px 26px; gap: 6px; }
   .ws-envelope .money { font-size: 2.9rem; }
   .ws-bonus { gap: 12px; }
+}
+/* The final scores on a short screen: a smaller title and slimmer rows, so the buttons stay above the rail. */
+@media (max-height: 800px) {
+  .end.wheel-game > .ws-title { margin-top: 0; }
+  .end.wheel-game > .ws-title :is(span, .ws-title-wheel) { font-size: 1.6rem; }
+  .end.wheel-game .ws-winner-title { margin-top: 0; font-size: clamp(2rem, 4.6vw, 3.2rem); }
+  .ws-final { gap: 6px; margin-top: 4px; }
+  .ws-final li { min-height: 56px; padding-block: 5px; }
+  .ws-final li.is-winner { min-height: 70px; }
 }
