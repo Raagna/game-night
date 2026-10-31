@@ -7,7 +7,7 @@ import { LobbyJoin, JoinCorner, Departures } from "../JoinQR";
 import { BackToHub } from "../Hub";
 import { useSound, playWinnersTune } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
-import Flap, { Brand } from "../Flap";
+import Flap from "../Flap";
 import { CATEGORIES, CATEGORY_NAME, ROLES, OPTIONAL_ROLES, DEFAULT_ROLES, MIN_PLAYERS, MAX_PLAYERS, factName } from "../../server/herringCase.js";
 import { Pictogram } from "./icons";
 import { LabTask } from "./Lab";
@@ -100,6 +100,15 @@ const act = (game, playerId, action, payload, done) =>
   socket.timeout(5000).emit("herring:act", { code: game.code, playerId, action, payload }, (err, r) => done?.(!err && !!r?.ok, r || {}));
 
 // ---------- Pieces ----------
+// The game's name: a wax seal pressed with the herring, then the name in old print.
+function HerringBrand() {
+  return (
+    <div className="brand rh-brand">
+      <span className="rh-seal" aria-hidden="true"><Pictogram group="misc" id="herring" size={48} strokeWidth={3} /></span>
+      <span className="rh-brand-name">Red Herring</span>
+    </div>
+  );
+}
 function Fact({ category, value, size = 28, showName = true, className = "" }) {
   return (
     <span className={`rh-fact ${className}`} title={`${CATEGORY_NAME[category]}: ${factName(category, value)}`}>
@@ -130,7 +139,7 @@ function PhaseBanner({ game }) {
   return (
     <div className={`rh-banner is-${game.phase}`}>
       <Pictogram group="misc" id={game.phase === "night" ? "moon" : game.phase === "morning" ? "sun" : ["defense", "vote", "verdict", "lastWords"].includes(game.phase) ? "gavel" : "ledger"} size={34} />
-      <Flap text={phase} />
+      <span className="rh-banner-name">{phase}</span>
       <span className="rh-banner-day label">Day {game.day} of {game.maxDays}</span>
     </div>
   );
@@ -308,7 +317,7 @@ function MorningReport({ game }) {
         {game.hunches?.length > 0 && (
           <div className="rh-hunches">
             <span className="label">Last night’s hunches</span>
-            <ol>{game.hunches.map(({ id, count }) => <li key={id}><Flap text={nameOf(game, id)} /><small>{count} {count === 1 ? "hunch" : "hunches"}</small></li>)}</ol>
+            <ol>{game.hunches.map(({ id, count }) => <li key={id}><b>{nameOf(game, id)}</b><small>{count} {count === 1 ? "hunch" : "hunches"}</small></li>)}</ol>
           </div>
         )}
       </div>
@@ -322,7 +331,7 @@ function TrialStage({ game }) {
   return (
     <div className="rh-trial">
       <span className="label">On trial</span>
-      <h1 className="rh-accused-name"><Flap text={nameOf(game, id)} intro /></h1>
+      <h1 className="rh-accused-name">{nameOf(game, id)}</h1>
       {accusers.length > 0 && <p className="muted">Accused by {listNames(game, accusers)}</p>}
       <div className="rh-trial-said">{said ? <AlibiCard card={said} title="Their statement" /> : <p className="rh-no-statement">No statement filed</p>}</div>
       {game.phase === "defense" ? <p className="rh-sub">{nameOf(game, id)}, make your case.</p> : (
@@ -342,7 +351,7 @@ function VerdictStage({ game }) {
   return (
     <div className={`rh-verdict ${v.jailed ? "is-jailed" : "is-released"}`}>
       <Pictogram group="misc" id={v.jailed ? "jail" : "gavel"} size={110} className="rh-verdict-art" />
-      <h1><Flap text={v.jailed ? "Jailed" : "Released"} intro /></h1>
+      <h1 className="rh-verdict-stamp">{v.jailed ? "Jailed" : "Released"}</h1>
       <p className="rh-verdict-name">{name}</p>
       <p className="rh-sub">{v.jail} to jail, {v.release} to release{v.ghosts?.length ? ` (with ${v.ghosts.length} ghost ${v.ghosts.length === 1 ? "vote" : "votes"})` : ""}. {v.needed} needed.</p>
       {v.jailed && <p className={"rh-verdict-truth" + (v.wasKiller ? " is-killer" : "")}>{v.wasKiller ? `${name} was the killer!` : `${name} was not the killer.`}</p>}
@@ -378,16 +387,18 @@ function Lobby({ game, onAction }) {
   return (
     <div className="lobby rh-lobby">
       <div className="rh-invite">
-        <Pictogram group="misc" id="mansion" size={96} strokeWidth={2} />
-        <p><span className="label">You are invited to {MANOR}</span><b>{game.victim} requests the pleasure of your company.</b> By morning, one guest will be a murderer.</p>
+        <Pictogram group="misc" id="mansion" size={84} strokeWidth={2} />
+        <p><span className="label">You are invited to {MANOR}</span><b>{game.victim} requests the pleasure of your company.</b> <i>By morning, one guest will be a murderer.</i></p>
       </div>
-      <LobbyJoin code={game.code} />
-      <Departures
-        head={["Guest", "Status"]}
-        cols="1fr 0.42fr"
-        rows={game.players.map((player) => ({ key: player.id, state: player.connected ? "ready" : "away", label: `${player.name}, ${player.connected ? "ready" : "reconnecting"}`, cells: [player.name, player.connected ? "Arrived" : "Away"] }))}
-        openCells={game.players.length < MAX_PLAYERS ? ["— — —", "Expected"] : null}
-      />
+      <div className="rh-tag-row"><LobbyJoin code={game.code} /></div>
+      <section className="rh-guestbook" aria-label="Guest book">
+        <Departures
+          head={["Guest", "Status"]}
+          cols="1fr 0.42fr"
+          rows={game.players.map((player) => ({ key: player.id, state: player.connected ? "ready" : "away", label: `${player.name}, ${player.connected ? "ready" : "reconnecting"}`, cells: [player.name, player.connected ? "Arrived" : "Away"] }))}
+          openCells={game.players.length < MAX_PLAYERS ? ["— — —", "Expected"] : null}
+        />
+      </section>
       <p className="muted">{ready ? "Each guest gets a secret role and an alibi card on their phone." : `Red Herring needs at least ${MIN_PLAYERS} guests (${live} here). It’s best with 7 to 10.`}</p>
       <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start the case</button>
     </div>
@@ -402,7 +413,7 @@ export function HerringDisplay({ game, onAction }) {
     <main className={`display rh is-${phase || "lobby"}`}>
       <SoundToggle />
       <header className="display-bar">
-        <Brand text="RED HERRING" className="rh-brand" />
+        <HerringBrand />
         {playing ? <JoinCorner code={game.code} /> : <span />}
         <ClueTimer deadline={game.deadline} serverNow={game.serverNow} />
       </header>
@@ -419,9 +430,9 @@ export function HerringDisplay({ game, onAction }) {
         </div>
       )}
       {game.hostless && game.players.length > 0 && playing && (
-        <details className="host-tools sv-host-tools">
+        <details className="host-tools rh-host-tools">
           <summary>Host tools</summary>
-          <div className="sv-round-controls">
+          <div className="rh-round-controls">
             <button className="chip-btn" onClick={() => onAction("next")}>Skip ahead</button>
             <button className="chip-btn danger" onClick={() => onAction("endGame")}>End the case</button>
           </div>
@@ -587,7 +598,7 @@ function InvestigatePhone({ game, playerId, me }) {
   const tabs = [["statement", "Statement"], ["lab", "Lab"], ["accuse", "Accuse"]];
   return (
     <div className="rh-investigate">
-      <div className="sv-rounds rh-tabs" role="tablist">
+      <div className="rh-choices rh-tabs" role="tablist">
         {tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} aria-checked={tab === id} onClick={() => setTab(id)}>{label}{id === "statement" && !game.statements[playerId] && <i className="rh-dot" aria-label="not filed yet" />}</button>)}
       </div>
       {tab === "statement" && <StatementForm game={game} playerId={playerId} me={me} />}
@@ -647,7 +658,7 @@ export function HerringPlayer({ game, playerId }) {
   return (
     <main className={`player rh is-${game.phase || "lobby"}`}>
       <header className="player-bar">
-        <Brand text="RED HERRING" className="rh-brand" />
+        <HerringBrand />
         <span className="player-name">{player.name}{fate !== "alive" && ` · ${fate === "dead" ? "ghost" : fate}`}</span>
       </header>
       {game.status === "lobby" || !me || me.lobby ? (
@@ -658,7 +669,7 @@ export function HerringPlayer({ game, playerId }) {
             <span className="label">{PHASE_NAME[game.phase]} · Day {game.day}</span>
             <ClueTimer deadline={game.deadline} serverNow={game.serverNow} />
           </div>
-          <div className="sv-rounds rh-views" role="tablist">
+          <div className="rh-choices rh-views" role="tablist">
             <button role="tab" aria-selected={view === "case"} aria-checked={view === "case"} onClick={() => setView("case")}>My case</button>
             <button role="tab" aria-selected={view === "board"} aria-checked={view === "board"} onClick={() => setView("board")}>Board</button>
           </div>
@@ -762,7 +773,7 @@ function RookiePicker({ game, book, onAction }) {
 }
 function GuestTools({ game, onAction }) {
   return (
-    <div className="sv-team-tools fib-player-tools">
+    <div className="rh-guest-tools">
       <ul>
         {game.players.map((player) => (
           <li key={player.id}>
@@ -779,13 +790,13 @@ export function HerringController({ game, onAction }) {
   const book = useGrimoire(game), [trialId, setTrialId] = useState("");
   const header = (
     <header className="controller-bar">
-      <Brand text="RED HERRING" className="rh-brand" />
+      <HerringBrand />
       <Flap className="code-chip" text={game.code} label={`Game code ${game.code}`} />
     </header>
   );
   if (game.status === "lobby")
     return (
-      <main className="controller rh">
+      <main className="controller rh is-lobby">
         {header}
         <h1>The storyteller</h1>
         <p className="muted">You run the case: read the narration aloud, pace the mornings and verdicts, and choose what the Rookie learns. Start the case from the TV once {MIN_PLAYERS} or more guests have arrived. The storyteller doesn’t play a guest.</p>
@@ -793,7 +804,7 @@ export function HerringController({ game, onAction }) {
       </main>
     );
   return (
-    <main className="controller rh">
+    <main className={`controller rh is-${game.phase || "lobby"}`}>
       {header}
       <div className="rh-ctrl-top"><PhaseBanner game={game} /><ClueTimer deadline={game.deadline} serverNow={game.serverNow} /></div>
       <blockquote className="rh-script"><span className="label">Read aloud</span>{script(game)}</blockquote>
@@ -810,7 +821,7 @@ export function HerringController({ game, onAction }) {
       {game.phase === "investigate" && <LabBar lab={game.lab} small />}
       {book && !book.lobby && <RookiePicker game={game} book={book} onAction={onAction} />}
       {book && !book.lobby ? <Grimoire game={game} book={book} /> : <p className="muted">Opening the grimoire…</p>}
-      <div className="sv-round-controls"><button className="chip-btn danger" onClick={() => onAction("endGame")}>End the case</button></div>
+      <div className="rh-round-controls"><button className="chip-btn danger" onClick={() => onAction("endGame")}>End the case</button></div>
       <section className="controller-players"><h2>Guests</h2><GuestTools game={game} onAction={onAction} /></section>
     </main>
   );
@@ -831,8 +842,9 @@ export function HerringSetup({ onCreate }) {
   return (
     <main className="setup rh-setup">
       <BackToHub />
-      <Brand text="RED HERRING" className="rh-brand" />
+      <HerringBrand />
       <section className="setup-card">
+        <span className="rh-folder-tab" aria-hidden="true">Case file · {MANOR}</span>
         <div className="setup-top rh-setup-top">
           <div>
             <h1>Set up Red Herring</h1>
@@ -846,16 +858,16 @@ export function HerringSetup({ onCreate }) {
           <li><Pictogram group="misc" id="ledger" size={36} /><span><b>Investigation</b> File a statement, do lab work, accuse. The killer can contaminate a sample.</span></li>
           <li><Pictogram group="misc" id="gavel" size={36} /><span><b>Trial</b> The most-accused guest defends themselves; more than half the living voting Jail jails them.</span></li>
         </ol>
-        <fieldset className="sv-fieldset">
+        <fieldset className="rh-fieldset">
           <legend>Investigation length</legend>
-          <div className="sv-rounds" role="radiogroup" aria-label="Investigation length">
+          <div className="rh-choices" role="radiogroup" aria-label="Investigation length">
             {LENGTHS.map(([ms, label]) => <button key={ms} role="radio" aria-checked={investigateMs === ms} onClick={() => setInvestigateMs(ms)}>{label}</button>)}
           </div>
-          <p className="muted sv-hint">A case runs up to five days, about 25 to 40 minutes.</p>
+          <p className="muted rh-hint">A case runs up to five days, about 25 to 40 minutes.</p>
         </fieldset>
-        <fieldset className="sv-fieldset rh-roles">
+        <fieldset className="rh-fieldset rh-roles">
           <legend>Roles</legend>
-          <p className="muted sv-hint">The Killer, Forensics and the Witness are in every case. These join once the party is big enough:</p>
+          <p className="muted rh-hint">The Killer, Forensics and the Witness are in every case. These join once the party is big enough:</p>
           <ul>
             {Object.entries(OPTIONAL_ROLES).map(([role, from]) => (
               <li key={role}>
@@ -906,15 +918,15 @@ export function HerringEnd({ game, host, display, onAction }) {
   return (
     <main className={`end rh is-${o.winner || "none"}`}>
       {display && <SoundToggle />}
-      <Brand text="RED HERRING" className="rh-brand" />
-      <h1><Flap text={abandoned ? "Case dropped" : detectives ? "Case closed" : "The killer got away"} wrap intro /></h1>
+      <HerringBrand />
+      <h1 className="rh-end-title">{abandoned ? "Case dropped" : detectives ? "Case closed" : "The killer got away"}</h1>
       <p className="rh-end-reason">{REASON[o.reason]}</p>
       <div className="rh-reveal">
         <div className="rh-reveal-killer">
           <span className="label">The killer</span>
-          <Flap className="rh-killer-name" text={nameOf(game, o.killerId)} intro />
+          <b className="rh-killer-name">{nameOf(game, o.killerId)}</b>
           {o.accompliceId && <p className="muted">with {nameOf(game, o.accompliceId)} as the accomplice</p>}
-          <AlibiCard card={reveal.crime} title="The crime" stamp={{ kind: detectives ? "jail" : "dead", text: detectives ? "Solved" : "Unsolved" }} />
+          <AlibiCard card={reveal.crime} title="The crime" stamp={{ kind: detectives ? "solved" : "dead", text: detectives ? "Solved" : "Unsolved" }} />
           {reveal.frames.length > 0 && <p className="muted">The clue on day {reveal.frames.join(", ")} was planted evidence.</p>}
         </div>
         <ol className="rh-roles-reveal">
@@ -932,7 +944,7 @@ export function HerringEnd({ game, host, display, onAction }) {
         </ol>
       </div>
       {host ? (
-        <div className="sv-end-buttons">
+        <div className="rh-end-buttons">
           <button className="primary" onClick={() => onAction("replay")}>A new case, same guests</button>
           <a href="./" onClick={() => sessionStorage.removeItem("displayCode")}>Back to Game Night</a>
         </div>
