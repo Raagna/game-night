@@ -8,6 +8,7 @@ import { BackToHub } from "../Hub";
 import { useSound, playWinnersTune } from "../survey/sounds";
 import { useClockTicks } from "../wheel/sounds";
 import Flap from "../Flap";
+import { Coach, TutorialSkip } from "../Tutorial";
 import { CATEGORIES, CATEGORY_NAME, ROLES, OPTIONAL_ROLES, DEFAULT_ROLES, MIN_PLAYERS, MAX_PLAYERS, factName } from "../../server/herringCase.js";
 import { Pictogram } from "./icons";
 import { LabTask } from "./Lab";
@@ -46,7 +47,7 @@ const guestIds = (game) => Object.keys(game.names || {});
 const fateOf = (game, id) => game.players.find((player) => player.id === id)?.fate || (game.names?.[id] ? "gone" : "alive");
 const isFree = (game, id) => fateOf(game, id) === "alive";
 const freeIds = (game) => guestIds(game).filter((id) => isFree(game, id));
-const PHASE_NAME = { night: "Night", morning: "Morning", investigate: "Investigation", defense: "The trial", vote: "The vote", verdict: "The verdict", lastWords: "Last words" };
+const PHASE_NAME = { alibi: "Alibi cards", night: "Night", morning: "Morning", investigate: "Investigation", defense: "The trial", vote: "The vote", verdict: "The verdict", lastWords: "Last words" };
 const MARK_PHRASE = { mud: "has muddy boots", ink: "has inky fingers", torn: "has a torn sleeve", smoke: "smells of smoke", scratch: "has a scratched hand", perfume: "wears strong perfume", wine: "has a wine stain", rain: "came in from the rain" };
 // The killer, in a clue's words.
 function clueSentence(game, clue) {
@@ -70,6 +71,80 @@ function claims(game) {
 }
 const accusedCount = (game, id) => Object.values(game.accusations || {}).filter((target) => target === id).length;
 const buzz = (ms = 120) => { try { navigator.vibrate?.(ms); } catch {} };
+
+// ---------- The practice case (the tutorial; see docs/tutorial.md) ----------
+// A made-up case before the real one: everyone is a Detective, and Mr. Kipper, a guest nobody plays, is the killer.
+// The steps come from the server (practiceStep in server/herring.js); this is what the coach says at each, on the TV,
+// the storyteller's controller and the phones.
+const npcId = (game) => game.practice?.npcId;
+const isNpc = (game, id) => !!id && id === npcId(game);
+// What the practice ledger gives away once the statements are in: the room with a claim too many, and the room
+// nobody owns up to.
+function practiceLie(game) {
+  if (!game.ledger) return null;
+  const rows = claims(game).rows.room, find = (state) => Object.keys(rows).find((value) => rows[value].state === state);
+  const over = find("over"), under = find("under") || Object.keys(rows).find((value) => rows[value].claimed < rows[value].count);
+  return { over, overRow: over && rows[over], under };
+}
+const crimeRoom = (game) => game.clues?.find((clue) => clue.category === "room")?.value;
+const roomName = (value) => (value ? `the ${factName("room", value)}` : "a room");
+const ROLE_LIST = "the Killer, Forensics, the Witness or another role";
+const HERRING_COACH = {
+  card: {
+    tv: "A practice case to learn on: nothing counts, and real roles are dealt after it. Look at your phone: your alibi card says where you were, what you held and a mark on you. The ledger here counts every card, but never says whose.",
+    controller: "A practice case: everyone is a Detective and Mr. Kipper, a guest nobody plays, is the killer (your grimoire below shows it all). Read the script, then move on once the table has read their cards.",
+    phone: ({ game, me }) => game.practice?.ready.includes(me) ? "Got it. Waiting for the others to read theirs." : `Tap the role card to turn it over: in practice everyone is a Detective (in the real case you could be ${ROLE_LIST}). Then read your alibi card. Keep both to yourself.`,
+  },
+  night: {
+    tv: "Night. Every guest taps something on their phone every night, so nobody can tell who has a night role. From night 2 the killer picks a victim; Forensics inspects a guest; the Officer guards one.",
+    controller: "Read the night aloud. In a real case the grimoire shows each guest’s night action as it comes in.",
+    phone: "Night: tap a hunch, the guest you suspect most, then Done for the night. In practice you have no night role; in the real case yours shows up here too.",
+  },
+  morning: {
+    tv: ({ game }) => `The morning report: who died, and the lab’s clue. A real clue comes only when the lab finished the day before; this one is free: the killer was in ${roomName(crimeRoom(game))}. ${game.hostless ? "" : "The storyteller moves on."}`,
+    controller: "Read the morning aloud, then tap Start the investigation. Real mornings wait for you too.",
+    phone: "Morning: eyes on the TV. Bodies are found here, their real cards are pinned up, and clues about the killer come from the lab.",
+  },
+  statement: {
+    tv: "Investigation. Everyone files a statement: the alibi they say is theirs. Mr. Kipper already has. The ledger counts the real cards, so a lie stops the statements adding up.",
+    controller: "Everyone is filing a statement on their phone. Mr. Kipper’s is the lie: compare it with his card in the grimoire.",
+    phone: "File your statement: your real card is filled in, so tap File my statement. A killer has to lie here.",
+  },
+  lie: {
+    tv: ({ game }) => {
+      const lie = practiceLie(game);
+      if (!lie?.over) return `Spot the lie: compare the statements with the ledger. The killer was in ${roomName(crimeRoom(game))}, so who says they weren’t?`;
+      return `Spot the lie: ${roomName(lie.over)} has ${lie.overRow.count} on the ledger but ${lie.overRow.claimed} claim it (≠), and nobody owns up to ${roomName(lie.under)} (?), where the killer was. Someone who says ${factName("room", lie.over)} is lying.`;
+    },
+    phone: ({ game }) => `Your Board tab shows it: one room has a claim too many (≠), and nobody claims ${roomName(crimeRoom(game))}, where the killer was. Who’s lying?`,
+  },
+  lab: {
+    tv: "The lab: guests do quick tasks on their phones to fill the lab bar. A full bar pins a clue up the next morning. In a real case the killer can secretly contaminate a sample.",
+    controller: "Guests are doing lab work. The bar below fills with every sample.",
+    phone: ({ game, me }) => game.practice?.tried.includes(me) ? "Sample done. In a real case every sample counts, so keep going." : "Lab work: match the sample’s fingerprint, or tap the tubes in the order they lit up. Do one.",
+  },
+  accuse: {
+    tv: "Accuse: tap a guest on your phone’s Accuse tab. When the clock runs out, the most-accused guest (with two accusations or more) stands trial.",
+    controller: "Guests are accusing on their phones. You can also put a guest on trial yourself.",
+    phone: ({ game, me }) => game.accusations?.[me] ? "Accused. Tap them again to take it back, or someone else to change your mind." : "Accuse the guest you think lied: tap their name.",
+  },
+  trial: {
+    tv: ({ game, name }) => isNpc(game, game.trial?.accusedId) ? "Mr. Kipper stands trial. A real guest gets 30 seconds to argue their case out loud; Mr. Kipper has nothing to say for himself." : `${name(game.trial?.accusedId)} stands trial, and argues their case out loud: 30 seconds in a real case, 10 here.`,
+    phone: ({ game, me }) => game.trial?.accusedId === me ? "You’re on trial! Argue your case out loud." : "Listen to the defence. The vote is next.",
+  },
+  vote: {
+    tv: ({ game }) => `Vote on your phones: Jail or Release. It takes more than half the free guests (${Math.floor(freeIds(game).length / 2) + 1} here) to jail. Dead and jailed guests keep one ghost vote.`,
+    phone: "Vote: Jail or Release. Here, nobody really goes to jail.",
+  },
+  done: {
+    tv: ({ game }) => `${game.trial?.verdict?.wasKiller ? "Mr. Kipper was the killer: case closed. " : ""}That’s the practice! Now everyone gets a new role and alibi card for the real case. ${game.hostless ? "It starts in a moment." : "The storyteller starts it."}`,
+    controller: "That’s the practice. Tap Start the real case to deal the real roles and cards.",
+    phone: ({ game }) => `That’s the practice! Your real role and alibi card are next: they’re new, so read them again. ${game.hostless ? "It starts in a moment." : "The storyteller starts it."}`,
+    skip: "Start the real case",
+  },
+};
+const PRACTICE_TITLE = "Practice case · nothing counts";
+const PRACTICE_NEXT = { statement: "Next: spot the lie", lie: "Next: the lab", lab: "Next: accusations", accuse: "Go to trial now" };
 
 // ---------- Private state ----------
 // The phone's own role and card. Asked for again whenever the server says private views changed, and when this
@@ -140,7 +215,7 @@ function PhaseBanner({ game }) {
     <div className={`rh-banner is-${game.phase}`}>
       <Pictogram group="misc" id={game.phase === "night" ? "moon" : game.phase === "morning" ? "sun" : ["defense", "vote", "verdict", "lastWords"].includes(game.phase) ? "gavel" : "ledger"} size={34} />
       <span className="rh-banner-name">{phase}</span>
-      <span className="rh-banner-day label">Day {game.day} of {game.maxDays}</span>
+      <span className="rh-banner-day label">{game.tutorial ? "Practice case" : `Day ${game.day} of ${game.maxDays}`}</span>
     </div>
   );
 }
@@ -272,6 +347,19 @@ function CaseBoard({ game }) {
 }
 
 // ---------- The TV's stages ----------
+// The practice case's first step: everyone reads their alibi card, and the TV ticks off who has.
+function AlibiStage({ game }) {
+  const ready = game.practice?.ready || [], guests = freeIds(game).filter((id) => !isNpc(game, id));
+  return (
+    <div className="rh-trial rh-alibi" role="status">
+      <h1 className="rh-headline">Read your alibi card</h1>
+      <p className="rh-sub">Where you were, what you were holding, and a mark on you. Every guest has one; the killer’s card is the crime.</p>
+      <div className="rh-votes">
+        <ul aria-label={`${ready.length} of ${guests.length} have read their card`}>{guests.map((id) => <li key={id} className={ready.includes(id) ? "is-in" : ""}><i />{nameOf(game, id)}</li>)}</ul>
+      </div>
+    </div>
+  );
+}
 function NightScene({ game }) {
   const progress = game.night || { done: 0, of: 0 };
   return (
@@ -337,7 +425,7 @@ function TrialStage({ game }) {
       {game.phase === "defense" ? <p className="rh-sub">{nameOf(game, id)}, make your case.</p> : (
         <div className="rh-votes" role="status">
           <p className="rh-sub">Vote on your phone. {needed} Jail votes jail them.</p>
-          <ul>{[...free, ...guestIds(game).filter((g) => !free.includes(g) && trial.voted.includes(g))].map((g) => <li key={g} className={trial.voted.includes(g) ? "is-in" : ""}><i />{nameOf(game, g)}{!free.includes(g) && <small>ghost</small>}</li>)}</ul>
+          <ul>{[...free, ...guestIds(game).filter((g) => !free.includes(g) && trial.voted.includes(g))].filter((g) => !isNpc(game, g)).map((g) => <li key={g} className={trial.voted.includes(g) ? "is-in" : ""}><i />{nameOf(game, g)}{!free.includes(g) && <small>ghost</small>}</li>)}</ul>
         </div>
       )}
     </div>
@@ -399,8 +487,8 @@ function Lobby({ game, onAction }) {
           openCells={game.players.length < MAX_PLAYERS ? ["— — —", "Expected"] : null}
         />
       </section>
-      <p className="muted">{ready ? "Each guest gets a secret role and an alibi card on their phone." : `Red Herring needs at least ${MIN_PLAYERS} guests (${live} here). It’s best with 7 to 10.`}</p>
-      <button className="primary" disabled={!ready} onClick={() => onAction("start")}>Start the case</button>
+      <p className="muted">{ready ? `Each guest gets a secret role and an alibi card on their phone.${game.config?.tutorial ? " A short practice case comes first." : ""}` : `Red Herring needs at least ${MIN_PLAYERS} guests (${live} here). It’s best with 7 to 10.`}</p>
+      <button className="primary" disabled={!ready} onClick={() => onAction("start")}>{game.config?.tutorial ? "Start the practice case" : "Start the case"}</button>
     </div>
   );
 }
@@ -420,6 +508,8 @@ export function HerringDisplay({ game, onAction }) {
       {game.status === "lobby" ? <Lobby game={game} onAction={onAction} /> : (
         <div className="rh-stage">
           <PhaseBanner game={game} />
+          <Coach game={game} coach={HERRING_COACH} place="tv" title={PRACTICE_TITLE} />
+          {phase === "alibi" && <><AlibiStage game={game} /><CaseBoard game={game} /></>}
           {phase === "night" && <NightScene game={game} />}
           {phase === "morning" && <><MorningReport game={game} /><Clues game={game} /></>}
           {phase === "investigate" && <><div className="rh-top-strip"><LabBar lab={game.lab} /><Clues game={game} /></div><CaseBoard game={game} /></>}
@@ -429,7 +519,7 @@ export function HerringDisplay({ game, onAction }) {
           {!game.hostless && ["morning", "verdict"].includes(phase) && <p className="muted rh-waiting">The storyteller moves the story on.</p>}
         </div>
       )}
-      {game.hostless && game.players.length > 0 && playing && (
+      {game.hostless && game.players.length > 0 && playing && !game.tutorial && (
         <details className="host-tools rh-host-tools">
           <summary>Host tools</summary>
           <div className="rh-round-controls">
@@ -594,6 +684,9 @@ function LabPanel({ game, playerId, me }) {
 function InvestigatePhone({ game, playerId, me }) {
   const free = isFree(game, playerId);
   const [tab, setTab] = useState(() => (free && !game.statements[playerId] ? "statement" : "lab"));
+  // The practice opens the tab its step is about.
+  const stage = game.practice?.stage;
+  useEffect(() => { if (["statement", "lab", "accuse"].includes(stage)) setTab(stage); }, [stage]);
   if (!free) return <><p className="player-status">You’re a ghost: keep the lab busy.</p><LabPanel game={game} playerId={playerId} me={me} /></>;
   const tabs = [["statement", "Statement"], ["lab", "Lab"], ["accuse", "Accuse"]];
   return (
@@ -634,11 +727,20 @@ function LastWordsPhone({ game, playerId }) {
     </div>
   );
 }
+// The practice's first step: read your cards, then say so.
+function AlibiPhone({ game, playerId }) {
+  const [busy, setBusy] = useState(false);
+  if (game.practice?.ready.includes(playerId)) return <p className="player-status rh-ready-note">Card read. The night falls once everyone has read theirs.</p>;
+  return <button className="primary rh-wide" disabled={busy} onClick={() => { setBusy(true); act(game, playerId, "ready", {}, () => setBusy(false)); }}>I’ve read my card</button>;
+}
+// Practice and real case get their own keys, so nothing typed or picked in the practice is left in a real form.
+const round = (game) => (game.tutorial ? "practice" : "case");
 function PhoneAction({ game, playerId, me }) {
   const phase = game.phase, trial = game.trial;
-  if (phase === "night") return <NightPhone key={`n${game.day}`} game={game} playerId={playerId} me={me} />;
+  if (phase === "alibi") return <AlibiPhone game={game} playerId={playerId} />;
+  if (phase === "night") return <NightPhone key={`n${game.day}${round(game)}`} game={game} playerId={playerId} me={me} />;
   if (phase === "morning") return <div className="rh-phone-scene"><Pictogram group="misc" id="sun" size={80} /><p className="player-status">Morning {game.day}. Eyes on the TV.</p></div>;
-  if (phase === "investigate") return <InvestigatePhone key={`i${game.day}`} game={game} playerId={playerId} me={me} />;
+  if (phase === "investigate") return <InvestigatePhone key={`i${game.day}${round(game)}`} game={game} playerId={playerId} me={me} />;
   if (phase === "defense") return <p className={"player-status" + (trial.accusedId === playerId ? " is-you" : "")}>{trial.accusedId === playerId ? "You’re on trial! Make your case out loud." : `${nameOf(game, trial.accusedId)} is on trial. Listen.`}</p>;
   if (phase === "vote") return <VotePhone game={game} playerId={playerId} me={me} />;
   if (phase === "verdict") {
@@ -649,40 +751,58 @@ function PhoneAction({ game, playerId, me }) {
   return null;
 }
 export function HerringPlayer({ game, playerId }) {
-  const player = game.players.find((p) => p.id === playerId), me = usePrivate(game, playerId);
+  const player = game.players.find((p) => p.id === playerId), fetched = usePrivate(game, playerId);
+  // A practice card still on the phone once the real case is dealt (or the other way round) is never shown.
+  const me = fetched && !fetched.lobby && !!fetched.practice !== !!game.tutorial ? null : fetched;
   const [view, setView] = useState("case");
   const mine = me?.night && !me.night.done;
   useEffect(() => { if (mine || game.phase === "vote") buzz(); }, [game.phase, game.day]);
+  // The practice turns the phone to what its step is about: the Board to spot the lie, My case for the rest.
+  const stage = game.tutorial ? game.practice?.stage || game.phase : null;
+  useEffect(() => { if (stage) setView(stage === "lie" ? "board" : "case"); }, [stage]);
   if (!player) return <main className="player rh"><p className="status-card">You’re no longer in this game.</p></main>;
   const fate = player.fate;
+  const dealt = !!me && !me.lobby;
+  const identity = dealt && (
+    <div className="rh-identity">
+      <RoleCard key={round(game)} me={me} game={game} />
+      <AlibiCard card={me.card} title={game.tutorial ? "Your practice card" : "Your real card"} stamp={fate === "dead" ? { kind: "dead", text: "Deceased" } : fate === "jailed" ? { kind: "jail", text: "Jailed" } : null} />
+      {me.crime && me.role !== "killer" && <AlibiCard card={me.crime} title="The crime" compact />}
+    </div>
+  );
   return (
     <main className={`player rh is-${game.phase || "lobby"}`}>
       <header className="player-bar">
         <HerringBrand />
         <span className="player-name">{player.name}{fate !== "alive" && ` · ${fate === "dead" ? "ghost" : fate}`}</span>
       </header>
-      {game.status === "lobby" || !me || me.lobby ? (
-        <div className="rh-phone-scene"><Pictogram group="misc" id="mansion" size={120} strokeWidth={2} /><p className="player-status">You’ve arrived at {MANOR}.</p><p className="muted">Your role and alibi card arrive when the case starts.</p></div>
+      {game.status === "lobby" || !dealt ? (
+        <div className="rh-phone-scene">
+          <Pictogram group="misc" id="mansion" size={120} strokeWidth={2} />
+          {game.tutorial && fetched?.lobby ? (
+            <><p className="player-status">A practice case is on.</p><p className="muted">Watch the TV to learn the game. You’re dealt in when the real case starts.</p><TutorialSkip game={game} place="phone" playerId={playerId} /></>
+          ) : game.status === "playing" ? <p className="player-status">Dealing the cards…</p>
+            : <><p className="player-status">You’ve arrived at {MANOR}.</p><p className="muted">Your role and alibi card arrive when the case starts.{game.config?.tutorial ? " A short practice case comes first." : ""}</p></>}
+        </div>
       ) : (
         <>
           <div className="rh-phone-top">
-            <span className="label">{PHASE_NAME[game.phase]} · Day {game.day}</span>
+            <span className="label">{PHASE_NAME[game.phase]} · {game.tutorial ? "Practice" : `Day ${game.day}`}</span>
             <ClueTimer deadline={game.deadline} serverNow={game.serverNow} />
           </div>
+          <Coach game={game} coach={HERRING_COACH} place="phone" playerId={playerId} title={PRACTICE_TITLE} />
           <div className="rh-choices rh-views" role="tablist">
             <button role="tab" aria-selected={view === "case"} aria-checked={view === "case"} onClick={() => setView("case")}>My case</button>
             <button role="tab" aria-selected={view === "board"} aria-checked={view === "board"} onClick={() => setView("board")}>Board</button>
           </div>
           {view === "case" ? (
-            <>
-              <PhoneAction game={game} playerId={playerId} me={me} />
-              <div className="rh-identity">
-                <RoleCard me={me} game={game} />
-                <AlibiCard card={me.card} title="Your real card" stamp={fate === "dead" ? { kind: "dead", text: "Deceased" } : fate === "jailed" ? { kind: "jail", text: "Jailed" } : null} />
-                {me.crime && me.role !== "killer" && <AlibiCard card={me.crime} title="The crime" compact />}
-              </div>
-              <Notebook game={game} me={me} />
-            </>
+            game.phase === "alibi" ? <>{identity}<PhoneAction game={game} playerId={playerId} me={me} /></> : (
+              <>
+                <PhoneAction game={game} playerId={playerId} me={me} />
+                {identity}
+                <Notebook game={game} me={me} />
+              </>
+            )
           ) : <PhoneBoard game={game} />}
         </>
       )}
@@ -711,6 +831,7 @@ function PhoneBoard({ game }) {
 function script(game) {
   const m = game.morning;
   switch (game.phase) {
+    case "alibi": return `Welcome to ${MANOR}. Before the real case, a practice one, where nothing counts. Look at your phone: tap your role card to turn it over, and read your alibi card. Keep them to yourself.`;
     case "night": return `Night ${game.day} falls on ${MANOR}. Everyone, look at your own phone and tap your choices. Every guest taps something, every night.`;
     case "morning": {
       const parts = [m.first ? `Morning. ${game.victim} has been found dead at the foot of the stairs. The road is cut by the storm; one of you did this.` : m.victimId ? `Morning. ${nameOf(game, m.victimId)} has been found dead in the ${factName("room", m.room)}. Their alibi card is pinned to the board.` : m.foiled ? `Morning. Someone tried to kill ${nameOf(game, m.savedId)}, but the Officer was standing guard.` : "Morning. A quiet night: nobody died."];
@@ -729,7 +850,8 @@ function script(game) {
     default: return "";
   }
 }
-const NEXT_LABEL = { night: "End the night now", morning: "Start the investigation", investigate: "Go to trial now", defense: "Start the vote", vote: "Close the vote", verdict: "Next", lastWords: "Skip last words" };
+const nextLabel = (game) => (game.tutorial ? (game.phase === "investigate" ? PRACTICE_NEXT[game.practice?.stage] : game.phase === "verdict" ? "Start the real case" : NEXT_LABEL[game.phase]) : NEXT_LABEL[game.phase]) || "Next";
+const NEXT_LABEL = { alibi: "Start the night", night: "End the night now", morning: "Start the investigation", investigate: "Go to trial now", defense: "Start the vote", vote: "Close the vote", verdict: "Next", lastWords: "Skip last words" };
 function Grimoire({ game, book }) {
   const night = book.night;
   return (
@@ -775,7 +897,7 @@ function GuestTools({ game, onAction }) {
   return (
     <div className="rh-guest-tools">
       <ul>
-        {game.players.map((player) => (
+        {game.players.filter((player) => !player.npc).map((player) => (
           <li key={player.id}>
             <input aria-label={`${player.name}’s name`} defaultValue={player.name} key={player.name} maxLength="20" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== player.name && onAction("renamePlayer", { playerId: player.id, name: e.target.value })} />
             <button className="chip-btn danger" onClick={() => onAction("kickPlayer", { playerId: player.id })}>Remove</button>
@@ -807,8 +929,9 @@ export function HerringController({ game, onAction }) {
     <main className={`controller rh is-${game.phase || "lobby"}`}>
       {header}
       <div className="rh-ctrl-top"><PhaseBanner game={game} /><ClueTimer deadline={game.deadline} serverNow={game.serverNow} /></div>
+      <Coach game={game} coach={HERRING_COACH} place="controller" title={PRACTICE_TITLE} />
       <blockquote className="rh-script"><span className="label">Read aloud</span>{script(game)}</blockquote>
-      <button className="wide on" onClick={() => onAction("next")}>{NEXT_LABEL[game.phase]}</button>
+      <button className="wide on" onClick={() => onAction("next")}>{nextLabel(game)}</button>
       {game.phase === "investigate" && (
         <div className="rh-put">
           <select aria-label="Put a guest on trial" value={trialId} onChange={(e) => setTrialId(e.target.value)}>
@@ -821,7 +944,7 @@ export function HerringController({ game, onAction }) {
       {game.phase === "investigate" && <LabBar lab={game.lab} small />}
       {book && !book.lobby && <RookiePicker game={game} book={book} onAction={onAction} />}
       {book && !book.lobby ? <Grimoire game={game} book={book} /> : <p className="muted">Opening the grimoire…</p>}
-      <div className="rh-round-controls"><button className="chip-btn danger" onClick={() => onAction("endGame")}>End the case</button></div>
+      {!game.tutorial && <div className="rh-round-controls"><button className="chip-btn danger" onClick={() => onAction("endGame")}>End the case</button></div>}
       <section className="controller-players"><h2>Guests</h2><GuestTools game={game} onAction={onAction} /></section>
     </main>
   );
@@ -833,11 +956,12 @@ export function HerringSetup({ onCreate }) {
   const [roles, setRoles] = useState({ ...DEFAULT_ROLES, ...(saved.roles || {}) }),
     [investigateMs, setInvestigateMs] = useState(LENGTHS.some(([ms]) => ms === saved.investigateMs) ? saved.investigateMs : 180000),
     [hostless, setHostless] = useState(!!saved.hostless),
+    [practice, setPractice] = useState(saved.practice !== false),
     [busy, setBusy] = useState(false), [notice, setNotice] = useState("");
   const start = () => {
     setBusy(true); setNotice("");
-    saveSettings({ roles, investigateMs, hostless });
-    onCreate({ game: "herring", roles, investigateMs, hostless }, (error) => { setBusy(false); setNotice(error); });
+    saveSettings({ roles, investigateMs, hostless, practice });
+    onCreate({ game: "herring", roles, investigateMs, hostless, tutorial: practice }, (error) => { setBusy(false); setNotice(error); });
   };
   return (
     <main className="setup rh-setup">
@@ -882,6 +1006,10 @@ export function HerringSetup({ onCreate }) {
         </fieldset>
         <section className="game-options" aria-labelledby="rh-options-title">
           <h2 id="rh-options-title">Game options</h2>
+          <label className="game-mode">
+            <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+            <span><b>Practice round first</b><small>A two-to-three-minute practice case before the real one, with tips on the TV and every phone: reading your alibi card, a night, the morning report, filing a statement and spotting a lie, one lab task, and an accusation, trial and vote. Everyone plays a Detective and the killer is a made-up guest; real roles are dealt afterwards. {hostless ? "Players can vote to skip it." : "The storyteller can skip it."}</small></span>
+          </label>
           <label className="game-mode">
             <input type="checkbox" checked={hostless} onChange={(e) => setHostless(e.target.checked)} />
             <span><b>Play without a storyteller</b><small>The game runs itself and the TV narrates: 30 seconds a night, mornings and verdicts move on by themselves, and the Rookie’s findings are a coin toss. With a storyteller, one person (not a guest) runs the case from the controller: they see every role and card, read the narration aloud, pace the mornings and verdicts, and choose what the Rookie learns.</small></span>

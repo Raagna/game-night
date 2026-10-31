@@ -777,6 +777,38 @@ body:has(.rh) .confirm h2 { font: 400 1.7rem var(--rh-display); letter-spacing: 
 .rh-end-buttons { display: grid; justify-items: center; gap: 14px; }
 .end.rh .player-end p { font: 400 1.6rem var(--rh-display); }
 
+/* ---------- The practice case's coach (src/Tutorial.jsx) ----------
+   A typed note clipped to the case board. It's an annotation rather than evidence, so it's case paper with a
+   pencil-blue margin rule and a pencil-blue label, held on by a brass paper clip. The skip control is inked on it. */
+.rh .coach {
+  position: relative; width: 100%; max-width: 1180px; margin: 4px auto 0;
+  padding: 14px 18px 12px 30px; border-left: 0; border-radius: 2px;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, transparent 0 14px, rgb(45 76 142 / 0.5) 14px 16px, transparent 16px),
+    radial-gradient(ellipse 120% 60% at 30% 0%, rgb(255 255 255 / 0.35), transparent 70%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-lo) 100%);
+  box-shadow: 0 1px 0 var(--paper-edge), 0 10px 22px rgb(0 0 0 / 0.42);
+}
+.rh .coach::before {
+  content: ""; position: absolute; top: -13px; left: 8px; width: 13px; height: 34px;
+  border: 3px solid #c9a058; border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12), 0 2px 2px rgb(0 0 0 / 0.3);
+  transform: rotate(4deg);
+}
+.rh .coach-label { color: var(--pencil); font: 700 0.78rem/1.2 var(--rh-typed); letter-spacing: 0.18em; }
+.rh .coach-text { color: var(--ink); font: 400 clamp(1.05rem, 1.45vw, 1.32rem)/1.42 var(--rh-prose); }
+.rh .coach .secondary.tutorial-skip { color: var(--ink); border-color: rgb(36 26 19 / 0.5); background: transparent; }
+.rh .coach .secondary.tutorial-skip:hover:not(:disabled) { background: rgb(36 26 19 / 0.08); border-color: var(--ink); }
+.rh .coach .tutorial-skip.is-voted { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.rh .coach .tutorial-tally { color: var(--ink-soft); }
+.rh .coach .tutorial-tally small { color: var(--ink-faint); }
+.rh .coach .tutorial-skip-note { color: var(--ink-soft); font-style: italic; }
+.rh .coach.is-phone { margin: 6px 0 16px; }
+.rh .coach.is-controller { margin: 6px 0 18px; }
+.rh .coach.is-phone .coach-text, .rh .coach.is-controller .coach-text { font-size: 1.04rem; }
+.rh-alibi .rh-votes ul { max-width: 900px; }
+
 /* A 720p TV: slimmer rows so the whole board fits without scrolling. */
 @media (max-height: 800px) {
   .rh-stage { gap: 10px; }
