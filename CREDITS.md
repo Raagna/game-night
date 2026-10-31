@@ -79,3 +79,12 @@ title case. `scripts/build-openprices-pack.py` rebuilds the file and documents e
 The big-ticket items in `src/price/showcase.json` were written for this project. Their prices are our own
 estimates of typical US prices in 2026, not quotes from any shop.
 
+## Red Herring fonts
+
+Red Herring's manor look uses two fonts, self-hosted in `src/herring/fonts/` (Latin subsets, as packaged by Fontsource):
+
+- **IM FELL English**, digitized by Igino Marini (https://iginomarini.com/fell/); copyright Google Inc. For titles and names.
+- **Courier Prime**, copyright 2015 The Courier Prime Project Authors (https://github.com/quoteunquoteapps/CourierPrime). For the typed case-file text.
+
+Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/); the licence texts sit next to the
+font files. The art, wax seal, tags and stamps are drawn in CSS for this project and don't come from any board game.
