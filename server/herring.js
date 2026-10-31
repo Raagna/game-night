@@ -19,7 +19,12 @@
 //
 // Roles and cards go only to their own phone (herring:me) and, in a hosted game, the storyteller's controller
 // (herring:grimoire); never to the TV state, which everyone can see.
+//
+// The practice case (the tutorial; see docs/tutorial.md and "Practice case" below) plays a short made-up case first,
+// with Mr. Kipper, a guest nobody plays, as its killer. It is thrown away afterwards: the real roles and cards are
+// only dealt once it's over.
 import { CATEGORIES, FACTS, ROLES, OPTIONAL_ROLES, DEFAULT_ROLES, MIN_PLAYERS, MAX_PLAYERS, MAX_DAYS, VICTIMS, dealCards, dealRoles, tally } from './herringCase.js'
+import { beginTutorial, setTutorialStep, endTutorial as leaveTutorial } from './tutorial.js'
 
 export const HERRING_TIMES = { nightMs: 30000, morningMs: 16000, defenseMs: 30000, voteMs: 20000, verdictMs: 10000, lastWordsMs: 30000 }
 export const INVESTIGATE_LENGTHS = [120000, 180000, 240000]
@@ -30,6 +35,22 @@ export const labTarget = (guests) => Math.round(LAB.base + LAB.perGuest * guests
 const RULINGS = new Set(['next'])
 const TUBES = 5, SEQUENCE = 4
 
+// ---------- Practice case ----------
+// The steps, in order: reading your alibi card, a night, the morning report, filing a statement, spotting the lie,
+// one lab task, accusing, the trial, the vote, and the verdict (then the real case is dealt).
+export const PRACTICE_STEPS = ['card', 'night', 'morning', 'statement', 'lie', 'lab', 'accuse', 'trial', 'vote', 'done']
+// How long each part of the practice runs at most; most move on as soon as everyone has done the thing. A hosted
+// game still waits for the storyteller at the morning and the verdict.
+export const PRACTICE_MS = { alibi: 30000, night: 25000, morning: 12000, statement: 30000, lie: 12000, lab: 30000, accuse: 30000, defense: 10000, vote: 20000, verdict: 12000 }
+// The practice killer: a guest nobody plays. Their statement is the practice's lie.
+export const PRACTICE_NPC = { id: 'npc-kipper', name: 'Mr. Kipper' }
+// A fixed little case, three facts of each kind. Nobody else was in the Wine Cellar, which the practice clue names,
+// and Mr. Kipper says he was in the Library: so the Library has one claim too many and the Cellar one too few.
+const PRACTICE_FACTS = { room: ['library', 'kitchen', 'cellar'], item: ['poker', 'teacup', 'key'], mark: ['smoke', 'mud', 'ink'] }
+const PRACTICE_CRIME = { room: 'cellar', item: 'poker', mark: 'smoke' }
+const PRACTICE_LIE = { room: 'library', item: 'poker', mark: 'smoke' }
+const PRACTICE_ROOMS = ['library', 'kitchen']
+
 const text = (value, max) => String(value ?? '').trim().slice(0, max)
 const KILLER_SIDE = new Set(['killer', 'accomplice'])
 
@@ -37,7 +58,7 @@ function cleanConfig(config) {
   const roles = {}
   for (const role of Object.keys(OPTIONAL_ROLES)) roles[role] = config?.roles && Object.hasOwn(config.roles, role) ? !!config.roles[role] : DEFAULT_ROLES[role]
   const investigateMs = INVESTIGATE_LENGTHS.includes(Number(config?.investigateMs)) ? Number(config.investigateMs) : 180000
-  return { hostless: !!config?.hostless, roles, investigateMs }
+  return { hostless: !!config?.hostless, roles, investigateMs, tutorial: !!config?.tutorial }
 }
 
 export function createHerringGames({ io, games, emitGame, schedule, clearGameTimers, cancelLeave, random = Math.random, now = Date.now }) {
@@ -68,21 +89,27 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     }
   }
   function playerJoined() {}
-  // Once the case is dealt, nobody new can join: there's no card or role for them.
-  const maxPlayers = (game) => (game.status === 'lobby' ? MAX_PLAYERS : game.players.size)
-  const rulingTurn = (game) => (game.status === 'playing' ? `${game.day}:${game.phase}` : null)
+  // Once the case is dealt, nobody new can join: there's no card or role for them. The practice case doesn't count:
+  // a guest who arrives during it watches, and is dealt in when the real case starts.
+  const maxPlayers = (game) => (game.status === 'lobby' || game.tutorial ? MAX_PLAYERS : game.players.size)
+  const rulingTurn = (game) => (game.status === 'playing' ? `${game.day}:${game.phase}${game.tutorial ? `:${game.practice?.stage || ''}` : ''}` : null)
 
   // ---------- Public view (the TV and everyone's Board tab) ----------
   function publicGame(game) {
+    if (game.tutorial) setTutorialStep(game, practiceStep(game))
     const c = game.case, done = game.status === 'complete'
     const out = Object.keys(c?.roles || {}).filter((id) => ghost(game, id) || fate(game, id) === 'gone')
     const trial = game.trial
     const verdictShown = trial?.verdict
     return {
       kind: 'herring', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
-      config: { investigateMs: game.config.investigateMs, roles: game.config.roles },
+      config: { investigateMs: game.config.investigateMs, roles: game.config.roles, tutorial: game.config.tutorial },
       victim: game.victim, day: game.day, maxDays: MAX_DAYS, phase: game.phase, deadline: game.deadline,
-      players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId, fate: c ? fate(game, player.id) : 'alive', ghostVote: !!c && ghost(game, player.id) && !game.ghostVotesUsed?.[player.id] })),
+      players: [
+        ...[...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId, fate: c ? fate(game, player.id) : 'alive', ghostVote: !!c && ghost(game, player.id) && !game.ghostVotesUsed?.[player.id] })),
+        // The practice killer sits at the table like any guest, but nobody plays them.
+        ...(game.tutorial && c?.roles[PRACTICE_NPC.id] ? [{ id: PRACTICE_NPC.id, name: PRACTICE_NPC.name, score: 0, npc: true, connected: true, fate: fate(game, PRACTICE_NPC.id), ghostVote: false }] : []),
+      ],
       names: c?.names || null,
       ledger: c ? tally(c.values, c.cards) : null,
       inPlay: c ? c.values : null,
@@ -103,6 +130,8 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
       } : null,
       outcome: game.outcome || null,
       reveal: done && c ? { roles: c.roles, crime: c.crime, frames: (game.clues || []).filter((clue) => clue.framed).map((clue) => clue.day) } : null,
+      // The practice case's progress (null in the real case): who has read their card, who has tried the lab.
+      practice: game.tutorial && game.practice ? { stage: game.practice.stage, ready: Object.keys(game.practice.ready), tried: Object.keys(game.practice.tried), npcId: PRACTICE_NPC.id } : null,
       serverNow: now(), lastEvent: game.lastEvent, events: game.recentEvents || [], privateRev: game.privateRev,
     }
   }
@@ -125,6 +154,7 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     const partner = role === 'killer' ? c.accompliceId : role === 'accomplice' ? c.killerId : null
     const canTaint = game.phase === 'investigate' && free(game, id) && killerSide(game, id) && game.lab && !game.lab.tainted[id]
     return {
+      practice: !!game.tutorial,
       role: shownRole, team: ROLES[role].team, card: c.cards[id], partnerId: partner,
       crime: killerSide(game, id) ? c.crime : null,
       notes: c.notes[id] || [],
@@ -139,6 +169,7 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     const c = game.case
     if (!c) return { lobby: true }
     return {
+      practice: !!game.tutorial,
       roles: c.roles, cards: c.cards, crime: c.crime, notes: c.notes,
       night: game.phase === 'night' ? game.night.actions : null,
       rookie: game.phase === 'night' && game.night.rookieLie !== undefined ? game.night.rookieLie : null,
@@ -152,9 +183,11 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
   const PHASE_MS = { night: () => HERRING_TIMES.nightMs, morning: () => HERRING_TIMES.morningMs, investigate: (game) => game.config.investigateMs, defense: () => HERRING_TIMES.defenseMs, vote: () => HERRING_TIMES.voteMs, verdict: () => HERRING_TIMES.verdictMs, lastWords: () => HERRING_TIMES.lastWordsMs }
   // A hosted game waits for the storyteller to read the morning and the verdict aloud.
   const HOST_PACED = new Set(['morning', 'verdict'])
+  // The practice case runs on its own shorter clocks (its investigation on its stages' clocks: see toStage).
+  const phaseMs = (game, phase) => (!game.hostless && HOST_PACED.has(phase) ? null : game.tutorial ? PRACTICE_MS[phase] : PHASE_MS[phase](game))
   function setPhase(game, phase) {
     game.phase = phase
-    const ms = game.hostless || !HOST_PACED.has(phase) ? PHASE_MS[phase](game) : null
+    const ms = phaseMs(game, phase)
     game.deadline = ms ? now() + ms : null
     clearGameTimers(game)
     const day = game.day
@@ -162,6 +195,11 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     touch(game)
   }
   function advance(game) {
+    if (game.tutorial) {
+      if (game.phase === 'alibi') return toNight(game)
+      if (game.phase === 'investigate') return nextStage(game)
+      if (game.phase === 'verdict') return endTutorial(game)
+    }
     if (game.phase === 'night') return toMorning(game)
     if (game.phase === 'morning') return toInvestigation(game)
     if (game.phase === 'investigate') return toTrial(game)
@@ -171,11 +209,26 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     if (game.phase === 'lastWords') return lastWords(game, null)
   }
 
-  function start(game) {
-    const ids = [...game.players.values()].filter((player) => player.socketId).map((player) => player.id)
-    if (ids.length < MIN_PLAYERS) return
-    // Anyone who left before the deal is no longer part of the party.
+  // The guests to deal in: the connected ones; anyone who left before the deal is no longer part of the party. After
+  // the practice, everyone still at the table is dealt in, including a phone that's only briefly away.
+  function seat(game, { everyone = false } = {}) {
+    const ids = [...game.players.values()].filter((player) => everyone || player.socketId).map((player) => player.id)
+    if (ids.length < MIN_PLAYERS) return null
     for (const id of [...game.players.keys()]) if (!ids.includes(id)) game.players.delete(id)
+    return ids
+  }
+  // A clear table: no case, nobody dead, nothing filed or pinned up.
+  function clearCase(game) {
+    Object.assign(game, {
+      case: null, fates: {}, day: 0, phase: null, deadline: null, night: null, statements: {}, clues: [], morning: null, hunchBoard: null,
+      lab: null, labDone: false, tasks: {}, trial: null, accusations: {}, ghostVotesUsed: {}, outcome: null, scoopId: null,
+      frameId: null, frameSpent: false, frameUsed: false, lastProtected: null, recentEvents: [],
+    })
+  }
+  // Deals the real case: fresh roles and alibi cards. Returns false if there are too few guests.
+  function start(game, options) {
+    const ids = seat(game, options)
+    if (!ids) return false
     const roles = dealRoles(ids, game.config.roles, random)
     const killerId = ids.find((id) => roles[id] === 'killer')
     const { values, crime, cards } = dealCards(ids, killerId, random)
@@ -191,6 +244,79 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
       lab: null, tasks: {}, trial: null, morning: null, hunchBoard: null, outcome: null, frameUsed: false, lastProtected: null,
     })
     toNight(game)
+    return true
+  }
+
+  // ---------- Practice case (the tutorial) ----------
+  // Everyone at the table is a Detective with a made-up alibi card, and Mr. Kipper (nobody's) is the killer. No real
+  // role or card exists until the practice is over.
+  function startPractice(game) {
+    const ids = seat(game)
+    if (!ids) return
+    const roles = {}, cards = {}, npc = PRACTICE_NPC.id
+    ids.forEach((id, i) => {
+      roles[id] = 'detective'
+      cards[id] = { room: PRACTICE_ROOMS[i % PRACTICE_ROOMS.length], item: PRACTICE_FACTS.item[i % 3], mark: PRACTICE_FACTS.mark[(i + 1) % 3] }
+    })
+    roles[npc] = 'killer'; cards[npc] = { ...PRACTICE_CRIME }
+    clearCase(game)
+    game.case = {
+      practice: true, roles, cards, values: structuredClone(PRACTICE_FACTS), crime: { ...PRACTICE_CRIME },
+      notes: Object.fromEntries([...ids, npc].map((id) => [id, []])), killerId: npc, accompliceId: null,
+      names: { ...Object.fromEntries(ids.map((id) => [id, game.players.get(id).name])), [npc]: PRACTICE_NPC.name },
+    }
+    game.status = 'playing'
+    game.practice = { stage: null, ready: {}, tried: {} }
+    beginTutorial(game, PRACTICE_STEPS)
+    event(game, 'practice')
+    setPhase(game, 'alibi')
+  }
+  // The coach's step, read off the state so it always matches the screens.
+  function practiceStep(game) {
+    if (game.phase === 'investigate') return game.practice?.stage || 'statement'
+    return { alibi: 'card', night: 'night', morning: 'morning', defense: 'trial', vote: 'vote', verdict: 'done' }[game.phase] || 'card'
+  }
+  // The practice investigation, a stage at a time: statements, a look at the lie, the lab, then accusations.
+  function toStage(game, stage) {
+    game.practice.stage = stage
+    const ms = PRACTICE_MS[stage]
+    game.deadline = now() + ms
+    schedule(game, 'herring', ms, () => { if (game.tutorial && game.phase === 'investigate' && game.practice?.stage === stage) { advance(game); emitGame(game) } })
+    touch(game)
+    practiceProgress(game)
+  }
+  function nextStage(game) {
+    const next = { statement: 'lie', lie: 'lab', lab: 'accuse' }[game.practice.stage]
+    if (next) return toStage(game, next)
+    // Somebody always stands trial in the practice: the most-accused guest, or else Mr. Kipper.
+    toTrial(game, mostAccused(game) ? null : PRACTICE_NPC.id)
+  }
+  // Moves the practice on as soon as every guest at the table has done what this step asks.
+  function practiceProgress(game) {
+    if (!game.tutorial || game.status !== 'playing') return
+    const live = liveFree(game), p = game.practice
+    if (game.phase === 'alibi' && live.every((id) => p.ready[id])) return toNight(game)
+    if (game.phase !== 'investigate') return
+    if (p.stage === 'statement' && live.every((id) => game.statements[id])) return toStage(game, 'lie')
+    if (p.stage === 'lab' && live.every((id) => p.tried[id])) return toStage(game, 'accuse')
+    if (p.stage === 'accuse' && live.every((id) => game.accusations[id])) return nextStage(game)
+  }
+  function practiceReady(game, id) {
+    if (!game.tutorial || game.phase !== 'alibi' || !free(game, id) || game.practice.ready[id]) return false
+    game.practice.ready[id] = true
+    return true
+  }
+  // Out of the practice and into the real case: the practice case is thrown away and fresh roles and cards are
+  // dealt. With too few guests left to deal, back to the lobby.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.practice = null
+    game.config.tutorial = false
+    clearCase(game)
+    game.status = 'lobby'
+    if (!start(game, { everyone: true })) touch(game)
+    emitGame(game)
   }
 
   function toNight(game) {
@@ -243,6 +369,8 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     // A clue when the lab finished yesterday, and a free one when the Officer foiled an attack.
     const clues = (game.labDone ? 1 : 0) + (morning.foiled ? 1 : 0)
     for (let i = 0; i < clues; i++) { const clue = drawClue(game); if (clue) morning.clue = clue }
+    // The practice morning pins up a clue straight away, so the lie can be spotted.
+    if (game.tutorial) { morning.clue = { day: game.day, category: 'room', value: c.crime.room }; game.clues.push(morning.clue) }
     game.labDone = false
     // Private findings.
     for (const [id, action] of Object.entries(actions)) {
@@ -311,6 +439,12 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     for (const id of Object.keys(game.case.roles)) if (fate(game, id) !== 'gone') game.tasks[id] = newTask(game)
     event(game, 'investigate', { day: game.day })
     setPhase(game, 'investigate')
+    if (game.tutorial) {
+      // One sample each fills the practice lab, and Mr. Kipper's statement is already on the board.
+      game.lab.target = Math.max(1, liveFree(game).length)
+      game.statements[PRACTICE_NPC.id] = { ...PRACTICE_LIE, changes: 0, day: game.day }
+      toStage(game, 'statement')
+    }
   }
   // Lab work: match a fingerprint to one of four, or repeat the order the sample tubes lit up in.
   function newTask(game) {
@@ -330,6 +464,7 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
   function solve(game, id, taskId, answer) {
     const task = game.tasks?.[id]
     if (game.status !== 'playing' || game.phase !== 'investigate' || !task || task.id !== taskId || fate(game, id) === 'gone') return { ok: false }
+    if (game.tutorial) game.practice.tried[id] = true
     const right = task.type === 'print' ? Number(answer) === task.answer : Array.isArray(answer) && answer.length === task.answer.length && answer.every((tube, i) => Number(tube) === task.answer[i])
     // Quicker than a person can do it is a script, not lab work.
     const tooQuick = now() - task.issued < LAB.minSolveMs
@@ -376,13 +511,15 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
 
   // ---------- Trial ----------
   // The most-accused guest stands trial, if two or more guests accused them (ties go to whoever got there first).
-  function toTrial(game, forcedId = null) {
-    game.tasks = {}
+  function mostAccused(game) {
     const counts = new Map()
     for (const [accuser, accused] of Object.entries(game.accusations)) if (free(game, accuser) && free(game, accused)) counts.set(accused, (counts.get(accused) || 0) + 1)
     const order = Object.values(game.accusations)
-    const top = [...counts.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))[0]
-    const accusedId = forcedId && free(game, forcedId) ? forcedId : top?.[0]
+    return [...counts.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))[0]?.[0] || null
+  }
+  function toTrial(game, forcedId = null) {
+    game.tasks = {}
+    const accusedId = forcedId && free(game, forcedId) ? forcedId : mostAccused(game)
     game.trial = { accusedId: accusedId || null, votes: {}, verdict: null }
     if (!accusedId) { game.trial.verdict = { none: true }; event(game, 'noTrial'); return setPhase(game, 'verdict') }
     event(game, 'trial', { playerId: accusedId })
@@ -435,6 +572,7 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
   // The killer's side wins once it's as big as everyone else still free.
   function checkWin(game) {
     if (game.status !== 'playing') return true
+    if (game.tutorial) return false
     const ids = freeIds(game), bad = ids.filter((id) => killerSide(game, id)).length
     if (!free(game, game.case.killerId)) return false
     if (bad >= ids.length - bad) { finish(game, 'killer', 'parity'); return true }
@@ -465,21 +603,29 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
     const player = game.players.get(playerId)
     if (!player || player.socketId) return
     if (game.status === 'lobby') game.players.delete(playerId)
-    else if (game.phase === 'night' && free(game, playerId) && nightDone(game)) toMorning(game)
+    else if (game.tutorial) {
+      // Gone for good during the practice: out of the party, so they aren't dealt into the real case.
+      game.players.delete(playerId)
+      if (free(game, playerId)) game.fates[playerId] = 'gone'
+      if (game.phase === 'night' && nightDone(game)) toMorning(game)
+      else if (game.phase === 'vote' && liveFree(game).every((other) => game.trial.votes[other])) toVerdict(game)
+      else practiceProgress(game)
+    } else if (game.phase === 'night' && free(game, playerId) && nightDone(game)) toMorning(game)
     emitGame(game)
   }
 
   function hostAction(game, action, payload) {
     const playing = game.status === 'playing'
-    if (action === 'start' && game.status === 'lobby') start(game)
-    if (action === 'next' && playing) advance(game)
+    if (action === 'start' && game.status === 'lobby') { if (game.config.tutorial) startPractice(game); else start(game) }
+    // Without a storyteller the practice runs itself, and only the players' vote skips it.
+    if (action === 'next' && playing && !(game.tutorial && game.hostless)) advance(game)
     if (action === 'putOnTrial' && playing && game.phase === 'investigate') toTrial(game, text(payload.playerId, 12))
     if (action === 'rookie' && playing && game.phase === 'night' && game.night.rookieLie !== undefined) {
       const lie = payload.lie === 'truth' ? 'truth' : payload.lie && CATEGORIES.includes(payload.lie.category) && game.case.values[payload.lie.category].includes(payload.lie.value) ? { category: payload.lie.category, value: payload.lie.value } : null
       game.night.rookieLie = lie
       touch(game)
     }
-    if (action === 'endGame' && playing) finish(game, null, 'ended')
+    if (action === 'endGame' && playing && !game.tutorial) finish(game, null, 'ended')
     if (action === 'renamePlayer') {
       const player = game.players.get(payload.playerId), name = text(payload.name, 20)
       if (player && name) { player.name = name; if (game.case?.names[player.id]) game.case.names[player.id] = name }
@@ -492,12 +638,16 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
         socket?.leave(game.code); socket?.emit('player:kicked')
         game.players.delete(player.id)
         remove(game, player.id)
+        practiceProgress(game)
       }
     }
     if (action === 'replay' && game.status === 'complete') {
       clearGameTimers(game)
       for (const [id, player] of game.players) if (!player.socketId) game.players.delete(id)
-      Object.assign(game, { status: 'lobby', victim: pick(VICTIMS), case: null, fates: {}, day: 0, phase: null, deadline: null, statements: {}, clues: [], morning: null, hunchBoard: null, lab: null, tasks: {}, trial: null, accusations: {}, outcome: null, scoopId: null, frameId: null, frameSpent: false, frameUsed: false, labDone: false })
+      clearCase(game)
+      // A replay goes straight to the case: this table has had its practice.
+      Object.assign(game, { status: 'lobby', victim: pick(VICTIMS) })
+      game.config.tutorial = false
       touch(game)
     }
     emitGame(game)
@@ -527,10 +677,12 @@ export function createHerringGames({ io, games, emitGame, schedule, clearGameTim
       else if (action === 'contaminate') changed = contaminate(game, playerId)
       else if (action === 'vote') changed = castVote(game, playerId, data.choice)
       else if (action === 'lastWords') changed = game.phase === 'lastWords' && playerId === game.case.killerId && lastWords(game, text(data.guessId, 12) || null)
+      else if (action === 'ready') changed = practiceReady(game, playerId)
+      if (changed && game.tutorial) practiceProgress(game)
       ack?.({ ...reply, ok: reply.ok && changed !== false })
       if (changed) emitGame(game)
     })
   }
 
-  return { MAX_PLAYERS, RULINGS, rulingTurn, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined: () => {}, register, privateView, grimoire }
+  return { MAX_PLAYERS, RULINGS, rulingTurn, maxPlayers, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined: () => {}, register, privateView, grimoire, endTutorial }
 }

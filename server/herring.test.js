@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHerringGames, HERRING_TIMES, LAB, labTarget } from './herring.js'
-import { CATEGORIES, dealCards, dealRoles, factsInPlay, tally, DEFAULT_ROLES } from './herringCase.js'
+import { createHerringGames, HERRING_TIMES, LAB, labTarget, PRACTICE_STEPS, PRACTICE_NPC, PRACTICE_MS } from './herring.js'
+import { CATEGORIES, dealCards, dealRoles, factsInPlay, tally, DEFAULT_ROLES, MAX_PLAYERS } from './herringCase.js'
+import { registerTutorial } from './tutorial.js'
 
 // A seeded random, so each test deals the same case every run.
 function seeded(seed = 7) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646 } }
@@ -337,4 +338,213 @@ test('phases run on the clock', () => {
   assert.equal(h.timers.herring.ms, HERRING_TIMES.morningMs)
   h.fire()
   assert.equal(h.timers.herring.ms, 180000)
+})
+
+// ---------- The practice case (the tutorial) ----------
+const NPC = PRACTICE_NPC.id
+// The coach's step, as the screens get it.
+const stepOf = (h, game) => { h.api.publicGame(game); return game.tutorial?.step ?? null }
+const practiceGame = (h, config = {}) => newGame(h, { tutorial: true, ...config })
+// The skip events, wired up as server/index.js does: `socketId` is the screen sending them.
+function skipEvents(h, socketId, data = {}) {
+  const handlers = new Map()
+  registerTutorial({ id: socketId, data, on: (event, fn) => handlers.set(event, fn) }, { games: h.games, emitGame: () => {}, end: h.api.endTutorial })
+  return { skip: (game) => handlers.get('tutorial:skip')({ code: game.code }), vote: (game, playerId) => handlers.get('tutorial:vote')({ code: game.code, playerId }) }
+}
+// One lab task, solved at a human pace.
+function labWork(h, game, id) { h.clock.t += LAB.minSolveMs; const task = game.tasks[id]; return h.act(game, id, 'solve', { taskId: task.id, answer: task.answer }) }
+// Nothing from the practice is left on the table, and the real case has been dealt to the players.
+function assertRealCase(h, game) {
+  assert.equal(game.tutorial, null)
+  assert.equal(game.practice, null)
+  assert.equal(game.config.tutorial, false, 'a later start or replay has no practice')
+  assert.equal(game.status, 'playing'); assert.equal(game.phase, 'night'); assert.equal(game.day, 1)
+  assert.equal(game.case.practice, undefined)
+  assert.ok(!(NPC in game.case.roles) && !(NPC in game.case.names), 'Mr. Kipper is gone')
+  assert.ok(ids(game).includes(game.case.killerId), 'a real guest is the killer')
+  assert.deepEqual(Object.keys(game.case.roles).sort(), ids(game).sort())
+  assert.deepEqual(game.statements, {}); assert.deepEqual(game.clues, []); assert.deepEqual(game.fates, {}); assert.deepEqual(game.accusations, {})
+  assert.deepEqual(game.ghostVotesUsed, {})
+  assert.equal(game.lab, null); assert.equal(game.labDone, false); assert.equal(game.trial, null); assert.equal(game.morning, null); assert.equal(game.hunchBoard, null)
+  const pub = h.api.publicGame(game)
+  assert.equal(pub.practice, null)
+  assert.ok(pub.players.every((player) => !player.npc))
+  for (const id of ids(game)) assert.equal(h.me(game, id).practice, false)
+}
+
+test('the practice case: made-up cards, everyone a Detective and Mr. Kipper the killer; no real role is dealt', () => {
+  const h = harness(), game = practiceGame(h)
+  assert.equal(game.status, 'playing'); assert.equal(game.phase, 'alibi')
+  assert.equal(stepOf(h, game), 'card')
+  assert.deepEqual(game.tutorial.steps, PRACTICE_STEPS)
+  assert.equal(game.case.practice, true); assert.equal(game.case.killerId, NPC)
+  for (const id of ids(game)) {
+    const me = h.me(game, id)
+    assert.equal(me.practice, true); assert.equal(me.role, 'detective'); assert.equal(me.crime, null); assert.equal(me.partnerId, null)
+    assert.notEqual(me.card.room, game.case.crime.room, 'only Mr. Kipper was in the room of the crime')
+  }
+  // The TV sees Mr. Kipper at the table, but never his role.
+  const pub = h.api.publicGame(game)
+  assert.deepEqual(pub.players.filter((player) => player.npc).map((player) => player.name), [PRACTICE_NPC.name])
+  assert.ok(!JSON.stringify(pub).includes(`"${NPC}":"killer"`)); assert.equal(pub.reveal, null)
+  // Nobody new is locked out during the practice.
+  assert.equal(h.api.maxPlayers(game), MAX_PLAYERS)
+  // Nothing leaves a hostless practice early but the players' vote.
+  h.api.hostAction(game, 'endGame', {}); h.api.hostAction(game, 'next', {})
+  assert.equal(game.status, 'playing'); assert.equal(game.phase, 'alibi')
+})
+
+test('the practice walks through every step, with nothing scoring, then deals the real case', () => {
+  const h = harness(), game = practiceGame(h), seen = []
+  const note = () => { const step = stepOf(h, game); if (step && seen.at(-1) !== step) seen.push(step) }
+  note()
+  // Reading the card: the night starts once everyone has.
+  ids(game).forEach((id) => { assert.equal(h.act(game, id, 'ready').ok, true); note() })
+  assert.equal(h.act(game, ids(game)[0], 'ready').ok, false, 'only in the alibi step')
+  assert.equal(game.phase, 'night'); assert.equal(h.me(game, ids(game)[0]).night.kind, 'none')
+  assert.equal(h.timers.herring.ms, PRACTICE_MS.night)
+  passNight(h, game); note()
+  // The morning: the victim, and a clue pinned up at once: the killer was in the Wine Cellar.
+  assert.equal(game.phase, 'morning'); assert.equal(game.morning.first, true); assert.deepEqual(game.fates, {})
+  assert.equal(game.morning.clue.value, 'cellar')
+  h.fire(); note()
+  // Statements: Mr. Kipper's lie is already on the board; once everyone has filed, the Library is over-claimed.
+  assert.equal(game.phase, 'investigate'); assert.equal(game.practice.stage, 'statement')
+  assert.equal(game.statements[NPC].room, 'library')
+  ids(game).forEach((id) => h.act(game, id, 'statement', game.case.cards[id]))
+  note()
+  assert.equal(game.practice.stage, 'lie')
+  const library = h.api.publicGame(game).ledger.room.find((row) => row.value === 'library').count
+  assert.equal(Object.values(game.statements).filter((said) => said.room === 'library').length, library + 1)
+  h.fire(); note()
+  // The lab: one task each fills the bar.
+  assert.equal(game.practice.stage, 'lab'); assert.equal(game.lab.target, 6)
+  ids(game).forEach((id) => { assert.equal(labWork(h, game, id).right, true); note() })
+  assert.equal(game.lab.solved, true)
+  // Accusations: once everyone has accused, the most-accused stands trial.
+  assert.equal(game.practice.stage, 'accuse')
+  ids(game).forEach((id) => { h.act(game, id, 'accuse', { targetId: NPC }); note() })
+  assert.equal(game.phase, 'defense'); assert.equal(game.trial.accusedId, NPC)
+  h.fire(); note()
+  ids(game).forEach((id) => h.act(game, id, 'vote', { choice: 'jail' })); note()
+  assert.equal(game.phase, 'verdict'); assert.equal(game.trial.verdict.jailed, true); assert.equal(game.trial.verdict.wasKiller, true)
+  assert.equal(game.status, 'playing', 'jailing the practice killer doesn’t end the game')
+  assert.deepEqual(seen, PRACTICE_STEPS)
+  assert.ok([...game.players.values()].every((player) => player.score === 0))
+  // Without a storyteller, the real case starts by itself after the verdict.
+  assert.equal(h.timers.herring.ms, PRACTICE_MS.verdict)
+  h.fire()
+  assertRealCase(h, game)
+  assert.equal(stepOf(h, game), null)
+  // The lab finished in the practice, but the real first morning has no clue.
+  passNight(h, game)
+  assert.equal(game.morning.clue, null)
+})
+
+test('the practice keeps short: every step has a clock, and all of it runs in under four minutes', () => {
+  const h = harness(), game = practiceGame(h)
+  let total = 0
+  while (game.tutorial) { assert.ok(h.timers.herring, `a clock on ${game.phase}`); total += h.timers.herring.ms; h.fire() }
+  assert.ok(total <= 4 * 60000, `${total} ms`)
+  assertRealCase(h, game)
+})
+
+test('nobody accused twice: Mr. Kipper stands trial anyway', () => {
+  const h = harness(), game = practiceGame(h)
+  while (game.phase !== 'defense') h.fire()
+  assert.equal(game.trial.accusedId, NPC)
+})
+
+test('a hosted practice: the storyteller paces it, and skipping deals the real case', () => {
+  const h = harness(), game = practiceGame(h, { hostless: false })
+  game.hostSocketId = 'tv'
+  // The storyteller moves the alibi step on; the morning waits for them.
+  h.api.hostAction(game, 'next', {})
+  assert.equal(game.phase, 'night')
+  passNight(h, game)
+  assert.equal(game.phase, 'morning'); assert.equal(h.timers.herring, undefined)
+  h.api.hostAction(game, 'next', {})
+  assert.equal(stepOf(h, game), 'statement')
+  // The grimoire shows the practice case.
+  const book = h.api.grimoire(game)
+  assert.equal(book.practice, true); assert.equal(book.roles[NPC], 'killer')
+  // Players can't skip a hosted practice; the TV (or the controller) can.
+  const phone = skipEvents(h, 's0'), tv = skipEvents(h, 'tv')
+  phone.vote(game, 'p0'); phone.skip(game)
+  assert.ok(game.tutorial)
+  tv.skip(game)
+  assertRealCase(h, game)
+  // A second skip (one racing the end) does nothing.
+  const cards = JSON.stringify(game.case.cards)
+  tv.skip(game); h.api.endTutorial(game)
+  assert.equal(JSON.stringify(game.case.cards), cards)
+})
+
+test('a hosted practice ends on the storyteller’s Next at the verdict', () => {
+  const h = harness(), game = practiceGame(h, { hostless: false })
+  while (game.phase !== 'verdict') { if (h.timers.herring) h.fire(); else h.api.hostAction(game, 'next', {}) }
+  assert.equal(stepOf(h, game), 'done'); assert.equal(h.timers.herring, undefined, 'the verdict waits for the storyteller')
+  h.api.hostAction(game, 'next', {})
+  assertRealCase(h, game)
+})
+
+test('a hostless practice skips once a strict majority of connected players vote', () => {
+  const h = harness(), game = practiceGame(h)
+  // Get some practice onto the table first: statements, the lab, a clue.
+  ids(game).forEach((id) => h.act(game, id, 'ready')); passNight(h, game); h.fire()
+  ids(game).forEach((id) => h.act(game, id, 'statement', game.case.cards[id])); h.fire()
+  ids(game).forEach((id) => labWork(h, game, id))
+  assert.equal(game.labDone, true)
+  // The TV can't skip a hostless practice, and a phone only votes for its own player.
+  skipEvents(h, 'tv').skip(game)
+  const phones = ids(game).map((id, i) => [id, skipEvents(h, `s${i}`)])
+  phones[1][1].vote(game, phones[0][0])
+  assert.ok(game.tutorial); assert.deepEqual(game.tutorial.votes, [])
+  // A second tap takes a vote back.
+  phones[0][1].vote(game, phones[0][0]); phones[0][1].vote(game, phones[0][0])
+  assert.deepEqual(game.tutorial.votes, [])
+  // 6 at the table: it takes 4.
+  phones.slice(0, 3).forEach(([id, phone]) => phone.vote(game, id))
+  assert.ok(game.tutorial, '3 of 6 is not a majority')
+  phones[3][1].vote(game, phones[3][0])
+  assertRealCase(h, game)
+  passNight(h, game)
+  assert.equal(game.morning.clue, null, 'the practice lab’s work doesn’t carry over')
+})
+
+test('after the practice: newcomers are dealt in, leavers are not, and too few guests go back to the lobby', () => {
+  const h = harness(), game = practiceGame(h)
+  // A guest arrives mid-practice: they watch, and get a real card when the case starts.
+  game.players.set('late', { id: 'late', name: 'Late Guest', score: 0, socketId: 'sl' })
+  assert.deepEqual(h.me(game, 'late'), { lobby: true })
+  // A guest leaves for good mid-practice.
+  game.players.get('p5').socketId = null
+  h.api.playerLeft(game, 'p5')
+  assert.ok(!game.players.has('p5'))
+  while (game.tutorial) h.fire()
+  assertRealCase(h, game)
+  assert.ok(game.case.roles.late); assert.ok(!game.case.roles.p5)
+
+  const h2 = harness(), small = practiceGame(h2, { players: 5, hostless: false })
+  small.hostSocketId = 'tv'
+  h2.api.hostAction(small, 'kickPlayer', { playerId: 'p4' })
+  assert.ok(small.tutorial, 'the practice goes on')
+  skipEvents(h2, 'tv').skip(small)
+  assert.equal(small.status, 'lobby'); assert.equal(small.case, null); assert.equal(small.tutorial, null)
+  // Once a fifth guest is back, Start goes straight to the real case.
+  small.players.set('p9', { id: 'p9', name: 'Guest 9', score: 0, socketId: 's9' })
+  h2.api.hostAction(small, 'start', {})
+  assertRealCase(h2, small)
+})
+
+test('the practice is off unless the setup asks for it, and a replay never has one', () => {
+  const h = harness(), game = newGame(h)
+  assert.ok(!game.tutorial); assert.equal(game.phase, 'night')
+  const h3 = harness(), replayed = practiceGame(h3, { hostless: false })
+  replayed.hostSocketId = 'tv'; skipEvents(h3, 'tv').skip(replayed)
+  h3.api.hostAction(replayed, 'endGame', {})
+  h3.api.hostAction(replayed, 'replay', {})
+  assert.equal(replayed.status, 'lobby')
+  h3.api.hostAction(replayed, 'start', {})
+  assert.ok(!replayed.tutorial); assert.equal(replayed.phase, 'night')
 })
