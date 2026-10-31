@@ -443,55 +443,57 @@ select { background-color: var(--well); }
   .departures.is-many li > span, .departures.is-many li > button { font-size: clamp(1rem, 1.6vw, 1.45rem); }
 }
 
-.round-title { display: flex; justify-content: center; margin: 0 0 12px; font-size: 1.35rem; }
-.round-title .flap-c { color: var(--table); }
+.round-title { display: flex; justify-content: center; margin: 0 0 12px; font: 700 clamp(1.2rem, 2vw, 1.8rem)/1 var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--table); text-shadow: var(--jp-shadow); }
 
-/* The Jeoparty board: a flap module in show blue. Categories turn over word by word; the values are gold flaps.
-   A clue that's been played goes to blank blue cells. */
+/* The Jeoparty board, as on the TV quiz show: a wall of deep blue screens behind black gaps, categories in white
+   condensed capitals and dollar values in gold, every letter with a hard black drop shadow. A played clue goes to a
+   dark empty screen. */
 .board {
-  --show: #1b2a7a;
-  --show-lo: #172468;
-  display: grid; grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); gap: 6px;
-  max-width: 1480px; margin: auto;
-  padding: 8px; border-radius: 3px;
-  background: var(--flap-gap);
-  box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
+  display: grid; grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); gap: 5px;
+  width: 100%; max-width: min(1480px, calc(var(--cols, 6) * 340px)); margin: 0 auto;
+  padding: 5px; border-radius: 2px;
+  background: #000;
+  box-shadow: 0 0 0 3px #000, 0 0 0 6px var(--jp-trim), 0 18px 50px rgb(0 0 0 / 0.5);
 }
-.column { display: grid; gap: 6px; grid-template-rows: auto; }
-.cat, .column button { position: relative; min-height: clamp(48px, 8.2vh, 96px); padding: 6px; border-radius: 2px; background: linear-gradient(180deg, var(--show) 0 50%, var(--show-lo) 50% 100%); color: var(--paint); }
-.cat::after, .column button::after { content: ""; position: absolute; left: 0; right: 0; top: calc(50% - 1px); height: 2px; background: rgb(3 6 24 / 0.75); }
+.column { display: grid; gap: 5px; grid-template-rows: auto; }
+/* On the TV, rows line up across the board even when a category runs to two or three lines. */
+@media (min-width: 761px) {
+  .display .board { grid-template-rows: auto repeat(var(--rows, 5), minmax(0, 1fr)); }
+  .display .board .column { grid-row: 1 / -1; grid-template-rows: subgrid; }
+}
+.cat, .column button {
+  position: relative; min-height: clamp(48px, 8.4vh, 98px); padding: 6px 8px;
+  background: radial-gradient(ellipse 85% 70% at 50% 40%, var(--jp-cell-hi), var(--jp-cell) 70%, var(--jp-cell-lo));
+  color: #fff;
+}
 .cat {
-  container-type: inline-size;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  font: 700 clamp(0.85rem, 1.55vw, 1.6rem)/1.04 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase;
+  text-wrap: balance; overflow-wrap: anywhere; text-shadow: var(--jp-shadow);
 }
-.cat::after { content: none; }
-.cat .flap { font-size: min(clamp(0.8rem, 1.5vw, 1.45rem), calc(100cqi / (var(--w) * 0.84))); }
-.cat .flap-cells { justify-content: center; }
-.cat .flap-c { background: linear-gradient(180deg, var(--show) 0 50%, var(--show-lo) 50% 100%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.25); }
-.column button { container-type: inline-size; display: grid; place-items: center; transition: box-shadow 160ms ease-out; }
-.column button::after { content: none; }
-.column button .flap { font-size: min(clamp(1.3rem, 2.9vw, 2.9rem), calc(100cqi / 4)); }
-.column button .flap-c { color: var(--table); background: linear-gradient(180deg, var(--show) 0 50%, var(--show-lo) 50% 100%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.3); }
-.column button .flap-c::after, .cat .flap-c::after { background: rgb(3 6 24 / 0.85); }
-.column button:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--table); }
-.column button.used { background: #0f1641; }
-.column button.used .flap-c { background: #111a4c; }
+.column button { display: grid; place-items: center; transition: box-shadow 160ms ease-out, filter 160ms ease-out; }
+.column button .value { font: 700 clamp(1.4rem, min(3.5vw, 6vh), 3.4rem)/1 var(--flap-font); letter-spacing: 0.01em; color: var(--jp-gold); text-shadow: 0.05em 0.05em 0 #000; font-variant-numeric: tabular-nums; }
+.column button:hover:not(:disabled) { box-shadow: inset 0 0 0 3px var(--jp-gold); filter: brightness(1.12); }
+.column button.used { background: var(--jp-used); }
 .turn-note { margin-top: 14px; font: 600 1.1rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
 .turn-note::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 10px; background: var(--table); }
 .host-bottom { margin-top: 16px; }
 
+/* A clue fills one big blue screen: white serif capitals with a black drop shadow, the category and value above it. */
 .clue-screen {
-  max-width: 1180px; min-height: 56vh;
-  margin: 3vh auto 0;
-  display: grid; place-content: center; justify-items: center; gap: 30px;
+  width: 100%; max-width: 1240px; min-height: 54vh;
+  margin: 2vh auto 0;
+  padding: clamp(14px, 3.4vh, 48px) clamp(18px, 5vw, 72px);
+  display: grid; place-content: center; justify-items: center; gap: clamp(12px, 2.6vh, 26px);
+  background: radial-gradient(ellipse 80% 75% at 50% 45%, var(--jp-cell-hi) 0%, var(--jp-cell) 58%, var(--jp-cell-lo) 100%);
+  box-shadow: 0 0 0 5px #000, 0 0 0 8px var(--jp-trim), 0 18px 50px rgb(0 0 0 / 0.5);
 }
-.clue-meta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px 22px; font-size: clamp(1.1rem, 2vw, 1.7rem); }
-.clue-meta .clue-value .flap-c { color: var(--table); }
-.clue-screen h1 { font: 600 clamp(2rem, 4.4vw, 4.1rem)/1.14 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance; max-width: 26ch; }
-.answer { font-size: clamp(1.6rem, 3.2vw, 3rem); }
-.answer .flap-cells { justify-content: center; }
-.answer .flap-c { color: var(--table); }
+.clue-meta { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 6px 22px; font: 700 clamp(1.1rem, 2vw, 1.8rem)/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; text-shadow: var(--jp-shadow); }
+.clue-meta .clue-value { color: var(--jp-gold); }
+.daily-banner { font: 700 clamp(3rem, 9vw, 7.4rem)/0.95 var(--flap-font); letter-spacing: 0.02em; color: var(--jp-gold); text-shadow: 0.05em 0.05em 0 #000; }
+.clue-screen h1 { font: 700 clamp(1.5rem, min(4vw, 5.8vh), 3.7rem)/1.2 var(--jp-serif); letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; max-width: 30ch; text-shadow: 0.06em 0.06em 0 #000; }
+.answer { padding-top: clamp(10px, 2vh, 18px); border-top: 2px solid rgb(255 255 255 / 0.22); font: 700 clamp(1.4rem, min(3vw, 4.6vh), 2.8rem)/1.2 var(--jp-serif); text-transform: uppercase; color: var(--jp-gold); text-shadow: 0.06em 0.06em 0 #000; animation: rise 360ms cubic-bezier(0.16, 1, 0.3, 1); }
 .buzzed { display: inline-flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: var(--radius-sm); background: var(--table); color: var(--on-table); font: 700 1.25rem var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 /* Final Jeoparty (host mode): each response joins the main screen as the host reveals it. */
@@ -639,15 +641,14 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 .hostless-board .board { grid-template-columns: repeat(var(--cols-small, 3), minmax(0, 1fr)); gap: 4px; padding: 4px; }
 .hostless-board .column { gap: 4px; }
 .hostless-board .cat { min-height: 54px; margin-bottom: 2px; padding: 4px; }
-.hostless-board .cat .flap { font-size: min(0.85rem, calc(100cqi / (var(--w) * 0.84))); }
+.hostless-board .cat { font-size: 0.74rem; }
 .hostless-board .column button { min-height: 46px; }
-.hostless-board .column button .flap { font-size: 1.15rem; }
+.hostless-board .column button .value { font-size: 1.2rem; }
 
 .final-form { display: grid; gap: 14px; margin-top: 20px; text-align: left; }
 .final-form textarea { min-height: 120px; resize: vertical; }
 .final-form .primary { min-height: 56px; font-size: 1.15rem; }
-.daily-title { display: flex; justify-content: center; font-size: 1.6rem; }
-.daily-title .flap-c { color: var(--table); }
+.daily-title { font: 700 2.6rem/1 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-align: center; color: var(--jp-gold); text-shadow: var(--jp-shadow); }
 
 .skip-vote { display: grid; justify-items: center; gap: 8px; margin-top: 24px; }
 .skip-button {
@@ -952,6 +953,121 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 .wb, .wb-setup, .row--budget { --table: #a993e3; --on-table: #170c2e; }
 .rh, .rh-setup, .row--herring { --table: #8fa0ee; --on-table: #0b1030; }
 
+/* ---------- Tutorials (src/Tutorial.jsx) ---------- */
+/* The coach: a notice on the board in the game's lamp colour, with the skip control at its end. */
+.coach {
+  display: flex; align-items: center; gap: 12px 24px;
+  width: 100%; max-width: 1180px; margin: 0 auto 14px;
+  padding: 12px 16px 12px 18px;
+  border-radius: 2px; border-left: 4px solid var(--table);
+  background: var(--well);
+  text-align: left;
+}
+.coach-body { flex: 1; min-width: 0; }
+.coach-label { margin-bottom: 4px; font: 600 0.8rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--table); }
+.coach-text { font: 500 clamp(1.05rem, 1.6vw, 1.45rem)/1.35 var(--set); color: var(--paint); text-wrap: pretty; }
+.tutorial-skip { flex-shrink: 0; }
+.tutorial-skip.is-voted { background: var(--table); color: var(--on-table); border-color: var(--table); }
+.tutorial-skip.is-voted::before { content: ""; width: 9px; height: 9px; background: currentColor; }
+.tutorial-tally { display: grid; gap: 2px; flex-shrink: 0; text-align: right; font: 600 1rem/1.2 var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-hi); }
+.tutorial-tally small { font-size: 0.75rem; letter-spacing: 0.18em; color: var(--steel); }
+.tutorial-vote { display: grid; gap: 8px; }
+.tutorial-skip-note { font-size: 0.95rem; color: var(--steel); }
+/* On a phone or the controller the coach is a card: the text, then the skip control across its width. */
+.coach.is-phone, .coach.is-controller { flex-direction: column; align-items: stretch; margin: 14px 0 0; }
+.coach.is-controller { margin: 0 0 18px; }
+.coach.is-phone + .player-clue-meta { margin-top: 16px; }
+.coach.is-phone .coach-text, .coach.is-controller .coach-text { font-size: 1.05rem; }
+.coach.is-phone .tutorial-skip, .coach.is-controller .tutorial-skip { width: 100%; }
+.coach.is-phone .tutorial-tally { text-align: center; }
+@media (max-width: 760px) { .coach.is-tv { flex-direction: column; align-items: stretch; } .coach.is-tv .tutorial-tally { text-align: left; } }
+
+/* ---------- Jeoparty: the quiz-show studio ---------- */
+/* Jeoparty keeps its own look, after the TV quiz show rather than the departure board: a deep blue studio, a board of
+   blue screens with gold dollar values, clues in white serif capitals with a hard black drop shadow, and scores on
+   blue podium panels. Its screens re-set the board's colours, so shared pieces (buttons, fields, the lobby) turn
+   studio blue with it, and flap cells become plain blue screens without the split. */
+.table-jeopardy, body:has(> #root > main.table-jeopardy), body:has(> #root > div:not([hidden]) > main.table-jeopardy) {
+  --table: #f5c542; --on-table: #1a1200;
+  --jp-gold: #f5c542;
+  --jp-cell: #0e21aa; --jp-cell-hi: #1d3ad6; --jp-cell-lo: #0a1888; --jp-used: #060f52;
+  --jp-trim: #1f33b8;
+  --jp-shadow: 0.06em 0.06em 0 #000;
+  --jp-serif: Georgia, "Times New Roman", "Noto Serif", serif;
+  --board: #060d48; --well: #040934; --flap-face: #0d1b86; --flap-face-lo: #0b1774; --flap-gap: #000;
+  --rule: #1a2985; --rule-strong: #2a3ca8; --steel: #98a4dc; --steel-hi: #c6cdf2; --steel-mid: #4e5db8; --steel-lo: #0b1356; --paint-dim: #7682c6;
+  --frame-hi: #18289a; --frame-lo: #050b3a;
+}
+/* The frame around the board becomes the studio: blue light falling from above onto dark navy. */
+body:has(> #root > main.table-jeopardy), body:has(> #root > div:not([hidden]) > main.table-jeopardy) {
+  background: radial-gradient(ellipse 70% 55% at 50% 0%, #2238c4 0%, transparent 70%), linear-gradient(180deg, #0c1677 0%, #030722 100%) fixed;
+  background-color: #030722;
+}
+.table-jeopardy.display, .table-jeopardy.player, .table-jeopardy.controller, .table-jeopardy.end, .table-jeopardy.setup {
+  background: radial-gradient(ellipse 90% 45% at 50% 0%, rgb(40 64 220 / 0.35) 0%, transparent 75%), var(--board);
+  box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+/* Flap cells read as small blue screens. */
+.table-jeopardy .flap .flap-c { background: linear-gradient(180deg, var(--jp-cell-hi), var(--jp-cell-lo)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.4); text-shadow: 0.05em 0.05em 0 #000; }
+.table-jeopardy .flap .flap-c::after { content: none; }
+.table-jeopardy .flap .flap-c.is-blank { background: var(--jp-used); }
+/* Names and statuses in the lobby rows are lettering on the row, not screens. */
+.table-jeopardy .departures .flap .flap-c { background: none; box-shadow: none; }
+/* The name: white condensed capitals with the drop shadow, not a logo. */
+.table-jeopardy .brand .lamp { display: none; }
+.table-jeopardy .brand .flap-cells { gap: 0.02em; }
+.table-jeopardy .brand .flap .flap-c { width: auto; height: auto; background: none; box-shadow: none; overflow: visible; font-weight: 700; text-shadow: var(--jp-shadow); }
+.table-jeopardy .code-chip .flap-c, .table-jeopardy .clue-timer .flap-c { font-weight: 700; }
+body:has(> #root > main.table-jeopardy) .back-to-settings.is-controller { color: var(--steel-hi); }
+body:has(> #root > main.table-jeopardy) .back-to-settings.is-controller:hover { color: var(--paint); }
+
+/* The TV: header, coach, the board or the clue, and the podiums along the foot, clear of the rail below. */
+.display.table-jeopardy { display: flex; flex-direction: column; padding-bottom: 96px; }
+.display.table-jeopardy .host-tools { margin-top: 14px; }
+/* The clue takes the room between the coach and the podiums, so the whole show fits the screen. */
+.display.table-jeopardy .clue-screen { flex: 1 1 auto; min-height: auto; }
+.table-jeopardy .scores {
+  gap: 14px; margin: auto 0 0; padding: 22px 0 0; border-top: 0;
+}
+.table-jeopardy .scores li {
+  grid-template-columns: auto; justify-items: center; gap: 6px;
+  min-width: clamp(120px, 13vw, 190px); padding: 10px 16px 9px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #0f1f96 0%, #091470 100%);
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--jp-trim);
+}
+.table-jeopardy .scores li.is-turn { box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--jp-gold); }
+.table-jeopardy .scores b { font-size: 0.92rem; color: var(--steel-hi); }
+.table-jeopardy .scores .is-turn b { color: var(--jp-gold); }
+.podium-score { font: 700 clamp(1.5rem, 2.5vw, 2.3rem)/1 var(--flap-font); letter-spacing: 0.02em; color: #fff; text-shadow: var(--jp-shadow); font-variant-numeric: tabular-nums; }
+.podium-score.is-negative, .table-jeopardy .player-score.is-negative { color: var(--red-text); }
+.table-jeopardy .scores .is-away .podium-score { color: var(--paint-dim); }
+@media (max-height: 800px) {
+  .display.table-jeopardy { padding-bottom: 80px; }
+  .table-jeopardy .scores { padding-top: 16px; }
+  /* A 720p TV: the podiums go to one line each (name, then score) so the whole board fits. */
+  .table-jeopardy .scores li { grid-template-columns: auto auto; align-items: center; gap: 4px 12px; padding: 6px 14px; min-width: 0; }
+  .table-jeopardy .scores .podium-score { order: 2; font-size: 1.5rem; }
+  .table-jeopardy .round-title { margin-bottom: 8px; }
+  .table-jeopardy .cat, .table-jeopardy .column button { min-height: 6.8vh; }
+  .table-jeopardy .turn-note { margin-top: 8px; }
+}
+/* Narrow TVs stack Back to settings above Sound and the controller link, so the podiums keep clear of both rows. */
+@media (max-width: 720px) {
+  body.is-tv .display.table-jeopardy { padding-bottom: 148px; }
+  .table-jeopardy .scores li { min-width: 0; flex: 1 1 40%; }
+}
+
+/* The phone: the score on a podium panel. */
+.table-jeopardy .player-score {
+  width: fit-content; min-width: 60%; margin: 20px auto 6px; padding: 10px 22px 8px;
+  background: linear-gradient(180deg, var(--jp-cell-hi), var(--jp-cell-lo));
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--jp-trim);
+  font: 700 3.2rem/1 var(--flap-font); letter-spacing: 0.02em; color: #fff; text-shadow: var(--jp-shadow); font-variant-numeric: tabular-nums;
+}
+.table-jeopardy .buzzer { box-shadow: 0 0 0 8px var(--well), 0 0 0 10px var(--jp-trim), inset 0 -6px 0 rgb(0 0 0 / 0.35); }
+.table-jeopardy .buzzer.ready:active { box-shadow: 0 0 0 8px var(--well), 0 0 0 10px var(--jp-trim), inset 0 -2px 0 rgb(0 0 0 / 0.35); }
+
 /* ---------- Game Night hub ---------- */
 .back-to-hub { display: flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 16px; font: 600 0.92rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; color: var(--steel-hi); }
 .back-to-hub:hover { color: var(--paint); }
@@ -973,11 +1089,12 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
   min-height: clamp(52px, 6.8vh, 66px); padding: 6px 8px 6px 14px;
   border-radius: 2px;
   background: var(--well);
-  box-shadow: inset 0 0 0 1px #1c1d20;
+  /* The row's edge is lit in its game's lamp. */
+  box-shadow: inset 3px 0 0 var(--table), inset 0 0 0 1px #1c1d20;
   color: var(--paint); text-decoration: none;
   transition: background-color 160ms ease-out;
 }
-.hub-row .lamp { justify-self: center; width: 16px; height: 16px; border-radius: 50%; background: var(--table); }
+.hub-motif { justify-self: center; width: 30px; height: 30px; }
 .hub-row .hub-name { font-size: clamp(1.2rem, 2.35vw, 2.15rem); }
 .hub-count { font: 500 clamp(1rem, 1.35vw, 1.25rem) var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel-hi); }
 .hub-go {
@@ -988,9 +1105,22 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
   transition: background-color 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out;
 }
 .hub-row .hub-name .flap-c { background: linear-gradient(180deg, #2a2b30 0 50%, #25262a 50% 100%); }
-.hub-row:hover, .hub-row:focus-visible { background: #131416; box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.hub-row:hover, .hub-row:focus-visible { background: linear-gradient(90deg, color-mix(in srgb, var(--row-tint) 30%, #131416) 0%, #131416 48%); box-shadow: inset 3px 0 0 var(--table), inset 0 0 0 1px var(--rule-strong); }
 .hub-row:hover .hub-go, .hub-row:focus-visible .hub-go { background: var(--table); border-color: var(--table); color: var(--on-table); }
 .hub-row:focus-visible { outline-offset: 2px; }
+
+/* Each row's lamp and tint follow its game's own look (the quiz board's gold, the survey set's marquee amber, the
+   puzzle board's green, Fib or Fact's '70s purple, Price Check's showroom pink, Tip of the Tongue's studio blue, Word
+   Budget's party-card teal, Red Herring's moonlight). They're set here, on the hub only, so a game's screens keep
+   their own --table. */
+.hub-row.row--jeopardy, .instruction-card .row--jeopardy { --table: #f5c542; --on-table: #1a1200; --row-tint: #1d3ad6; }
+.hub-row.row--survey, .instruction-card .row--survey { --table: #f2b33d; --on-table: #1f1404; --row-tint: #0f2a8a; }
+.hub-row.row--wheel, .instruction-card .row--wheel { --table: #45c26b; --on-table: #04210f; --row-tint: #2f8f50; }
+.hub-row.row--fib, .instruction-card .row--fib { --table: #c27ce6; --on-table: #1e0730; --row-tint: #a04ac8; }
+.hub-row.row--price, .instruction-card .row--price { --table: #f05aa0; --on-table: #2a0717; --row-tint: #f08a3c; }
+.hub-row.row--tongue, .instruction-card .row--tongue { --table: #5aa6ef; --on-table: #04182b; --row-tint: #2f6fd6; }
+.hub-row.row--budget, .instruction-card .row--budget { --table: #2dd4bf; --on-table: #03201c; --row-tint: #ff5b6e; }
+.hub-row.row--herring, .instruction-card .row--herring { --table: #b8c4f4; --on-table: #0b1030; --row-tint: #4a5aa8; }
 
 /* Under the board: keying in a code. */
 .hub-join { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 28px; margin-top: clamp(18px, 3.4vh, 34px); padding: 18px 0 0; border-top: 2px solid var(--rule); }
@@ -1036,7 +1166,7 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
   .hub-join .primary { flex: 1; min-width: 0; }
   .hub-cols { display: none; }
   .hub-row { grid-template-columns: 1.4rem minmax(0, 1fr) auto; column-gap: 12px; padding: 10px 8px 10px 10px; }
-  .hub-row .lamp { width: 12px; height: 12px; }
+  .hub-motif { width: 20px; height: 20px; }
   .hub-row .hub-name { font-size: min(1.2rem, 4.7vw); }
   .hub-count { font-size: 0.82rem; letter-spacing: 0.06em; }
   .hub-go { min-height: 44px; padding: 0 12px; }
