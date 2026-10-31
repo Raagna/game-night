@@ -17,10 +17,20 @@
 //
 // A game is set in one country (US or Canada): its products and prices come from that country's pack, and every
 // price is shown in that country's dollars. Prices are never converted between the two.
+//
+// Practice round (the tutorial; see docs/tutorial.md): before round one, the setup can ask for a short practice on
+// two products from the game's own country pack, with nothing scoring: one Closest Bid, its reveal, one Higher or
+// Lower call, and its breakdown. It plays through the real round code; the coach text is PRICE_COACH in
+// src/price/PriceCheck.jsx.
+import { beginTutorial, setTutorialStep, endTutorial as leaveTutorial, inTutorial, skipCarried } from './tutorial.js'
 
 // Answer clocks are sized for a phone: reading the products, thinking, then tapping or typing. Higher or Lower
 // has five products to call; the reveals leave time to read who got what before moving on.
 export const PRICE_TIMES = { bidMs: 35000, higherLowerMs: 70000, priciestMs: 20000, priciestRevealMs: 9000, orderMs: 55000, groceryMs: 70000, showcaseMs: 75000, revealMs: 16000, showcaseRevealMs: 20000 }
+// The practice round's clocks: one product to bid on and one to call, and (without a host) time to read each
+// reveal and the coach. Round one starts endMs after the last practice reveal.
+export const PRICE_PRACTICE_TIMES = { bidMs: 30000, higherLowerMs: 25000, revealMs: 20000, endMs: 9000 }
+export const PRICE_TUTORIAL_STEPS = ['bid', 'bidReveal', 'call', 'callReveal', 'done']
 export const PRICE_COUNTRIES = {
   US: { name: 'United States', currency: 'USD', symbol: 'US$', locale: 'en-US' },
   CA: { name: 'Canada', currency: 'CAD', symbol: 'CA$', locale: 'en-CA' },
@@ -74,7 +84,10 @@ function cleanConfig(config) {
   const segments = (Array.isArray(config?.segments) ? config.segments : []).slice(0, MAX_SEGMENTS).map(cleanSegment).filter(Boolean)
   if (!segments.length) throw new Error('A game needs at least one round.')
   const showcases = (Array.isArray(config?.showcases) ? config.showcases : []).slice(0, 2).map((bundle) => goodItems(bundle, 4)).filter((bundle) => bundle.length)
-  return { segments, showcases: showcases.length === 2 ? showcases : null, hostless: !!config?.hostless, country: countryOf(config?.country) }
+  // The practice products: one to bid on, one to call higher or lower (dealt by the setup from the same pack).
+  const [bidItem] = goodItems([config?.practice?.bid], 1), [callItem] = goodItems([config?.practice?.higherLower], 1)
+  const practice = bidItem && callItem ? [{ type: 'bid', item: bidItem }, { type: 'higherLower', items: [callItem] }] : null
+  return { segments, showcases: showcases.length === 2 ? showcases : null, hostless: !!config?.hostless, country: countryOf(config?.country), tutorial: !!config?.tutorial && !!practice, practice }
 }
 const total = (items) => items.reduce((sum, item) => sum + item.cents, 0)
 // Closest without going over: the ids whose value is highest but not above the target (ties share it).
@@ -97,7 +110,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
 
   function makeGame(code, rawConfig) {
     const config = cleanConfig(rawConfig)
-    return { kind: 'price', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, country: config.country, players: new Map(), config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null }
+    return { kind: 'price', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, country: config.country, players: new Map(), config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null, tutorial: null, practice: null }
   }
   function playerJoined() {}
 
@@ -121,11 +134,12 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     return base
   }
   function publicGame(game) {
+    if (inTutorial(game)) setTutorialStep(game, practiceStep(game))
     return {
       kind: 'price', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId, country: game.country,
       index: game.index, segmentCount: game.segments.length, hasShowcase: !!game.showcases, segmentTypes: game.segments.map((segment) => segment.type),
       players: [...game.players.values()].map(({ socketId, ...player }) => ({ ...player, connected: !!socketId })),
-      round: game.round && publicRound(game), serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
+      round: game.round && publicRound(game), practice: game.practice ? { index: game.practice.index, count: game.practice.segments.length, done: game.practice.done } : null, serverNow: Date.now(), lastEvent: game.lastEvent, events: game.recentEvents || [],
     }
   }
 
@@ -142,12 +156,13 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
 
   // ---------- Phases and clocks ----------
   const ANSWER_MS = { bid: 'bidMs', higherLower: 'higherLowerMs', priciest: 'priciestMs', order: 'orderMs', grocery: 'groceryMs', showcase: 'showcaseMs' }
+  const timesFor = (game) => (inTutorial(game) ? { ...PRICE_TIMES, ...PRICE_PRACTICE_TIMES } : PRICE_TIMES)
   function setPhase(game, phase) {
-    const round = game.round
+    const round = game.round, times = timesFor(game)
     round.phase = phase
-    const ms = phase === 'answer' ? PRICE_TIMES[ANSWER_MS[round.type]]
-      : phase === 'reveal' && round.type === 'priciest' && round.set < round.sets.length - 1 ? PRICE_TIMES.priciestRevealMs
-      : phase === 'reveal' && game.hostless ? (round.type === 'showcase' ? PRICE_TIMES.showcaseRevealMs : PRICE_TIMES.revealMs) : null
+    const ms = phase === 'answer' ? times[ANSWER_MS[round.type]]
+      : phase === 'reveal' && round.type === 'priciest' && round.set < round.sets.length - 1 ? times.priciestRevealMs
+      : phase === 'reveal' && game.hostless ? (round.type === 'showcase' ? times.showcaseRevealMs : times.revealMs) : null
     round.deadline = ms ? Date.now() + ms : null
     clearGameTimers(game)
     if (ms) schedule(game, 'price', ms, () => { if (game.round === round && round.phase === phase && game.status === 'playing') { advance(game); emitGame(game) } })
@@ -159,8 +174,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     else if (round.type === 'priciest' && round.set < round.sets.length - 1) { round.set++; setPhase(game, 'answer'); event(game, 'question'); sendSecret(game) }
     else nextSegment(game)
   }
-  function startSegment(game) {
-    const segment = game.segments[game.index]
+  function startSegment(game, segment = game.segments[game.index]) {
     game.round = { type: segment.type, phase: 'answer', deadline: null, answers: {}, awards: null, results: null }
     const round = game.round
     if (segment.type === 'bid') Object.assign(round, { item: segment.item, rebids: 0, below: null, overBids: null })
@@ -190,6 +204,7 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     sendSecret(game)
   }
   function nextSegment(game) {
+    if (inTutorial(game)) return nextPractice(game)
     if (game.round?.type === 'showcase') return finish(game)
     if (game.index < game.segments.length - 1) { game.index++; return startSegment(game) }
     game.index = game.segments.length
@@ -200,6 +215,42 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     game.status = 'complete'
     if (game.round) game.round.deadline = null
     event(game, 'complete')
+  }
+
+  // ---------- Practice round ----------
+  function beginPractice(game) {
+    beginTutorial(game, PRICE_TUTORIAL_STEPS)
+    game.practice = { segments: game.config.practice, index: 0, done: false }
+    startSegment(game, game.practice.segments[0])
+  }
+  // The step is read off the practice round's state, so the coach always matches the screen.
+  function practiceStep(game) {
+    const practice = game.practice, round = game.round
+    if (!practice || !round || practice.done) return 'done'
+    if (round.type === 'bid') return round.phase === 'answer' ? 'bid' : 'bidReveal'
+    return round.phase === 'answer' ? 'call' : 'callReveal'
+  }
+  // After a practice reveal: the next practice product, or the end of the practice. The last breakdown stays on
+  // screen while the coach wraps up; without a host, round one starts by itself shortly after.
+  function nextPractice(game) {
+    const practice = game.practice
+    if (practice.done) return endTutorial(game)
+    if (practice.index < practice.segments.length - 1) { practice.index++; return startSegment(game, practice.segments[practice.index]) }
+    practice.done = true
+    clearGameTimers(game)
+    game.round.deadline = game.hostless ? Date.now() + PRICE_PRACTICE_TIMES.endMs : null
+    if (game.hostless) schedule(game, 'price', PRICE_PRACTICE_TIMES.endMs, () => endTutorial(game))
+    event(game, 'practiceDone')
+  }
+  // Out of the practice (played through, skipped by the host, or voted down) into round one, with scores at 0.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    game.practice = null
+    for (const player of game.players.values()) player.score = 0
+    game.index = 0
+    startSegment(game)
+    emitGame(game)
   }
 
   // Who still has to answer. Everyone answers everything, except in the showcase, where the two contestants bid
@@ -254,9 +305,10 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
   }
 
   // ---------- Scoring ----------
+  // Every point goes through here. Nothing scores in the practice round.
   function award(game, playerId, points, why) {
     const round = game.round, player = game.players.get(playerId)
-    if (!player || !points) return
+    if (!player || !points || inTutorial(game)) return
     player.score += points
     const entry = (round.awards[playerId] ||= { points: 0, why: [] })
     entry.points += points
@@ -336,10 +388,14 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
 
   function hostAction(game, action, payload) {
     const round = game.round, playing = game.status === 'playing' && round
-    if (action === 'start' && game.status === 'lobby' && connected(game).length >= 2) { game.status = 'playing'; game.index = 0; startSegment(game) }
+    if (action === 'start' && game.status === 'lobby' && connected(game).length >= 2) {
+      game.status = 'playing'; game.index = 0
+      if (game.config.tutorial) beginPractice(game); else startSegment(game)
+    }
     if (action === 'next' && playing) advance(game)
-    if (action === 'skip' && playing) nextSegment(game)
-    if (action === 'endGame' && game.status === 'playing') finish(game)
+    // Skipping a round during the practice skips the practice (endTutorial sends the game out itself).
+    if (action === 'skip' && playing) { if (inTutorial(game)) return endTutorial(game); nextSegment(game) }
+    if (action === 'endGame' && game.status === 'playing' && !inTutorial(game)) finish(game)
     if (action === 'adjustScore') { const player = game.players.get(payload.playerId), amount = Math.trunc(Number(payload.amount)); if (player && Number.isFinite(amount)) player.score += amount }
     if (action === 'renamePlayer') { const player = game.players.get(payload.playerId), name = text(payload.name, 20); if (player && name) player.name = name }
     if (action === 'kickPlayer') {
@@ -350,14 +406,18 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
         socket?.leave(game.code); socket?.emit('player:kicked')
         game.players.delete(player.id)
         if (game.status === 'playing') checkDone(game)
+        // One fewer player can carry a vote to skip the practice.
+        if (skipCarried(game)) return endTutorial(game)
       }
     }
     if (action === 'replay') {
       let config = game.config
       // A replay stays in the game's country: the new products come from the same pack.
       try { if (payload.segments) config = cleanConfig({ ...payload, hostless: game.hostless, country: game.country }) } catch {}
+      // No practice round on a replay.
+      config = { ...config, tutorial: false }
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null })
+      Object.assign(game, { status: 'lobby', config, segments: config.segments, showcases: config.showcases, index: 0, round: null, lastEvent: null, tutorial: null, practice: null })
       for (const player of game.players.values()) player.score = 0
     }
     emitGame(game)
@@ -373,5 +433,5 @@ export function createPriceGames({ io, games, emitGame, schedule, clearGameTimer
     })
   }
 
-  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register }
+  return { MAX_PLAYERS, makeGame, publicGame, playerJoined, playerLeft, hostAction, hostJoined, register, endTutorial }
 }

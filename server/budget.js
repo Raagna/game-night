@@ -18,9 +18,21 @@
 // First team to the target number of cards wins (or, in points mode, a card is 10 and every saved word 1).
 // The words are only ever sent to the phones that need them and the host controller (budget:card); the TV gets
 // each word's status, and a word's text only once it has been guessed or the card is over.
+//
+// Practice round (the tutorial; see docs/tutorial.md): before card one, the setup can ask for one practice card,
+// played with the real rules and nothing scoring: the look, bidding the budget down, the clue-giver clueing while the
+// words are counted and checked off (by the host, or without one by the other team's clue-giver), going over the
+// budget, and the other team's steal. Its clocks are shorter, but long enough to read the coach (BUDGET_COACH in
+// src/budget/WordBudget.jsx), and its words are its own, so the game's word pool is untouched.
 import { repeatHostTap } from './taps.js'
+import { beginTutorial, setTutorialStep, endTutorial as leaveTutorial, inTutorial, skipCarried } from './tutorial.js'
 
 export const BUDGET_TIMES = { peekMs: 10000, bidMs: 10000, playMs: 90000, stealMs: 35000, doneMs: 18000 }
+// doneMs: without a host, card one starts this long after the practice card's result.
+export const BUDGET_PRACTICE_TIMES = { peekMs: 12000, bidMs: 15000, playMs: 45000, stealMs: 25000, doneMs: 12000 }
+export const BUDGET_TUTORIAL_STEPS = ['peek', 'bid', 'play', 'steal', 'done']
+// Easy words to clue; a second card in case both clue-givers pass on the first.
+export const PRACTICE_CARDS = [['Pizza', 'Beach', 'Rocket', 'Guitar', 'Snowman'], ['Moon', 'Coffee', 'Dragon', 'Bicycle', 'Rainbow']]
 export const START_BID = 25
 export const CARD_SIZE = 5
 const MAX_PLAYERS = 16
@@ -38,7 +50,7 @@ function cleanConfig(config) {
     .filter((word) => word && !seen.has(word.toLowerCase()) && seen.add(word.toLowerCase()))
   if (words.length < CARD_SIZE * 2) throw new Error(`Pick categories with at least ${CARD_SIZE * 2} words between them.`)
   const cardsToWin = [5, 7, 10].includes(Number(config?.cardsToWin)) ? Number(config.cardsToWin) : 10
-  return { words, cardsToWin, scoring: config?.scoring === 'points' ? 'points' : 'cards', hostless: !!config?.hostless }
+  return { words, cardsToWin, scoring: config?.scoring === 'points' ? 'points' : 'cards', hostless: !!config?.hostless, tutorial: !!config?.tutorial }
 }
 
 // Best first: most cards, then most saved words (the tiebreak). In points mode, most points, then most cards.
@@ -66,7 +78,7 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
 
   function makeGame(code, rawConfig) {
     const config = cleanConfig(rawConfig)
-    const game = { kind: 'budget', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config, teams: [], cardNo: 0, cardSeq: 0, dealt: 0, turn: null, lastEvent: null, phoneTaps: {} }
+    const game = { kind: 'budget', code, status: 'lobby', hostSocketId: null, hostless: config.hostless, players: new Map(), config, teams: [], cardNo: 0, cardSeq: 0, dealt: 0, turn: null, lastEvent: null, phoneTaps: {}, tutorial: null, practiceDealt: 0 }
     game.teams = [1, 2].map((n) => ({ id: `t${n}`, name: `Team ${n}`, members: [], cards: 0, bonus: 0 }))
     return game
   }
@@ -96,6 +108,8 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
     }
   }
   function publicGame(game) {
+    // The practice card's step is its phase, so the coach always matches the screen.
+    if (inTutorial(game) && game.turn) setTutorialStep(game, game.turn.phase)
     return {
       kind: 'budget', code: game.code, status: game.status, hostless: game.hostless, hostConnected: !!game.hostSocketId,
       cardsToWin: game.config.cardsToWin, scoring: game.config.scoring, target: target(game), cardNo: game.cardNo,
@@ -107,7 +121,8 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
 
   // ---------- Cards ----------
   const PHASE_TIME = { peek: 'peekMs', bid: 'bidMs', play: 'playMs', steal: 'stealMs', done: 'doneMs' }
-  function setPhase(game, phase, ms = phase === 'done' && !game.hostless ? null : BUDGET_TIMES[PHASE_TIME[phase]]) {
+  const timesFor = (game) => (inTutorial(game) ? BUDGET_PRACTICE_TIMES : BUDGET_TIMES)
+  function setPhase(game, phase, ms = phase === 'done' && !game.hostless ? null : timesFor(game)[PHASE_TIME[phase]]) {
     const turn = game.turn
     turn.phase = phase
     turn.deadline = ms ? now() + ms : null
@@ -116,6 +131,8 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
   }
   // The next five words from the pool (starting over from the top if a long game uses them all up).
   function deal(game) {
+    // The practice card comes from its own words, so the game's pool starts fresh at card one.
+    if (inTutorial(game)) return PRACTICE_CARDS[game.practiceDealt++ % PRACTICE_CARDS.length].map((word) => ({ text: word, status: 'waiting' }))
     const { words } = game.config, hand = []
     for (let i = 0; i < CARD_SIZE; i++) hand.push(words[(game.dealt + i) % words.length])
     game.dealt = (game.dealt + CARD_SIZE) % words.length
@@ -251,7 +268,8 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
   function finishCard(game, winnerId, reason, bonus = 0) {
     const turn = game.turn, winner = teamById(game, winnerId)
     for (const word of turn.words) if (word.status === 'waiting') word.status = 'missed'
-    if (winner) { winner.cards++; winner.bonus += bonus }
+    // Nothing scores in the practice: the result shows who would have won the card, and the teams stay at 0.
+    if (winner && !inTutorial(game)) { winner.cards++; winner.bonus += bonus }
     turn.result = { winnerId: winner?.id ?? null, reason, bonus: winner ? bonus : 0, failReason: turn.failReason ?? null }
     turn.countTimes = []
     event(game, winner ? 'cardWon' : 'cardVoid', { teamId: winner?.id, reason })
@@ -260,7 +278,7 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
   // The host's last word on a finished card: give it to a team (no bonus), or to nobody.
   function award(game, teamId) {
     const turn = game.turn
-    if (turn?.phase !== 'done' || !turn.result) return false
+    if (turn?.phase !== 'done' || !turn.result || inTutorial(game)) return false
     const old = teamById(game, turn.result.winnerId), next = teamById(game, teamId) ?? null
     if (old === next) return false
     if (old) { old.cards--; old.bonus -= turn.result.bonus }
@@ -270,6 +288,7 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
   }
   const leader = (game) => game.teams.find((team) => progress(game, team) >= target(game))
   function nextCard(game) {
+    if (inTutorial(game)) return endTutorial(game)
     if (leader(game)) return finish(game)
     game.cardNo++
     startCard(game)
@@ -284,8 +303,19 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
     if (game.status !== 'lobby' || game.teams.some((team) => live(game, team.members).length < 2)) return false
     game.status = 'playing'
     game.cardNo = 0
+    if (game.config.tutorial) beginTutorial(game, BUDGET_TUTORIAL_STEPS)
     startCard(game)
     return true
+  }
+  // Out of the practice card (played through, skipped by the host, or voted down) into card one, with the teams at 0.
+  function endTutorial(game) {
+    if (!leaveTutorial(game)) return
+    clearGameTimers(game)
+    for (const team of game.teams) { team.cards = 0; team.bonus = 0 }
+    game.cardNo = 0
+    game.turn = null
+    startCard(game)
+    emitGame(game)
   }
 
   // ---------- Players coming and going ----------
@@ -338,7 +368,7 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
       if (action === 'newCard') newCard(game)
       if (action === 'award') award(game, payload.teamId)
     }
-    if (action === 'endGame' && game.status === 'playing') finish(game)
+    if (action === 'endGame' && game.status === 'playing' && !inTutorial(game)) finish(game)
     if (action === 'renameTeam') { const team = teamById(game, payload.teamId), name = text(payload.name, 24); if (team && name) team.name = name }
     if (action === 'adjustScore') { const team = teamById(game, payload.teamId), amount = Math.trunc(Number(payload.amount)); if (team && Number.isFinite(amount)) team.cards = Math.max(0, team.cards + amount) }
     if (action === 'renamePlayer') { const player = game.players.get(payload.playerId), name = text(payload.name, 20); if (player && name) player.name = name }
@@ -352,13 +382,17 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
         game.players.delete(player.id)
         handOff(game, player.id)
         removeFromTeams(game, player.id)
+        // One fewer player can carry a vote to skip the practice.
+        if (skipCarried(game)) return endTutorial(game)
       }
     }
     if (action === 'replay') {
       let config = game.config
       try { if (payload.words) config = cleanConfig({ ...game.config, words: payload.words, hostless: game.hostless }) } catch {}
+      // No practice card on a replay.
+      config = { ...config, tutorial: false }
       clearGameTimers(game)
-      Object.assign(game, { status: 'lobby', config, cardNo: 0, dealt: 0, turn: null, lastEvent: null })
+      Object.assign(game, { status: 'lobby', config, cardNo: 0, dealt: 0, turn: null, lastEvent: null, tutorial: null })
       for (const team of game.teams) { team.cards = 0; team.bonus = 0 }
     }
     emitGame(game)
@@ -416,5 +450,5 @@ export function createBudgetGames({ io, games, emitGame, schedule, clearGameTime
     })
   }
 
-  return { MAX_PLAYERS, RULINGS, rulingTurn, makeGame, publicGame, playerJoined, playerLeft, hostAction, register }
+  return { MAX_PLAYERS, RULINGS, rulingTurn, makeGame, publicGame, playerJoined, playerLeft, hostAction, register, endTutorial }
 }
