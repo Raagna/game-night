@@ -1,20 +1,11 @@
-/* Fib or Fact — the board with a mint lamp (--table, from styles.css). The clue is set type, like a notice posted
-   on the board; the choices are rows on the board itself, each with a status cell that stays blank until the reveal
-   reaches it. A fib's letters dim and its cell names who wrote it; the fact clacks in again in the lamp colour.
-   Price Check, Tip of the Tongue and Word Budget reuse the stage, scoreboard and tools classes here (fib-*), so
-   those stay generic. */
+/* Fib or Fact — a '70s TV quiz show: a plum studio with sunburst rays and warm stripes, the title in fat extruded
+   letters, the clue on a cream cue card, and the choices as big answer cards with letter discs. When the reveal
+   reaches a card, a fib is crossed out and gets a sticker naming who wrote it; the fact lights up orange.
+   Everything here is scoped to the game's own roots (.fib, .fib-setup), except the shared section below:
+   Price Check, Tip of the Tongue and Word Budget reuse the stage, scoreboard and tools classes (fib-*), so those
+   rules stay generic. */
 
-/* ---------- Setup ---------- */
-.fib-length { margin-top: 24px; max-width: 520px; }
-.fib-setup .sv-questions-head .chip-btn { margin-left: auto; }
-.fib-q-categories { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
-.fib-q-categories span {
-  padding: 6px 10px 5px; border-radius: 2px;
-  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule-strong);
-  font: 600 0.88rem/1.1 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--steel-hi);
-}
-
-/* ---------- The stage (shared with Price Check, Tip of the Tongue and Word Budget) ---------- */
+/* ---------- Shared with Price Check, Tip of the Tongue and Word Budget ---------- */
 .fib-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); gap: 28px; align-items: start; max-width: 1400px; margin: 4px auto 0; }
 .fib-stage:has(> :only-child) { grid-template-columns: minmax(0, 1fr); max-width: 1000px; }
 .fib-center { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 14px; min-width: 0; }
@@ -46,165 +37,7 @@
 .is-done .fib-sb-check { background: var(--table); border-color: var(--table); color: var(--on-table); }
 .fib-scoreboard li > .money { flex-shrink: 0; font: 600 1.3rem/1 var(--flap-font); color: var(--paint); }
 .fib-scoreboard li.is-away .fib-sb-name, .fib-scoreboard li.is-away .flap-c { color: var(--paint-dim); }
-
-/* ---------- TV ---------- */
-.fib-round-label { font-size: 1.4rem; }
-.fib-headline { font: 600 clamp(1.6rem, 3.2vw, 2.8rem)/1.12 var(--flap-font); letter-spacing: 0.03em; text-transform: uppercase; text-wrap: balance; max-width: 30ch; }
-
-/* Picking: the three categories as departures, one cell each. */
-.fib-categories {
-  list-style: none; margin: 8px 0 0; padding: 8px; width: 100%; max-width: 1040px;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px;
-  border-radius: 3px; background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
-}
-.fib-categories li { display: grid; place-items: center; min-height: clamp(120px, 20vh, 180px); padding: 16px 12px; border-radius: 2px; background: var(--board); font-size: clamp(1.3rem, 2.3vw, 2.1rem); }
-.fib-categories .flap-cells { justify-content: center; }
-
-/* The clue: a notice posted on the board, its category on lamp-coloured flaps above the clue in set type. */
-.fib-clue {
-  width: 100%; max-width: 1040px; display: grid; justify-items: center; gap: 12px;
-  padding: clamp(16px, 2.6vw, 30px) clamp(18px, 3vw, 36px);
-  border-radius: 3px; background: var(--well); box-shadow: inset 0 3px 0 var(--table), inset 0 0 0 1px var(--rule);
-}
-.fib-clue-category { font-size: clamp(1.25rem, 1.8vw, 1.6rem); }
-.fib-clue-category .flap-cells { justify-content: center; }
-.fib-clue-category .flap-c { color: var(--table); }
-.fib-clue p { font: 500 clamp(1.4rem, 2.8vw, 2.4rem)/1.3 var(--set); text-wrap: balance; max-width: 46ch; }
-.fib-clue.is-small { padding: 12px 22px 14px; gap: 8px; }
-.fib-clue.is-small .fib-clue-category { font-size: 1.2rem; }
-.fib-clue.is-small p { font-size: clamp(1.05rem, 1.7vw, 1.4rem); line-height: 1.35; max-width: 70ch; }
-
-/* The choices: a flap module. Each row is a letter, the choice on flaps, and its status cell. */
-.fib-options {
-  list-style: none; margin: 0; padding: 8px; width: 100%; max-width: 1040px;
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 10px;
-  border-radius: 3px; background: var(--flap-gap); box-shadow: 0 0 0 1px #000, 0 0 0 5px var(--steel-lo);
-}
-.fib-options.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(var(--rows), auto); }
-.fib-option {
-  --side: 11.5rem;
-  position: relative; container-type: inline-size;
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.45rem;
-  min-height: clamp(50px, 6.8vh, 72px); padding: 4px 8px; border-radius: 2px;
-  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
-  transition: box-shadow 200ms ease-out;
-}
-.fib-option-text { min-width: 0; display: flex; justify-content: flex-start; text-align: left; }
-.fib-option-text .flap { font-size: clamp(0.95rem, calc((100cqi - var(--side)) / (var(--n) * 0.7)), 1.7rem); }
-.fib-option-text .flap-c { width: 0.64em; }
-.fib-option-text .flap-cells, .fib-option-text .flap-w { gap: 0.06em; }
-.fib-option-text .flap-wrap .flap-cells { gap: 0.1em 0.32em; }
-.fib-option-key .flap-c { background: var(--paint); color: #121316; }
-.fib-option-key .flap-c::after { background: rgb(0 0 0 / 0.35); }
-.fib-option-tag { font-size: 0.82em; }
-.fib-option-tag .flap-c { min-width: 6.2em; max-width: 11em; justify-content: center; letter-spacing: 0.08em; background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
-/* The one in the spotlight: a white edge while the room waits for the verdict. */
-.fib-option.is-current { box-shadow: inset 0 0 0 2px var(--paint); }
-/* A fib: dim letters, a steel letter cell, and its writer in the status cell. */
-.fib-option.is-fib .fib-option-text .flap-c { color: var(--paint-dim); }
-.fib-option.is-fib .fib-option-key .flap-c { background: var(--steel-mid); }
-.fib-option.is-fib .fib-option-tag .flap-c { background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); color: var(--paint); }
-/* The fact: letters in the lamp colour, a lit letter cell, and FACT on a lit cell. */
-.fib-option.is-fact .fib-option-text .flap-c { color: var(--table); }
-.fib-option.is-fact .fib-option-key .flap-c, .fib-option.is-fact .fib-option-tag .flap-c { background: var(--table); color: var(--on-table); }
-.fib-option.is-fact.is-current { box-shadow: inset 0 0 0 2px var(--table); }
-
-/* The spotlight: the choice in the reveal, who picked it, then what it really was and what it was worth. */
-.fib-spotlight {
-  width: 100%; max-width: 1040px; display: grid; justify-items: center; gap: 10px;
-  padding: 16px 20px; border-radius: 3px;
-  background: var(--well); box-shadow: inset 0 3px 0 var(--steel-mid), inset 0 0 0 1px var(--rule);
-  transition: box-shadow 200ms ease-out;
-}
-.fib-spotlight.is-fact { box-shadow: inset 0 3px 0 var(--table), inset 0 0 0 2px var(--table); }
-.fib-spotlight-text { font-size: clamp(1.7rem, 3.3vw, 2.9rem); }
-.fib-spotlight-text .flap-cells { justify-content: center; }
-.fib-spotlight-voters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; min-height: 1.6rem; font-size: 1.25rem; }
-.fib-spotlight-voters .label { font-size: 0.95rem; color: var(--steel-hi); }
-.fib-spotlight-verdict { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 22px; min-height: clamp(2rem, 3.4vw, 2.8rem); }
-.fib-verdict { font-size: clamp(1.3rem, 2.3vw, 2rem); }
-.fib-verdict .flap-cells { justify-content: center; }
-.fib-spotlight.is-fact .fib-verdict .flap-c { color: var(--table); }
-.fib-spotlight-points { display: inline-flex; align-items: center; gap: 10px; font-size: clamp(1.3rem, 2.3vw, 2rem); }
-.fib-spotlight-points .flap-c { color: var(--table); }
-.fib-spotlight-points small { font: 600 0.5em var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
-
-/* The points from the clue: an arrivals board, best first. */
-.fib-clue-scores { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 860px; display: grid; gap: 5px; text-align: left; }
-.fib-clue-scores li {
-  display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr) auto auto; align-items: center; gap: 8px 18px;
-  min-height: 58px; padding: 6px 12px 6px 16px; border-radius: 2px;
-  background: var(--well); box-shadow: inset 0 0 0 1px var(--rule);
-  font-size: 1.5rem;
-  animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.fib-clue-scores li:nth-child(2) { animation-delay: 60ms; }
-.fib-clue-scores li:nth-child(3) { animation-delay: 120ms; }
-.fib-clue-scores li:nth-child(n+4) { animation-delay: 180ms; }
-.fib-cs-name { font: 600 1.4rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; overflow-wrap: anywhere; }
-.fib-cs-why { display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.fib-cs-why em { display: inline-flex; align-items: center; gap: 8px; font: 600 0.95rem/1.2 var(--flap-font); font-style: normal; letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-hi); }
-.fib-cs-why em::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; border: 2px solid currentColor; }
-.fib-cs-why .is-fact { color: var(--table); }
-.fib-cs-why .is-fact::before { background: currentColor; }
-.fib-cs-why .is-fib { color: var(--paint); }
-.fib-cs-why .is-none { color: var(--paint-dim); }
-.fib-cs-gain .flap-c { color: var(--table); }
-.fib-clue-scores li:not(.is-gain) .fib-cs-gain .flap-c { background: linear-gradient(180deg, #1b1c1f 0 50%, #18191c 50% 100%); }
-
-/* ---------- Phone ---------- */
-.player.fib { text-align: center; }
-.fib-my-score {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  margin: 16px 0 12px; padding: 12px 14px; border-radius: 3px;
-  background: var(--well); box-shadow: inset 0 3px 0 var(--table);
-  font-size: 1.9rem;
-}
-.fib-my-score > span:first-child { font: 600 1rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel-hi); }
-.player.fib .fib-clue { margin-top: 10px; padding: 14px 16px 16px; gap: 10px; justify-items: start; text-align: left; }
-.player.fib .fib-clue-category { font-size: 1.15rem; }
-.player.fib .fib-clue-category .flap-cells { justify-content: flex-start; }
-.player.fib .fib-clue p { font: 500 1.14rem/1.42 var(--set); }
-.player.fib .fib-clue.is-small p { font-size: 1rem; }
-.fib-mine { font: 600 1.1em var(--flap-font); letter-spacing: 0.04em; color: var(--table); }
-.fib-pick, .fib-vote { display: grid; gap: 8px; margin-top: 16px; text-align: left; }
-.fib-vote ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-/* Ticket-machine keys: a hollow marker, the choice in board letters. Tapping one sends it. */
-.fib-pick-btn, .fib-vote button {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  min-height: 60px; padding: 10px 16px; border-radius: 3px;
-  background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%);
-  border: 1px solid var(--steel-mid);
-  font: 600 1.18rem/1.2 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; text-align: left; overflow-wrap: anywhere;
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.4);
-  transition: border-color 160ms ease-out, background-color 160ms ease-out, transform 90ms ease-out;
-}
-.fib-pick-btn::before, .fib-vote button::before { content: ""; flex-shrink: 0; width: 10px; height: 10px; border: 2px solid currentColor; }
-.fib-pick-btn:hover, .fib-vote button:hover:not(:disabled) { border-color: var(--table); }
-.fib-pick-btn:active, .fib-vote button:active:not(:disabled) { transform: translateY(1px); background: var(--table); color: var(--on-table); border-color: var(--table); }
-.fib-pick-btn:active::before, .fib-vote button:active:not(:disabled)::before { background: currentColor; }
-.fib-vote button:disabled { color: var(--paint-dim); border-style: dashed; border-color: var(--rule-strong); background: transparent; box-shadow: none; }
-.fib-vote button small { margin-left: auto; flex-shrink: 0; font: 600 0.78rem var(--flap-font); letter-spacing: 0.16em; color: var(--steel); }
-.fib-my-result { margin-top: 10px; }
-
-/* ---------- Host controller ---------- */
-.controller.fib .fib-clue { margin: 14px 0 12px; padding: 14px 16px; justify-items: start; text-align: left; }
-.controller.fib .fib-clue-category { font-size: 1.15rem; }
-.controller.fib .fib-clue-category .flap-cells { justify-content: flex-start; }
-.controller.fib .fib-clue p { font: 500 1.05rem/1.42 var(--set); }
-.fib-ctrl-hint { margin-bottom: 12px; font-size: 0.95rem; }
-.fib-ctrl-fibs { margin: 14px 0; }
-.fib-ctrl-fibs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
-.fib-ctrl-fibs li { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px 8px 6px 12px; border-radius: 2px; background: linear-gradient(180deg, var(--flap-face) 0 50%, var(--flap-face-lo) 50% 100%); }
-.fib-ctrl-fibs q { flex: 1; min-width: 0; font: 600 1.1rem/1.2 var(--flap-font); letter-spacing: 0.05em; text-transform: uppercase; overflow-wrap: anywhere; quotes: none; }
-.fib-ctrl-fibs li > span { flex-shrink: 0; font: 600 0.82rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-hi); }
-.fib-ctrl-fibs li.muted { background: none; border: 1px dashed var(--rule-strong); color: var(--paint-dim); }
-.controller.fib .fib-clue-scores { margin: 12px 0; }
-.controller.fib .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; min-height: 0; padding: 10px 10px 10px 12px; font-size: 1.15rem; }
-.controller.fib .fib-cs-name { font-size: 1.1rem; }
-.controller.fib .fib-cs-why { grid-column: 1 / -1; grid-row: 2; }
-.controller.fib .fib-cs-why:empty { display: none; }
-.controller.fib .wide { margin: 8px 0; }
+@media (max-width: 900px) { .fib-stage { grid-template-columns: minmax(0, 1fr); } }
 
 /* The players tool (shared): name field, score on flaps, and the adjust and kick keys. */
 .fib-player-tools ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -223,42 +56,510 @@
 .fib .fib-player-tools li > .subtract, .pc .fib-player-tools li > .subtract { grid-area: sub; }
 .fib .fib-player-tools li > .danger, .pc .fib-player-tools li > .danger { grid-area: kick; }
 .fib .fib-player-tools li.muted, .pc .fib-player-tools li.muted { display: block; border: 0; }
+.fib-my-result { margin-top: 10px; }
+
+/* =====================================================================================================
+   Fib or Fact's own look
+   ===================================================================================================== */
+
+/* The studio: plum and violet, with orange, tangerine, hot pink and marigold for the '70s stripes. The shared
+   tokens are re-set too, so the shared keys, fields and dialogs come out in the show's colours. */
+body:has(main.fib), body:has(main.fib-setup) {
+  --fib-night: #1c0933;
+  --fib-plum: #2a0f4b;
+  --fib-purple: #44197a;
+  --fib-violet: #6a2fae;
+  --fib-lilac: #c6a6ee;
+  --fib-orange: #ff8c2b;
+  --fib-tangerine: #ec5f1d;
+  --fib-pink: #ff4f8b;
+  --fib-gold: #ffc53d;
+  --fib-cream: #fff2d8;
+  --fib-ink: #2a0c3f;
+  --fib-stripes: linear-gradient(180deg, var(--fib-pink) 0 25%, var(--fib-tangerine) 25% 50%, var(--fib-orange) 50% 75%, var(--fib-gold) 75% 100%);
+  --board: #24103f;
+  --well: #1a0a30;
+  --flap-face: #3a1866;
+  --flap-face-lo: #33155b;
+  --flap-gap: #14071f;
+  --rule: #4a2678;
+  --rule-strong: #6b3fa0;
+  --steel-hi: #e6d6f7;
+  --steel: #c9aeea;
+  --steel-mid: #8f6ac0;
+  --steel-lo: #3a1866;
+  --paint: #fff2d8;
+  --paint-dim: #a993c8;
+  --red-text: #ff8fa6;
+  background: #140625;
+}
+main.fib, main.fib-setup { --table: #ff8c2b; --on-table: #2a0c3f; }
+
+/* Every Fib or Fact screen: a plum studio lit from above, faint sunburst rays, and a band of warm stripes along the
+   top edge. */
+.fib.display, .fib.end, .fib.player, .fib.controller, .fib-setup {
+  position: relative; isolation: isolate;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgb(140 70 220 / 0.45), transparent 70%),
+    repeating-conic-gradient(from 0deg at 50% 30%, rgb(255 255 255 / 0.035) 0 7.5deg, transparent 7.5deg 15deg),
+    linear-gradient(180deg, var(--fib-plum), var(--fib-night));
+  border-radius: 6px;
+}
+.fib.display::before, .fib.end::before, .fib.player::before, .fib.controller::before, .fib-setup::before {
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: 0; height: 22px;
+  border-radius: 6px 6px 0 0;
+  background: var(--fib-stripes);
+}
+.fib.player::before, .fib.controller::before { height: 12px; }
+
+/* Data on flaps elsewhere in the app is plain, warm lettering here: no tiles, no hairline. */
+.fib .flap .flap-c, .fib-setup .flap .flap-c { width: auto; min-width: 0.2em; background: none; box-shadow: none; color: inherit; font-variant-numeric: tabular-nums; }
+.fib .flap .flap-c::after, .fib-setup .flap .flap-c::after { content: none; }
+.fib .flap .flap-cells, .fib .flap .flap-w { gap: 0; }
+
+/* The title card. */
+.fib-logo {
+  display: inline-flex; align-items: center; gap: 0.16em; justify-self: start;
+  padding: 0 0.16em 0.12em 0;
+  font: 700 2.4rem/0.92 var(--flap-font); letter-spacing: 0.01em; text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+.fib-logo-word {
+  color: var(--fib-cream);
+  text-shadow: 0.03em 0.03em 0 var(--fib-gold), 0.06em 0.06em 0 var(--fib-orange), 0.09em 0.09em 0 var(--fib-tangerine), 0.12em 0.12em 0 var(--fib-pink);
+}
+.fib-logo-or {
+  display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%;
+  background: var(--fib-gold); color: var(--fib-ink);
+  font-size: 0.42em; letter-spacing: 0.02em; text-transform: lowercase;
+  box-shadow: 0.1em 0.1em 0 var(--fib-pink);
+  transform: rotate(-10deg) translateY(-0.1em);
+}
+.display.fib .display-bar .fib-logo { font-size: clamp(2rem, 3.6vw, 3.4rem); }
+.display.fib .display-bar { border-bottom: 0; padding-top: 12px; min-height: clamp(76px, 7.6vw, 108px); }
+body:has(main.fib) .back-to-settings.is-controller { color: var(--fib-lilac); }
+
+/* The keys: chunky orange pills with a darker lip, like a studio podium button. */
+.fib .primary, .fib-setup .primary {
+  border-radius: 999px; padding: 0 34px;
+  background: linear-gradient(180deg, #ffa24a, var(--fib-orange));
+  color: var(--fib-ink); font-size: 1.15rem;
+  box-shadow: 0 5px 0 #b8430f, inset 0 2px 0 rgb(255 255 255 / 0.35);
+}
+.fib .primary:active:not(:disabled), .fib-setup .primary:active:not(:disabled) { box-shadow: 0 2px 0 #b8430f, inset 0 2px 0 rgb(255 255 255 / 0.35); transform: translateY(3px); }
+.fib .primary:disabled, .fib-setup .primary:disabled { background: var(--fib-purple); color: var(--paint-dim); box-shadow: 0 5px 0 #1a0930, inset 0 0 0 2px var(--rule-strong); }
+@media (min-width: 721px) {
+  .fib .lobby > .primary:active:not(:disabled), .fib .fib-center > .sv-next:active:not(:disabled) { transform: translate(-50%, 3px); }
+}
+.fib .chip-btn, .fib-setup .chip-btn, .fib .secondary { border-radius: 999px; }
+.fib .wide { border-radius: 16px; }
+.fib .wide.on { background: linear-gradient(180deg, #ffa24a, var(--fib-orange)); box-shadow: 0 4px 0 #b8430f; }
+.fib .game-mode, .fib-setup .game-mode { border-radius: 14px; }
+
+/* The clock: a marigold disc, going hot pink in its last seconds. */
+.fib .clue-timer {
+  justify-content: center; gap: 0;
+  width: 1.8em; height: 1.8em; border-radius: 50%;
+  background: var(--fib-gold); color: var(--fib-ink);
+  box-shadow: 0.06em 0.06em 0 var(--fib-tangerine), inset 0 0 0 0.06em rgb(42 12 63 / 0.25);
+}
+.fib .clue-timer.is-low { background: var(--fib-pink); color: #fff; }
+.fib .clue-timer.is-low .flap-c { color: inherit; }
+.fib .clue-timer.is-paused { width: auto; padding: 0 0.4em; border-radius: 0.9em; gap: 0.2em; }
+.fib .clue-timer.is-paused .flap-c, .fib .clue-timer small { color: var(--fib-ink); }
+.display.fib .display-bar .clue-timer { font-size: clamp(2rem, 3.4vw, 3rem); }
+
+/* The join corner and the round code in the header. */
+.fib .join-hint { color: var(--steel-hi); }
+.fib .join-hint .qr-small { background: var(--fib-cream); padding: 4px; border-radius: 8px; }
+.fib .code-chip .flap-c { color: var(--fib-gold); }
+
+/* ---------- Lobby ---------- */
+.fib .lobby h1 { color: var(--fib-gold); }
+.fib .lobby-code-label { color: var(--fib-lilac); }
+/* The room code on chunky cream letter blocks, each tipped a little. */
+.fib .lobby-code .flap-cells { gap: 0.12em; }
+.fib .lobby-code .flap-c {
+  width: 0.86em; height: 1.08em; border-radius: 0.14em;
+  background: var(--fib-cream); color: var(--fib-ink);
+  box-shadow: 0.05em 0.06em 0 var(--fib-orange), 0.1em 0.12em 0 var(--fib-pink);
+}
+.fib .lobby-code .flap-c:nth-child(odd) { transform: rotate(-3deg); }
+.fib .lobby-code .flap-c:nth-child(even) { transform: rotate(2.5deg) translateY(0.04em); }
+.fib .qr-card { border-radius: 16px; background: var(--fib-cream); box-shadow: 0 0 0 5px var(--fib-orange), 0 0 0 10px var(--fib-pink); }
+.fib .lobby-url b { color: var(--fib-gold); }
+/* Players as contestant name plates. */
+.fib .departures li { border-radius: 14px; overflow: hidden; gap: 3px; }
+.fib .departures li > span, .fib .departures li > button { background: var(--fib-purple); }
+.fib .departures li > span:first-child { background: linear-gradient(90deg, var(--fib-violet), var(--fib-purple)); color: var(--fib-cream); }
+.fib .departures .dep-status { color: var(--fib-gold); }
+.fib .departures .dep-status::before { border-radius: 50%; width: 0.42em; height: 0.42em; background: var(--fib-gold); }
+.fib .departures .dep-status .flap-c { color: var(--fib-gold); }
+.fib .departures li.is-open > span { background: transparent; box-shadow: inset 0 0 0 2px var(--rule-strong); }
+.fib .departures li.is-open { border: 2px dashed var(--rule-strong); }
+.fib .departures li.is-open > span { box-shadow: none; }
+.fib .departures li.is-open .flap-c, .fib .departures li.is-away .flap-c { color: var(--paint-dim); }
+
+/* ---------- The stage ---------- */
+.fib-round-label { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 14px; }
+.fib-round-pill {
+  padding: 6px 18px 5px; border-radius: 999px;
+  background: var(--fib-purple); box-shadow: inset 0 0 0 2px var(--fib-violet);
+  font: 700 clamp(1rem, 1.5vw, 1.35rem) var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fib-lilac);
+}
+/* Double and triple points: a tipped marigold sticker. */
+.fib-multiplier {
+  padding: 6px 16px 5px; border-radius: 6px;
+  background: var(--fib-gold); color: var(--fib-ink);
+  font: 700 clamp(1.05rem, 1.7vw, 1.5rem) var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--fib-pink); transform: rotate(-4deg);
+}
+
+.fib-headline {
+  max-width: 30ch;
+  font: 700 clamp(1.8rem, 3.6vw, 3.2rem)/1.08 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  color: var(--fib-cream); text-shadow: 0.05em 0.05em 0 var(--fib-tangerine);
+}
+
+/* Picking: the three categories as big cards, each with its letter disc. */
+.fib-categories {
+  list-style: none; margin: 8px 0 0; padding: 0; width: 100%; max-width: 1100px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px);
+}
+.fib-categories li {
+  position: relative; display: grid; place-items: center; align-content: center; gap: 12px;
+  min-height: clamp(150px, 26vh, 250px); padding: 22px 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: inset 0 0 0 4px var(--fib-orange), 0 8px 0 #1a0930;
+  animation: fib-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.fib-categories li:nth-child(2) { animation-delay: 120ms; }
+.fib-categories li:nth-child(3) { animation-delay: 240ms; }
+.fib-cat-key, .fib-option-key, .fib-key {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 1.7em; height: 1.7em; border-radius: 50%;
+  background: var(--fib-gold); color: var(--fib-ink);
+  font: 700 1em/1 var(--flap-font);
+  box-shadow: 0.08em 0.08em 0 var(--fib-tangerine);
+}
+.fib-categories .fib-cat-key { font-size: clamp(1.2rem, 2vw, 1.8rem); }
+.fib-cat-name { font: 700 clamp(1.5rem, 2.6vw, 2.5rem)/1.08 var(--flap-font); letter-spacing: 0.03em; text-transform: uppercase; text-wrap: balance; text-align: center; color: var(--fib-cream); overflow-wrap: anywhere; }
+
+/* The clue: a cream cue card with its category on an orange tab. */
+.fib-clue {
+  position: relative; width: 100%; max-width: 1060px;
+  display: grid; justify-items: center; gap: 14px;
+  margin-top: 14px; padding: clamp(26px, 3.4vw, 40px) clamp(20px, 3.4vw, 44px) clamp(18px, 2.6vw, 30px);
+  border-radius: 22px;
+  background: var(--fib-cream); color: var(--fib-ink);
+  box-shadow: 0 7px 0 var(--fib-tangerine), 0 7px 0 3px #1a0930;
+  animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fib-clue-category {
+  position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%) rotate(-1.5deg);
+  max-width: calc(100% - 40px); padding: 7px 20px 6px; border-radius: 999px;
+  background: var(--fib-orange); color: var(--fib-ink);
+  font: 700 clamp(1.05rem, 1.7vw, 1.5rem)/1.1 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; text-align: center;
+  box-shadow: 3px 3px 0 var(--fib-pink);
+}
+.fib-clue p { font: 600 clamp(1.5rem, 2.9vw, 2.6rem)/1.28 var(--set); text-wrap: balance; max-width: 44ch; }
+.fib-clue.is-small { padding: 24px 24px 14px; gap: 8px; }
+.fib-clue.is-small .fib-clue-category { font-size: clamp(0.95rem, 1.4vw, 1.2rem); }
+.fib-clue.is-small p { font-size: clamp(1.1rem, 1.7vw, 1.45rem); line-height: 1.32; max-width: 70ch; }
+
+/* What the room is waiting for. */
+.fib .sv-status { justify-items: center; min-height: 0; }
+.fib .sv-status h2 { font: 700 clamp(1.6rem, 3vw, 2.6rem) var(--flap-font); letter-spacing: 0.04em; color: var(--fib-gold); text-shadow: 0.05em 0.05em 0 var(--fib-tangerine); }
+.fib .sv-status p { font-size: clamp(1.1rem, 1.6vw, 1.4rem); color: var(--fib-lilac); }
+
+/* The choices: big answer cards, two or three across. */
+.fib-options {
+  list-style: none; margin: 4px 0 0; padding: 0; width: 100%; max-width: 1160px;
+  display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: clamp(10px, 1.4vw, 18px);
+}
+.fib-option {
+  position: relative;
+  display: flex; align-items: center; gap: 0.5em;
+  min-height: clamp(66px, 9vh, 104px); padding: 10px 18px 10px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: inset 0 0 0 3px #8a54cc, 0 5px 0 #1a0930;
+  font-size: clamp(1.15rem, 1.9vw, 1.9rem);
+  text-align: left;
+  animation: fib-pop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease-out, background 200ms ease-out;
+}
+.fib-option:nth-child(2) { animation-delay: 60ms; } .fib-option:nth-child(3) { animation-delay: 120ms; }
+.fib-option:nth-child(4) { animation-delay: 180ms; } .fib-option:nth-child(5) { animation-delay: 240ms; }
+.fib-option:nth-child(6) { animation-delay: 300ms; } .fib-option:nth-child(n+7) { animation-delay: 360ms; }
+.fib-option-key { font-size: 0.9em; }
+.fib-option-text { flex: 1; min-width: 0; font: 700 1em/1.1 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; color: var(--fib-cream); overflow-wrap: anywhere; text-wrap: balance; }
+/* The sticker that lands on a revealed card. */
+.fib-option-tag {
+  position: absolute; z-index: 1; top: -0.55em; right: 0.7em; max-width: 70%;
+  padding: 0.28em 0.7em 0.22em; border-radius: 6px;
+  background: var(--fib-pink); color: #fff;
+  font: 700 0.62em/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 3px 3px 0 #1a0930;
+  transform: rotate(3deg);
+  animation: fib-slap 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+/* The one in the spotlight: a marigold ring, lifted. */
+.fib-option.is-current { transform: scale(1.035); box-shadow: inset 0 0 0 4px var(--fib-gold), 0 0 0 4px var(--fib-ink), 0 0 0 8px var(--fib-gold), 0 8px 0 4px #1a0930; z-index: 2; }
+/* A fib: a darker card, its words struck through in pink. */
+.fib-option.is-fib { background: #2b1150; box-shadow: inset 0 0 0 3px #4d2a7e, 0 5px 0 #1a0930; }
+.fib-option.is-fib .fib-option-text { color: var(--paint-dim); text-decoration: line-through; text-decoration-color: var(--fib-pink); text-decoration-thickness: 0.12em; }
+.fib-option.is-fib .fib-option-key { background: #5a3d86; color: var(--fib-lilac); box-shadow: none; }
+.fib-option.is-fib.is-current { box-shadow: inset 0 0 0 4px var(--fib-pink), 0 0 0 4px var(--fib-ink), 0 0 0 8px var(--fib-pink), 0 8px 0 4px #1a0930; }
+/* The fact: the card lights up orange. */
+.fib-option.is-fact { background: linear-gradient(180deg, #ffb357, var(--fib-orange)); box-shadow: inset 0 0 0 3px var(--fib-gold), 0 5px 0 #b8430f; }
+.fib-option.is-fact .fib-option-text { color: var(--fib-ink); }
+.fib-option.is-fact .fib-option-key { background: var(--fib-ink); color: var(--fib-gold); box-shadow: none; }
+.fib-option.is-fact .fib-option-tag { background: var(--fib-ink); color: var(--fib-gold); font-size: 0.72em; transform: rotate(-4deg); }
+.fib-option.is-fact.is-current { box-shadow: inset 0 0 0 4px var(--fib-gold), 0 0 0 4px var(--fib-ink), 0 0 0 8px var(--fib-gold), 0 8px 0 4px #b8430f; }
+
+/* The spotlight: who picked it, then a burst for FIB! or FACT!, who wrote it and what it was worth. A marquee of
+   dotted lights runs round it. */
+.fib-spotlight {
+  width: 100%; max-width: 1060px; display: grid; justify-items: center; gap: 10px;
+  margin-top: 6px; padding: 16px 22px 18px; border-radius: 22px;
+  background: rgb(26 10 48 / 0.85);
+  border: 5px dotted var(--fib-gold);
+}
+.fib-spotlight.is-fact { border-color: var(--fib-orange); background: rgb(60 20 70 / 0.9); }
+.fib-spotlight-text { font: 700 clamp(1.8rem, 3.4vw, 3.1rem)/1.05 var(--flap-font); letter-spacing: 0.02em; text-transform: uppercase; color: var(--fib-cream); text-wrap: balance; overflow-wrap: anywhere; }
+.fib-spotlight-voters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px; min-height: 2.2rem; }
+.fib-spotlight-voters .label { font-size: 1rem; color: var(--fib-lilac); }
+.fib-chip {
+  padding: 5px 14px 4px; border-radius: 999px;
+  background: var(--fib-cream); color: var(--fib-ink);
+  font: 700 clamp(1.1rem, 1.6vw, 1.45rem) var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase;
+  animation: fib-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.fib-chip:nth-child(3) { animation-delay: 80ms; } .fib-chip:nth-child(4) { animation-delay: 160ms; } .fib-chip:nth-child(n+5) { animation-delay: 240ms; }
+.fib-spotlight-verdict { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 22px; min-height: clamp(4.4rem, 8vw, 6.4rem); }
+.fib-burst {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: clamp(4.6rem, 8.4vw, 6.8rem); aspect-ratio: 1;
+  background: var(--fib-pink); color: #fff;
+  font: 700 clamp(1.2rem, 2.1vw, 1.7rem)/1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase;
+  clip-path: polygon(50% 0%, 58.7% 12%, 71.7% 5%, 74.3% 19.5%, 89.1% 18.8%, 85.1% 33.1%, 98.7% 38.9%, 89% 50%, 98.7% 61.1%, 85.1% 66.9%, 89.1% 81.2%, 74.3% 80.5%, 71.7% 95%, 58.7% 88%, 50% 100%, 41.3% 88%, 28.3% 95%, 25.7% 80.5%, 10.9% 81.2%, 14.9% 66.9%, 1.3% 61.1%, 11% 50%, 1.3% 38.9%, 14.9% 33.1%, 10.9% 18.8%, 25.7% 19.5%, 28.3% 5%, 41.3% 12%);
+  animation: fib-burst 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.fib-spotlight.is-fact .fib-burst { background: var(--fib-gold); color: var(--fib-ink); }
+.fib-verdict { font: 700 clamp(1.5rem, 2.7vw, 2.4rem)/1.1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--fib-cream); animation: fib-in 420ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fib-spotlight.is-fact .fib-verdict { color: var(--fib-orange); }
+.fib-spotlight-points { display: inline-grid; justify-items: start; gap: 2px; animation: fib-in 420ms 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fib-spotlight-points b { font: 700 clamp(1.6rem, 2.9vw, 2.6rem)/1 var(--flap-font); color: var(--fib-gold); }
+.fib-spotlight-points small { font: 700 clamp(0.85rem, 1.2vw, 1.05rem) var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fib-lilac); }
+
+/* The scores down the side, as contestant podiums: a name plate and a score window. */
+.fib .fib-scoreboard h2 { color: var(--fib-gold); font-size: 0.95rem; }
+.fib .fib-scoreboard ol { gap: 8px; }
+.fib .fib-scoreboard li {
+  min-height: 54px; padding: 6px 6px 6px 14px; border-radius: 14px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: inset 0 3px 0 var(--fib-orange), 0 4px 0 #1a0930;
+}
+.fib .fib-sb-name { font: 700 1.2rem/1.1 var(--flap-font); color: var(--fib-cream); }
+.fib .fib-sb-check { border-radius: 50%; border-color: var(--fib-lilac); }
+.fib .is-done .fib-sb-check { background: var(--fib-gold); border-color: var(--fib-gold); color: var(--fib-ink); }
+.fib .fib-scoreboard li > .money { min-width: 3.4em; padding: 8px 10px 6px; border-radius: 10px; background: var(--fib-night); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.5); color: var(--fib-gold); font: 700 1.45rem/1 var(--flap-font); justify-content: flex-end; }
+.fib .fib-scoreboard li > .money .flap-cells { justify-content: flex-end; }
+.fib .fib-scoreboard li.is-away { background: #2b1150; box-shadow: none; outline: 2px dashed var(--rule-strong); outline-offset: -2px; }
+
+/* The points from the clue: podium strips, best first. */
+.fib-clue-scores { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 900px; display: grid; gap: 8px; text-align: left; }
+.fib-clue-scores li {
+  display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr) auto auto; align-items: center; gap: 8px 18px;
+  min-height: 62px; padding: 8px 8px 8px 20px; border-radius: 16px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: 0 4px 0 #1a0930;
+  animation: fib-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fib-clue-scores li:not(.is-gain) { background: #2b1150; }
+.fib-clue-scores li:nth-child(2) { animation-delay: 70ms; }
+.fib-clue-scores li:nth-child(3) { animation-delay: 140ms; }
+.fib-clue-scores li:nth-child(n+4) { animation-delay: 210ms; }
+.fib-cs-name { font: 700 1.55rem/1.1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--fib-cream); overflow-wrap: anywhere; }
+.fib-cs-why { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.fib-cs-why em { padding: 4px 11px 3px; border-radius: 999px; font: 700 0.95rem/1.2 var(--flap-font); font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; }
+.fib-cs-why .is-fact { background: var(--fib-orange); color: var(--fib-ink); }
+.fib-cs-why .is-fib { background: var(--fib-pink); color: #fff; }
+.fib-cs-why .is-none { color: var(--paint-dim); padding-left: 0; }
+.fib-cs-gain { min-width: 4.2em; text-align: right; font: 700 1.6rem var(--flap-font); color: var(--fib-gold); }
+.fib-clue-scores li > .money { min-width: 4.2em; padding: 9px 12px 7px; border-radius: 10px; background: var(--fib-night); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.5); font: 700 1.6rem/1 var(--flap-font); color: var(--fib-cream); }
+.fib-clue-scores li > .money .flap-cells { justify-content: flex-end; }
+.fib-center.is-scores .fib-headline { margin-top: 6px; }
+
+/* The rail and the host tools. */
+.fib .sv-sound:hover, .fib .controller-link:hover { background: var(--fib-purple); }
+.fib .host-tools { border-radius: 16px; }
+
+/* ---------- Setup ---------- */
+.fib-setup .fib-logo { font-size: clamp(2.6rem, 6vw, 4.2rem); margin: 6px 0 4px; }
+.fib-setup .setup-card { border-top: 0; padding-top: 18px; }
+.fib-setup h1 { color: var(--fib-gold); }
+.fib-setup .sv-fieldset legend, .fib-setup .sv-questions-head h2, .fib-setup .game-options h2 { color: var(--fib-gold); }
+.fib-length { margin-top: 24px; max-width: 520px; }
+.fib-setup .sv-questions-head .chip-btn { margin-left: auto; }
+.fib-setup .fib-lengths button { border-radius: 999px; min-height: 46px; padding: 0 20px; background: var(--fib-purple); }
+.fib-setup .fib-lengths button[aria-checked="true"] { background: var(--fib-orange); color: var(--fib-ink); border-color: var(--fib-orange); }
+.fib-setup .fib-prompt-list li { border-radius: 16px; background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple)); padding: 12px 14px; }
+.fib-setup .fib-prompt-list .sv-q-round { color: var(--fib-lilac); }
+.fib-setup .fib-prompt-list .sv-q-round em { display: inline-block; width: fit-content; padding: 2px 8px; border-radius: 4px; background: var(--fib-gold); color: var(--fib-ink); transform: rotate(-3deg); }
+.fib-prompt-list .sv-q-round { width: 132px; }
+.fib-q-categories { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.fib-q-categories span {
+  padding: 6px 12px 5px; border-radius: 999px;
+  background: var(--fib-cream); color: var(--fib-ink);
+  font: 700 0.9rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.fib-setup .final-row, .fib-setup .game-options { border-top-color: var(--rule-strong); }
+
+/* ---------- Phone ---------- */
+.player.fib { text-align: center; }
+.player.fib .player-bar { padding-top: 10px; border-bottom: 0; }
+.player.fib .fib-logo { font-size: 1.5rem; }
+.player.fib .player-name { color: var(--fib-lilac); }
+.fib-my-score {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin: 10px 0 12px; padding: 10px 10px 10px 18px; border-radius: 18px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: inset 0 3px 0 var(--fib-orange), 0 4px 0 #1a0930;
+  font-size: 1.9rem;
+}
+.fib-my-score > span:first-child { font: 700 1rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fib-lilac); }
+.fib-my-score > .money { padding: 8px 12px 6px; border-radius: 12px; background: var(--fib-night); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.5); color: var(--fib-gold); font-weight: 700; }
+.player.fib .player-clue-meta { color: var(--fib-gold); }
+.player.fib .player-status { color: var(--fib-cream); }
+.player.fib .fib-clue { margin-top: 26px; padding: 26px 16px 16px; gap: 10px; justify-items: start; text-align: left; border-radius: 18px; }
+.player.fib .fib-clue-category { left: 16px; transform: translateY(-50%) rotate(-1.5deg); font-size: 0.98rem; max-width: calc(100% - 32px); text-align: left; }
+.player.fib .fib-clue p { font: 600 1.14rem/1.42 var(--set); }
+.player.fib .fib-clue.is-small p { font-size: 1rem; }
+.fib-mine { font: 700 1.1em var(--flap-font); letter-spacing: 0.04em; color: var(--fib-gold); }
+.fib .sv-guess-label { color: var(--fib-gold); }
+.fib .sv-guess input { border-radius: 14px; border-width: 2px; min-height: 60px; font-size: 1.25rem; background: var(--fib-night); }
+.fib .final-form .primary { min-height: 60px; }
+.fib-pick, .fib-vote { display: grid; gap: 10px; margin-top: 16px; text-align: left; }
+.fib-vote ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+/* Answer cards on the phone: a letter disc and the choice, matching the TV. Tapping one sends it. */
+.fib-pick-btn, .fib-vote button {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 64px; padding: 10px 16px 10px 10px; border-radius: 16px;
+  background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple));
+  box-shadow: inset 0 0 0 3px #8a54cc, 0 5px 0 #1a0930;
+  font: 700 1.22rem/1.15 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; text-align: left; overflow-wrap: anywhere; color: var(--fib-cream);
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out, background 160ms ease-out;
+}
+.fib-pick-btn .fib-key, .fib-vote .fib-key { font-size: 1.05rem; }
+.fib-vote-text { flex: 1; min-width: 0; }
+.fib-pick-btn:hover, .fib-vote button:hover:not(:disabled) { box-shadow: inset 0 0 0 3px var(--fib-gold), 0 5px 0 #1a0930; }
+.fib-pick-btn:active, .fib-vote button:active:not(:disabled) { transform: translateY(4px); background: linear-gradient(180deg, #ffb357, var(--fib-orange)); color: var(--fib-ink); box-shadow: inset 0 0 0 3px var(--fib-gold), 0 1px 0 #b8430f; }
+.fib-vote button:disabled { background: transparent; color: var(--paint-dim); box-shadow: inset 0 0 0 2px var(--rule-strong); border: 2px dashed var(--rule-strong); }
+.fib-vote button:disabled .fib-key { background: #5a3d86; color: var(--fib-lilac); box-shadow: none; }
+.fib-vote button small { flex-shrink: 0; font: 700 0.8rem var(--flap-font); letter-spacing: 0.14em; color: var(--fib-lilac); }
+
+/* ---------- Host controller ---------- */
+.controller.fib .controller-bar { border-bottom: 0; padding-top: 8px; }
+.controller.fib .fib-logo { font-size: 1.5rem; }
+.controller.fib .sv-ctrl-status { border-radius: 14px; background: var(--fib-purple); box-shadow: inset 0 3px 0 var(--fib-orange); }
+.controller.fib .fib-clue { margin: 30px 0 14px; padding: 26px 16px 14px; justify-items: start; text-align: left; border-radius: 18px; }
+.controller.fib .fib-clue-category { left: 16px; transform: translateY(-50%) rotate(-1.5deg); font-size: 0.98rem; max-width: calc(100% - 32px); text-align: left; }
+.controller.fib .fib-clue p { font: 600 1.05rem/1.42 var(--set); }
+.controller.fib .controller-answer { border-radius: 14px; background: var(--fib-night); box-shadow: inset 0 0 0 2px var(--fib-orange); }
+.controller.fib .judgement { border-radius: 16px; background: var(--fib-night); }
+.fib-ctrl-hint { margin-bottom: 12px; font-size: 0.95rem; }
+.fib-ctrl-fibs { margin: 14px 0; }
+.fib-ctrl-fibs ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.fib-ctrl-fibs li { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 8px 6px 14px; border-radius: 14px; background: var(--fib-purple); }
+.fib-ctrl-fibs q { flex: 1; min-width: 0; font: 700 1.1rem/1.2 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; overflow-wrap: anywhere; quotes: none; color: var(--fib-cream); }
+.fib-ctrl-fibs li > span { flex-shrink: 0; font: 700 0.82rem var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fib-lilac); }
+.fib-ctrl-fibs li.muted { background: none; border: 2px dashed var(--rule-strong); color: var(--paint-dim); }
+.controller.fib .fib-clue-scores { margin: 12px 0; }
+.controller.fib .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; min-height: 0; padding: 10px 8px 10px 14px; }
+.controller.fib .fib-cs-name { font-size: 1.15rem; }
+.controller.fib .fib-cs-gain, .controller.fib .fib-clue-scores li > .money { font-size: 1.2rem; min-width: 0; }
+.controller.fib .fib-cs-why { grid-column: 1 / -1; grid-row: 2; }
+.controller.fib .fib-cs-why:empty { display: none; }
+.controller.fib .wide { margin: 8px 0; }
+
+/* ---------- End ---------- */
+.end.fib > .fib-logo { justify-self: center; font-size: clamp(2rem, 4vw, 3rem); margin-top: 8px; }
+.fib-winner {
+  display: block !important; max-width: 18ch;
+  font: 700 clamp(2.8rem, 7.4vw, 6.4rem)/1 var(--flap-font) !important; letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere;
+  color: var(--fib-gold);
+  text-shadow: 0.04em 0.04em 0 var(--fib-tangerine), 0.08em 0.08em 0 var(--fib-pink), 0.12em 0.12em 0 #1a0930;
+  animation: fib-burst 720ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.fib-winner > span { color: var(--fib-cream); }
+.end.fib .podium { gap: 10px; }
+.end.fib .place { border-radius: 18px; background: linear-gradient(180deg, var(--fib-violet), var(--fib-purple)); box-shadow: 0 5px 0 #1a0930; }
+.end.fib .place .rank { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--fib-lilac); color: var(--fib-ink); font-size: 1.4rem; }
+.end.fib .place b { color: var(--fib-cream); }
+.end.fib .place .money { padding: 8px 12px 6px; border-radius: 12px; background: var(--fib-night); color: var(--fib-gold); font-weight: 700; }
+.end.fib .place-1 { background: linear-gradient(180deg, #ffb357, var(--fib-orange)); box-shadow: inset 0 0 0 4px var(--fib-gold), 0 6px 0 #b8430f; }
+.end.fib .place-1 .rank { background: var(--fib-ink); color: var(--fib-gold); }
+.end.fib .place-1 b { color: var(--fib-ink); }
+.end.fib .remaining-players li { border-radius: 12px; background: var(--fib-purple); }
+.end.fib .sv-end-buttons a { color: var(--fib-lilac); }
+.end.fib .player-end p { color: var(--fib-cream); }
+
+/* ---------- Motion ---------- */
+@keyframes fib-pop { from { opacity: 0; transform: scale(0.7); } }
+@keyframes fib-slap { from { opacity: 0; transform: rotate(14deg) scale(1.8); } }
+@keyframes fib-burst { 0% { opacity: 0; transform: scale(0.2) rotate(-40deg); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fib-categories li, .fib-option, .fib-option-tag, .fib-chip, .fib-burst, .fib-verdict, .fib-spotlight-points, .fib-clue, .fib-clue-scores li, .fib-winner { animation: fib-fade 240ms ease-out both !important; animation-delay: 0ms !important; }
+  .fib-option { transition: none; }
+  .fib-option.is-current { transform: none; }
+}
+@keyframes fib-fade { from { opacity: 0; } }
 
 /* ---------- Narrower and shorter screens ---------- */
 @media (max-width: 900px) {
-  .fib-stage { grid-template-columns: minmax(0, 1fr); }
-  .fib-options.is-two { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; grid-template-rows: none; }
+  .fib-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
+  .fib.display::before, .fib.end::before, .fib-setup::before { height: 12px; }
+  .display.fib .display-bar .fib-logo { font-size: 1.6rem; }
+  .display.fib .display-bar .clue-timer { font-size: 1.6rem; }
   .fib-categories { grid-template-columns: 1fr; }
-  .fib-categories li { min-height: 84px; }
-  .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; font-size: 1.15rem; }
-  .fib-cs-name { font-size: 1.1rem; }
+  .fib-categories li { min-height: 96px; grid-auto-flow: column; justify-content: start; }
+  .fib-cat-name { text-align: left; }
+  .fib-options { grid-template-columns: 1fr; }
+  .fib-option { min-height: 58px; }
+  .fib-clue-scores li { grid-template-columns: minmax(0, 1fr) auto auto; padding-left: 14px; }
+  .fib-cs-name { font-size: 1.15rem; }
+  .fib-cs-gain, .fib-clue-scores li > .money { font-size: 1.2rem; min-width: 0; }
   .fib-cs-why { grid-column: 1 / -1; grid-row: 2; }
   .fib-spotlight { padding: 14px 12px; }
-}
-/* A 720p TV or a laptop: slimmer rows and a tighter spotlight, so the clue, all nine choices and the verdict fit. */
-@media (max-height: 940px) and (min-width: 761px) {
-  .fib-center { gap: 10px; }
-  .fib-option { min-height: 5.9vh; padding-block: 3px; }
-  .fib-clue.is-small { padding: 9px 18px 11px; gap: 6px; }
-  .fib-clue.is-small p { font-size: clamp(1rem, 1.6vw, 1.25rem); }
-  .fib-spotlight { padding: 10px 18px; gap: 6px; }
-  .fib-spotlight-text { font-size: clamp(1.5rem, 2.8vw, 2.3rem); }
-  .fib-scoreboard li { min-height: 40px; }
-  .fib-clue-scores li { min-height: 44px; padding-block: 3px; }
-  .fib-clue-scores { gap: 4px; }
-  .fib-center.is-scores .fib-headline { font-size: 1.8rem; }
-  /* During the reveal the clue keeps only its category: the room has read it twice by now. */
-  .fib-center.is-reveal .fib-clue p { display: none; }
-  .fib-center.is-reveal .fib-clue { padding: 8px 18px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fib-clue-scores li { animation: none !important; }
-}
-.fib-prompt-list .sv-q-round { width: 132px; }
-@media (max-width: 760px) {
   .fib-prompt-list .sv-q-round { width: auto; }
   .fib-lengths { flex-wrap: nowrap; }
   .fib-lengths button { flex: 1; min-width: 0; padding: 0 10px; font-size: 1.05rem; }
+}
+/* A 720p TV or a laptop: slimmer cards and a tighter spotlight, so the clue, all nine choices and the verdict fit. */
+@media (max-height: 940px) and (min-width: 761px) {
+  .fib-center { gap: 10px; }
+  .fib-option { min-height: 7.4vh; padding-block: 6px; font-size: clamp(1.05rem, 1.7vw, 1.6rem); }
+  .fib-options { gap: 10px 12px; }
+  .fib-clue.is-small { padding: 20px 18px 10px; gap: 6px; margin-top: 10px; }
+  .fib-clue.is-small p { font-size: clamp(1rem, 1.55vw, 1.25rem); }
+  .fib-spotlight { padding: 8px 18px 10px; gap: 6px; }
+  .fib-spotlight-text { font-size: clamp(1.5rem, 2.8vw, 2.3rem); }
+  .fib-spotlight-verdict { min-height: 4.4rem; }
+  .fib-burst { width: 4.6rem; font-size: 1.05rem; }
+  .fib .fib-scoreboard li { min-height: 46px; }
+  .fib .fib-scoreboard li > .money { font-size: 1.25rem; padding-block: 6px 4px; }
+  .fib-clue-scores li { min-height: 48px; padding-block: 5px; }
+  .fib-clue-scores { gap: 6px; }
+  .fib-center.is-scores .fib-headline { font-size: 2rem; }
+  .fib-categories li { min-height: 22vh; }
+  /* During the reveal the clue keeps only its category: the room has read it twice by now. */
+  .fib-center.is-reveal .fib-clue p { display: none; }
+  .fib-center.is-reveal .fib-clue { padding: 18px 18px 6px; min-height: 0; box-shadow: 0 4px 0 var(--fib-tangerine); }
+  .fib-center.is-reveal .fib-clue .fib-clue-category { position: static; transform: rotate(-1.5deg); margin-top: -2px; }
+  .fib-center.is-reveal .fib-clue { background: transparent; box-shadow: none; padding: 4px 0 0; margin: 0; }
 }
