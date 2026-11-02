@@ -24,7 +24,7 @@ import { boardToConfig, deleteBoard, fastMoneyFromBoard, hasFinal, loadBoards, n
 import Hub, { Arrow, BackToHub, CodeEntry } from "./Hub";
 import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
-import { LobbyJoin, JoinCorner, Departures } from "./JoinQR";
+import { LobbyJoin, JoinCorner, Departures, QRCode, useJoinBase } from "./JoinQR";
 import { Coach } from "./Tutorial";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd, SoundToggle } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
@@ -1030,6 +1030,7 @@ function EndGame({ game, host, display = false }) {
 }
 // ---------- Back to settings ----------
 const CLOSED_MESSAGE = "The host closed that game to change the settings. Scan the new QR code, or enter the new code to join again.";
+const NO_HOST_KEY = "Only the host’s screens can run a game. Open the controller with “Open host controller” on the TV, or scan “Use your phone as the controller” on a controller that’s already open.";
 // Back to the game's settings, from the lobby or after starting by mistake. It ends this room: every phone is sent
 // back to the join screen, and creating the lobby again makes a new room with a new code.
 function BackToSettings({ game, place, onClosed }) {
@@ -1063,6 +1064,23 @@ function BackToSettings({ game, place, onClosed }) {
     </>
   );
 }
+// The host controller on the host's phone: a QR code with the room code and the host's key. It's only on the
+// controller, never on the TV the players can see, and stays folded until the host opens it.
+function ControllerOnPhone({ code }) {
+  const base = useJoinBase(), token = sessionStorage.hostToken;
+  if (!token) return null;
+  return (
+    <details className="controller-phone">
+      {/* Styled as the Back to settings button above it, so each game's controller colours it the same way. */}
+      <summary className="back-to-settings is-controller">Use your phone as the controller</summary>
+      <figure className="qr-card">
+        <QRCode value={`${base}?controller#key=${code}.${token}`} label="QR code that opens this host controller on a phone" />
+        <figcaption>Scan with your phone</figcaption>
+        <p>Only the host should scan this. Any phone that does can run the game.</p>
+      </figure>
+    </details>
+  );
+}
 const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup };
 
 function App() {
@@ -1075,6 +1093,10 @@ function App() {
   if (host && params.has("game")) sessionStorage.removeItem("displayCode");
   // A QR code for a different game replaces this phone's saved session instead of reconnecting to the old one.
   if (joinCode && sessionStorage.gameCode && sessionStorage.gameCode !== joinCode) clearPlayerSession();
+  // The host controller's "on your phone" QR code carries the room and the host's key after the #, which never
+  // reaches a server. Keep them for this tab and take them out of the address bar.
+  const handedKey = controller && location.hash.match(/^#key=([A-Z0-9]+)\.([\w-]+)$/);
+  if (handedKey) { sessionStorage.hostCode = handedKey[1]; sessionStorage.hostToken = handedKey[2]; history.replaceState({}, "", "?controller"); }
   const [game, setGame] = useState(null),
     [playerId, setPlayerId] = useState(sessionStorage.playerId),
     [connected, setConnected] = useState(socket.connected),
@@ -1112,17 +1134,19 @@ function App() {
     // Phones drop the socket when locked or backgrounded; without this they stop receiving updates.
     const resync = () => {
       if (host || controller) {
-        let code = gameCode.current || (host ? sessionStorage.displayCode : sessionStorage.hostCode);
-        if (!code && controller) {
-          code = prompt("Enter the game code")?.trim().toUpperCase();
-          if (code) sessionStorage.hostCode = code;
+        // The room code alone isn't enough: the server only lets a screen run the game with the host's key, which
+        // the TV got from host:create and the controller got from the TV (a copy of its sessionStorage, or ControllerOnPhone).
+        const code = gameCode.current || (host ? sessionStorage.displayCode : sessionStorage.hostCode), hostToken = sessionStorage.hostToken;
+        if (!code || !hostToken) {
+          if (controller) setControllerNote(NO_HOST_KEY);
+          return setRestoring(false);
         }
-        if (!code) return setRestoring(false);
-        socket.timeout(5000).emit("host:join", { code, display: host }, (err, r) => {
+        socket.timeout(5000).emit("host:join", { code, display: host, hostToken }, (err, r) => {
           if (err) return socket.disconnect().connect();
           if (r.ok) setGame(r.game);
           else if (host) { sessionStorage.removeItem("displayCode"); setGame(null); }
           else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote("That game was closed to change the settings. Open the host controller again from the new lobby on the TV."); }
+          else if (r.denied) setControllerNote(NO_HOST_KEY);
           setRestoring(false);
         });
         return;
@@ -1178,7 +1202,7 @@ function App() {
     socket.timeout(10000).emit("host:create", config, (err, r) => {
       if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
       if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
-      sessionStorage.displayCode = r.code;
+      sessionStorage.displayCode = r.code; sessionStorage.hostToken = r.hostToken;
       setGame(r.game);
       history.replaceState({}, "", "?host");
     });
@@ -1186,13 +1210,16 @@ function App() {
   const HostSetup = host && SETUPS[pick];
   // Always the first child, so the setup keeps its state while hidden behind the game.
   const setupSlot = HostSetup ? <div hidden={!!game || restoring}><HostSetup onCreate={create} /></div> : null;
-  const dock = game && (host || controller) && <BackToSettings game={game} place={host ? "tv" : "controller"} onClosed={() => roomClosed.current()} />;
+  const dock = game && (host || controller) && <>
+    <BackToSettings game={game} place={host ? "tv" : "controller"} onClosed={() => roomClosed.current()} />
+    {controller && <ControllerOnPhone code={game.code} />}
+  </>;
   return <>{setupSlot}{dock}{renderScreen()}</>;
 
   function renderScreen() {
   if (!game) {
     if (restoring || controller)
-      return <main className="join"><Brand text="GAME NIGHT" />{controllerNote && !restoring && <p className="player-status" role="status">{controllerNote}</p>}{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Enter game code</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
+      return <main className="join"><Brand text="GAME NIGHT" />{controllerNote && !restoring && <p className="player-status" role="status">{controllerNote}</p>}{controller && !restoring ? <button className="primary" onClick={() => location.reload()}>Try again</button> : <p className="player-status">Reconnecting to your game…</p>}</main>;
     if (host) return HostSetup ? null : <Hub />;
     if (!joining && !joinError) return <Hub />;
     return (

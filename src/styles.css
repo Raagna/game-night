@@ -554,6 +554,11 @@ body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 200px); 
 }
 .back-to-settings.is-controller { margin: 0 0 8px; min-height: 36px; padding: 0 6px; position: relative; z-index: 2; color: #1d1e21; }
 .back-to-settings.is-controller:hover { background: transparent; color: #000; text-decoration: underline; }
+.controller-phone { margin: -8px 0 12px; position: relative; z-index: 2; }
+.controller-phone summary { cursor: pointer; }
+.controller-phone .qr-card { margin: 4px 6px 0; width: max-content; max-width: calc(100% - 12px); }
+.controller-phone .qr-card .qr { width: 180px; }
+.controller-phone .qr-card p { margin: 0; max-width: 24ch; font-size: 0.85rem; text-align: center; }
 /* Narrow screens stack it above the other two, so the page keeps room for both rows. */
 @media (max-width: 720px) { .back-to-settings.is-tv, body:has(.sv-sound) .back-to-settings.is-tv { left: calc(var(--frame) + 20px); bottom: calc(var(--frame) + 58px); } body.is-tv .display { padding-bottom: 120px; } }
 
