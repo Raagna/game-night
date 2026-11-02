@@ -100,11 +100,11 @@ const settle = () => sleep(250)
 async function practice({ hostless, names = ['Ana', 'Ben'] }) {
   const host = await connect()
   const created = await ask(host, 'host:create', { boards: [[{ name: 'Real', questions: [{ question: 'Real clue', answer: 'Real', value: 200 }, { question: 'Second', answer: 'Two', value: 400 }] }]], hostless, tutorial: true })
-  const code = created.code, players = {}
+  const { code, hostToken } = created, players = {}
   for (const name of names) { const socket = await connect(), joined = await ask(socket, 'player:join', { code, name }); players[joined.playerId] = socket }
   host.emit('host:action', { code, action: 'start' })
   const state = await until(host, (s) => s.status === 'playing' && s.tutorial)
-  return { host, code, players, ids: Object.keys(players), state }
+  return { host, code, hostToken, players, ids: Object.keys(players), state }
 }
 
 describe('Jeoparty’s practice round', { concurrency: true }, () => {
@@ -147,9 +147,9 @@ describe('Jeoparty’s practice round', { concurrency: true }, () => {
   })
 
   test('hosted: the host controller can skip too, and a skip after the end does nothing', async () => {
-    const { code, host } = await practice({ hostless: false })
+    const { code, host, hostToken } = await practice({ hostless: false })
     const controller = await connect()
-    await ask(controller, 'host:join', { code })
+    await ask(controller, 'host:join', { code, hostToken })
     controller.emit('tutorial:skip', { code })
     await until(host, (s) => !s.tutorial)
     controller.emit('tutorial:skip', { code })

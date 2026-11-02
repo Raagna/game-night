@@ -1,4 +1,5 @@
 import express from 'express'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
 import { Server } from 'socket.io'
@@ -321,21 +322,30 @@ function closeGame(game) {
   io.in(game.code).socketsLeave(game.code)
 }
 
+// The host's key to a room. Only the screen that created it gets it (it's never in the public game), and only a
+// screen holding it can become the TV or the host controller, so knowing the room code isn't enough to run the game.
+const newHostToken = () => randomBytes(18).toString('base64url')
+function isHostToken(game, token) {
+  const given = Buffer.from(String(token || '')), expected = Buffer.from(game.hostToken)
+  return given.length === expected.length && timingSafeEqual(given, expected)
+}
+
 io.on('connection', (socket) => {
   socket.on('host:create', (config, ack) => {
     forgetOldClosedGames()
     let code; do { code = id() } while (games.has(code) || closedGames.has(code))
     const mode = modeFor(config?.game)
     let game; try { game = mode ? mode.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
-    game.hostSocketId = socket.id; games.set(code, game)
-    socket.join(code); ack?.({ ok: true, code, game: publicGame(game) })
+    game.hostSocketId = socket.id; game.hostToken = newHostToken(); games.set(code, game)
+    socket.join(code); ack?.({ ok: true, code, hostToken: game.hostToken, game: publicGame(game) })
   })
   socket.on('host:close', ({ code } = {}, ack) => {
     const game = games.get(code); if (!game || (game.hostSocketId !== socket.id && socket.data.controllerGame !== code)) return ack?.({ ok: false })
     closeGame(game); ack?.({ ok: true })
   })
-  socket.on('host:join', ({ code, display }, ack) => {
-    const game = games.get(code?.toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), error: 'Game not found' })
+  socket.on('host:join', ({ code, display, hostToken } = {}, ack) => {
+    const game = games.get(String(code || '').toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), error: 'Game not found' })
+    if (!isHostToken(game, hostToken)) return ack?.({ ok: false, denied: true, error: 'Only the host’s screens can open this game.' })
     socket.data.controllerGame = game.code; if (display) game.hostSocketId = socket.id
     socket.join(game.code); ack?.({ ok: true, game: publicGame(game) }); emitGame(game)
     modeOf(game)?.hostJoined?.(game, socket)
@@ -415,7 +425,7 @@ io.on('connection', (socket) => {
     if (action === 'timeout') { const players=[...game.players.values()]; if(players.length){const low=Math.min(...players.map(p=>p.score)); const choices=players.filter(p=>p.score===low); const next=choices[Math.floor(Math.random()*choices.length)]; game.turnPlayerId=next.id; game.answeringPlayerId=game.activeQuestion?next.id:null; game.buzzerOpen=false; game.buzzedPlayer=null} }
     if (action === 'replay') {
       const reset = makeGame(game.code, { ...game.config, tutorial: false, roundNames: game.roundNames, fastMoney: game.fastMoneyClues ? { clues: game.fastMoneyClues } : null })
-      reset.hostSocketId = game.hostSocketId
+      reset.hostSocketId = game.hostSocketId; reset.hostToken = game.hostToken
       reset.players = game.players
       for (const player of reset.players.values()) player.score = 0
       games.set(game.code, reset)
