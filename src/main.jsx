@@ -26,6 +26,7 @@ import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
 import { LobbyJoin, JoinCorner, Departures, QRCode, useJoinBase } from "./JoinQR";
 import { Coach } from "./Tutorial";
+import { MindsSetup, MindsDisplay, MindsPlayer, MindsController, MindsEnd } from "./minds/GreatMinds";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd, SoundToggle } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
@@ -1081,7 +1082,7 @@ function ControllerOnPhone({ code }) {
     </details>
   );
 }
-const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup };
+const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup, minds: MindsSetup };
 
 function App() {
   const params = new URLSearchParams(location.search),
@@ -1236,6 +1237,12 @@ function App() {
         }}
       />
     );
+  }
+  if (game.kind === "minds") {
+    if (game.status === "complete") return <>{banner}<MindsEnd game={game} host={host || controller} display={host} onAction={action} playerId={playerId} /></>;
+    if (controller) return <>{banner}<MindsController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<MindsDisplay game={game} onAction={action} /></>;
+    return <>{banner}<MindsPlayer game={game} playerId={playerId} /></>;
   }
   if (game.kind === "survey") {
     if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} display={host} onAction={action} /></>;

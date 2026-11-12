@@ -30,6 +30,12 @@ const GAMES = [
     blurb: "Write a fake answer to a real Jeopardy clue, then spot the real one among everyone’s fakes. Score for finding the fact — and for every friend your fib fools.",
   },
   {
+    id: "minds",
+    name: "Great Minds",
+    tag: "2–12 players, best with 3+",
+    blurb: "Everyone answers the same prompt on their phone, and you score for every player who said what you said. End up alone and you take the Lone Wolf, and whoever holds it at the end can’t win.",
+  },
+  {
     id: "price",
     name: "Price Check",
     tag: "2–8 players",
@@ -64,6 +70,7 @@ const MOTIFS = {
   survey: <><rect x="1.5" y="3" width="21" height="7.5" rx="1" fill="#0f2a8a" stroke="#f2b33d" strokeWidth="1.2" /><circle cx="6" cy="6.75" r="2.4" fill="#f2b33d" /><rect x="1.5" y="13.5" width="13" height="7.5" rx="1" fill="#0f2a8a" stroke="#f2b33d" strokeWidth="1.2" /><path d="M17.5 14.5l4 5.5M21.5 14.5l-4 5.5" stroke="#e0473b" strokeWidth="2.2" strokeLinecap="round" /></>,
   wheel: <>{["#e8483f", "#f5a623", "#f2d43a", "#45c26b", "#2f8fe0", "#8b5cf6", "#ec4899", "#14b8a6"].map((color, i) => { const a = (i * Math.PI) / 4, b = ((i + 1) * Math.PI) / 4; return <path key={color} d={`M12 12L${12 + 10 * Math.cos(a)} ${12 + 10 * Math.sin(a)}A10 10 0 0 1 ${12 + 10 * Math.cos(b)} ${12 + 10 * Math.sin(b)}Z`} fill={color} />; })}<circle cx="12" cy="12" r="2.6" fill="#f5c542" stroke="#000" strokeOpacity=".4" /></>,
   fib: <><path d="M2 20a10 10 0 0 1 20 0" fill="none" stroke="#f08a3c" strokeWidth="3" /><path d="M6 20a6 6 0 0 1 12 0" fill="none" stroke="#e0607e" strokeWidth="3" /><path d="M10 20a2 2 0 0 1 4 0" fill="none" stroke="#a46ae0" strokeWidth="3" /></>,
+  minds: <><circle cx="8.6" cy="12" r="6.6" fill="#ff6f4f" /><circle cx="15.4" cy="12" r="6.6" fill="#ffc53d" /><path d="M12 6.3A6.6 6.6 0 0 1 12 17.7A6.6 6.6 0 0 1 12 6.3Z" fill="#fff4e4" /><circle cx="8.6" cy="12" r="6.6" fill="none" stroke="#2a1711" strokeWidth="1.3" /><circle cx="15.4" cy="12" r="6.6" fill="none" stroke="#2a1711" strokeWidth="1.3" /></>,
   price: <><path d="M3 6.5l6-4h12v19H9l-6-4z" transform="rotate(-12 12 12)" fill="#f7c93c" stroke="#f05aa0" strokeWidth="1.4" strokeLinejoin="round" /><circle cx="7.6" cy="12.6" r="1.6" fill="#16171a" /><text x="15" y="15.5" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="700" fontSize="9" fill="#c2410c" transform="rotate(-12 12 12)">$</text></>,
   tongue: <><rect x="1.5" y="6" width="10" height="12" rx="1.2" fill="#f2b33d" /><rect x="12.5" y="6" width="10" height="12" rx="1.2" fill="#2f6fd6" /><path d="M4.5 14.5l2-6 2 6M5.2 12.6h2.6" stroke="#16171a" strokeWidth="1.3" fill="none" strokeLinecap="round" /><path d="M15.5 8.5h4M17.5 8.5v6" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" /></>,
   budget: <><rect x="3" y="5" width="11" height="15" rx="1.6" transform="rotate(-14 8.5 12.5)" fill="#ff5b6e" /><rect x="9" y="4" width="11" height="15" rx="1.6" transform="rotate(10 14.5 11.5)" fill="#ffd23f" stroke="#16171a" strokeWidth="1" /><text x="14.6" y="15.6" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="700" fontSize="8" fill="#16171a" transform="rotate(10 14.5 11.5)">5</text></>,
