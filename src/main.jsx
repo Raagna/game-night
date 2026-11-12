@@ -26,6 +26,7 @@ import Flap, { Brand, Money } from "./Flap";
 import { repeatHostTap } from "../server/taps.js";
 import { LobbyJoin, JoinCorner, Departures, QRCode, useJoinBase } from "./JoinQR";
 import { Coach } from "./Tutorial";
+import { MindsSetup, MindsDisplay, MindsPlayer, MindsController, MindsEnd } from "./minds/GreatMinds";
 import { SurveySetup, SurveyDisplay, SurveyPlayer, SurveyController, SurveyEnd, SoundToggle } from "./survey/SurveySays";
 import { WheelSetup, WheelDisplay, WheelPlayer, WheelController, WheelEnd } from "./wheel/SpinSolve";
 import { FibSetup, FibDisplay, FibPlayer, FibController, FibEnd } from "./fib/FibOrFact";
@@ -1005,7 +1006,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Survey Says!, Tip of the Tongue and Red Herring 12, and Word Budget 16. You can join after a game starts, except in Red Herring, where every guest is dealt in at the start.</p>
+      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Pin Drop 10, Survey Says!, Tip of the Tongue, Red Herring and Great Minds 12, and Word Budget 16. You can join after a game starts, except in Red Herring, where every guest is dealt in at the start.</p>
       <a className="back-link" href="./"><Arrow back /> Game Night</a>
     </main>
   );
@@ -1082,7 +1083,7 @@ function ControllerOnPhone({ code }) {
     </details>
   );
 }
-const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup, pindrop: PinDropSetup };
+const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup, minds: MindsSetup, pindrop: PinDropSetup };
 
 function App() {
   const params = new URLSearchParams(location.search),
@@ -1237,6 +1238,12 @@ function App() {
         }}
       />
     );
+  }
+  if (game.kind === "minds") {
+    if (game.status === "complete") return <>{banner}<MindsEnd game={game} host={host || controller} display={host} onAction={action} playerId={playerId} /></>;
+    if (controller) return <>{banner}<MindsController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<MindsDisplay game={game} onAction={action} /></>;
+    return <>{banner}<MindsPlayer game={game} playerId={playerId} /></>;
   }
   if (game.kind === "survey") {
     if (game.status === "complete") return <>{banner}<SurveyEnd game={game} host={host || controller} display={host} onAction={action} /></>;

@@ -121,3 +121,13 @@ of each place; places whose spot couldn't be pinned down well (a whole desert, a
 The typed text reuses Courier Prime from `src/herring/fonts/` (see Red Herring fonts above); the headings use
 Barlow Condensed and Barlow Semi Condensed from Fontsource (SIL Open Font License 1.1). The cork board, map sheet,
 pins, postcard and stamps are drawn in CSS and SVG for this project.
+
+## Great Minds prompts, font and sounds
+
+The prompts in `src/minds/prompts.json` were written for this project. The sounds are synthesized in the browser by
+`src/minds/sounds.js`, and the logo, Lone Wolf mark and polka-dot frame are drawn in SVG and CSS; there are no
+recordings, images or downloaded art.
+
+Its rounded type is **Fredoka**, copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One),
+bundled from the `@fontsource/fredoka` npm package and licensed under the
+[SIL Open Font License 1.1](https://openfontlicense.org/).
