@@ -96,3 +96,13 @@ Red Herring's manor look uses two fonts, self-hosted in `src/herring/fonts/` (La
 
 Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/); the licence texts sit next to the
 font files. The art, wax seal, tags and stamps are drawn in CSS for this project and don't come from any board game.
+
+## Great Minds prompts, font and sounds
+
+The prompts in `src/minds/prompts.json` were written for this project. The sounds are synthesized in the browser by
+`src/minds/sounds.js`, and the logo, Lone Wolf mark and polka-dot frame are drawn in SVG and CSS; there are no
+recordings, images or downloaded art.
+
+Its rounded type is **Fredoka**, copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One),
+bundled from the `@fontsource/fredoka` npm package and licensed under the
+[SIL Open Font License 1.1](https://openfontlicense.org/).
