@@ -1,6 +1,6 @@
 # Game Night
 
-Party games for a TV and everyone's phones: Jeoparty!, Survey Says!, Spin & Solve, Fib or Fact, Price Check, Tip of the Tongue, Word Budget and Red Herring. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
+Party games for a TV and everyone's phones: Jeoparty!, Survey Says!, Spin & Solve, Fib or Fact, Price Check, Tip of the Tongue, Word Budget, Red Herring and Pin Drop. One screen everyone can see hosts the game; players join on their phones by scanning a QR code and play from there.
 
 ## Games
 
@@ -114,6 +114,18 @@ A detective social deduction game for 5 to 12 players, about 25 to 40 minutes. T
 - **Privacy**: roles, cards and notes go only to each guest's own phone (and, in a hosted game, the storyteller's controller), never to the TV. Each phone has a Board tab that mirrors the TV, for playing over a video call. The role card lies face down until tapped.
 - **The storyteller**: with a host, one person who isn't a guest runs the case from the controller: a grimoire of every role, card and night action, the narration to read aloud, the pacing of mornings and verdicts, and what the Rookie learns. Without one, the TV narrates and everything runs on the clock.
 
+### Pin Drop
+A map game for 1 to 10 players. Each round, a clue for a place in the world shows on the TV and every phone ("a rocky hill crowned by the marble Parthenon"). Everyone finds it on the world map on their phone (drag to look around, pinch to zoom), taps to drop a pin, drags or taps again to move it, and locks it in. The TV shows who has locked in, never where.
+
+- **The reveal**: the map flies to the real place, every pin drops in with its player's name, and a line runs from each pin to the answer along the shortest route over the globe. The side panel lists everyone closest first, with their distance and points, and each phone shows its own result.
+- **Scoring**: up to 1,000 points a round, falling off smoothly with distance: anything within a short distance of the spot (25 km on the World map, 8 km on the USA and Canada maps) scores the full 1,000, and the scores fall off faster on the smaller maps. The closest pin earns 100 more (shared on a tie; only when two or more pins are down). A pin that isn't locked in when the clock runs out still counts.
+- **Maps**: World (126 places), USA (48) and Canada (38), 212 in all, in `src/pindrop/places.json`. Every clue was written for this project and each place has its own coordinates and a difficulty.
+- **Settings**: 5, 8 or 12 rounds; 30, 45, 60 or 90 seconds a pin; Easy, Mixed (easier places first, harder ones later) or Hard; distances in kilometres or miles (miles by default on the USA map). Places played recently on this TV come up last.
+- **Practice round** (on by default, off on Play again): one easy practice place, with tips on the TV and every phone. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
+- **With a host**, the controller shows the answer from the start, and the host reveals early and moves to the next round. **Without one**, the reveal comes when everyone has locked in or the clock runs out, and the next round starts by itself 18 seconds later. Either way, players only ever move their own pin.
+- **The end**: final standings, a round-by-round table of every player's points and distance, and Play again with new places.
+- **Look**: Pin Drop has its own look, an explorer's desk: a map sheet pinned to a cork board, a postcard for the clue, passport stamps for the scores. The map is NASA's Blue Marble satellite imagery with OpenStreetMap borders, with no place names on it, drawn with [Leaflet](https://leafletjs.com).
+
 ### With or without a host
 All eight games can be played two ways:
 
@@ -185,6 +197,7 @@ src/                  React client
   tongue/             Tip of the Tongue screens, styles and its word pack (words.json)
   budget/             Word Budget screens and styles (its cards come from tongue/words.json)
   herring/            Red Herring screens, styles, sounds, lab tasks and pictograms (icons.jsx)
+  pindrop/            Pin Drop screens, the map, styles and its places (places.json)
   FastMoney.jsx       Fast Money finale
   BoardEditor.jsx     custom board editor
   MyBoards.jsx        saved boards, board file and JeopardyLabs import
@@ -206,6 +219,7 @@ server/               game server (Express + Socket.IO)
   budget.js           Word Budget game logic (budget.test.js tests it)
   herring.js          Red Herring game logic (herring.test.js tests it)
   herringCase.js      Red Herring's facts, roles and the deal, shared with the screens
+  pindrop.js          Pin Drop game logic, distances and scoring (pindrop.test.js tests it)
   taps.js             ignores a host's (or phone's) double tap on a ruling (taps.test.js tests it)
   tutorial.js         a game's practice round: its steps and the skip rules (tutorial.test.js tests it)
   jeopardylabs.js     JeopardyLabs board import
@@ -240,5 +254,6 @@ docs/
 - Fib or Fact uses the same built-in Jeopardy clues. Its sounds are synthesized in `src/fib/sounds.js` and are original.
 - Price Check's prices come from [Open Prices](https://prices.openfoodfacts.org), an Open Food Facts project, under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/); the pack built from it is released under the same licence. Product photos are from Open Food Facts under CC BY-SA. The showcase prices in `src/price/showcase.json` are our own estimates, for the US and for Canada. See [CREDITS.md](CREDITS.md).
 - The Tip of the Tongue word pack in `src/tongue/words.json` was written for this project.
+- Pin Drop's clues in `src/pindrop/places.json` were written for this project. Its map is NASA GIBS Blue Marble imagery with OpenStreetMap borders (© OpenStreetMap contributors, ODbL), drawn with Leaflet (BSD-2-Clause); see [CREDITS.md](CREDITS.md).
 - Game Night is a fan project and isn't affiliated with *Jeopardy!*, *Family Feud*, *Wheel of Fortune*, *The Price Is Right* or their owners.
 - The repository has no licence file yet, so no licence is granted for the code.
