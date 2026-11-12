@@ -34,6 +34,7 @@ import { PriceSetup, PriceDisplay, PricePlayer, PriceController, PriceEnd } from
 import { TongueSetup, TongueDisplay, TonguePlayer, TongueController, TongueEnd } from "./tongue/TipOfTheTongue";
 import { BudgetSetup, BudgetDisplay, BudgetPlayer, BudgetController, BudgetEnd } from "./budget/WordBudget";
 import { HerringSetup, HerringDisplay, HerringPlayer, HerringController, HerringEnd } from "./herring/RedHerring";
+import { PinDropSetup, PinDropDisplay, PinDropPlayer, PinDropController, PinDropEnd } from "./pindrop/PinDrop";
 
 const PLAYER_KEYS = ["playerId", "gameCode", "playerName"];
 const clearPlayerSession = () => PLAYER_KEYS.forEach((key) => sessionStorage.removeItem(key));
@@ -1005,7 +1006,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
         </button>
       </form>
       {error && <p className="notice" role="alert">{error}</p>}
-      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Survey Says!, Tip of the Tongue and Red Herring 12, and Word Budget 16. You can join after a game starts, except in Red Herring, where every guest is dealt in at the start.</p>
+      <p className="muted">Jeoparty! takes up to 6 players, Spin &amp; Solve 6 (or 12 in teams), Fib or Fact and Price Check 8, Pin Drop 10, Survey Says!, Tip of the Tongue, Red Herring and Great Minds 12, and Word Budget 16. You can join after a game starts, except in Red Herring, where every guest is dealt in at the start.</p>
       <a className="back-link" href="./"><Arrow back /> Game Night</a>
     </main>
   );
@@ -1082,7 +1083,7 @@ function ControllerOnPhone({ code }) {
     </details>
   );
 }
-const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup, minds: MindsSetup };
+const SETUPS = { jeopardy: Setup, survey: SurveySetup, wheel: WheelSetup, fib: FibSetup, price: PriceSetup, tongue: TongueSetup, budget: BudgetSetup, herring: HerringSetup, minds: MindsSetup, pindrop: PinDropSetup };
 
 function App() {
   const params = new URLSearchParams(location.search),
@@ -1285,6 +1286,12 @@ function App() {
     if (controller) return <>{banner}<HerringController game={game} onAction={action} /></>;
     if (host) return <>{banner}<HerringDisplay game={game} onAction={action} /></>;
     return <>{banner}<HerringPlayer game={game} playerId={playerId} /></>;
+  }
+  if (game.kind === "pindrop") {
+    if (game.status === "complete") return <>{banner}<PinDropEnd game={game} host={host || controller} display={host} onAction={action} /></>;
+    if (controller) return <>{banner}<PinDropController game={game} onAction={action} /></>;
+    if (host) return <>{banner}<PinDropDisplay game={game} onAction={action} /></>;
+    return <>{banner}<PinDropPlayer game={game} playerId={playerId} /></>;
   }
   if (game.status === "complete")
     return <>{banner}<EndGame game={game} host={host || controller} display={host} /></>;

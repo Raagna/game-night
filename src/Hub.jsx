@@ -59,6 +59,12 @@ const GAMES = [
     tag: "5–12 players",
     blurb: "A body at the manor, and one of the detectives did it. Everyone holds a secret alibi card; the killer has to lie, and the ledger on the TV counts every guest. Investigate, run the lab, and put a suspect on trial.",
   },
+  {
+    id: "pindrop",
+    name: "Pin Drop",
+    tag: "1–10 players",
+    blurb: "A clue for a place goes up on the TV: a wonder, a landmark, a city with a story. Drop a pin on the map on your phone, then watch the map fly to the real spot. Closest pin scores most.",
+  },
 ];
 
 // Each game's row carries a small motif of its own show in the lamp cell, drawn in the colours of that game's look:
@@ -75,6 +81,7 @@ const MOTIFS = {
   tongue: <><rect x="1.5" y="6" width="10" height="12" rx="1.2" fill="#f2b33d" /><rect x="12.5" y="6" width="10" height="12" rx="1.2" fill="#2f6fd6" /><path d="M4.5 14.5l2-6 2 6M5.2 12.6h2.6" stroke="#16171a" strokeWidth="1.3" fill="none" strokeLinecap="round" /><path d="M15.5 8.5h4M17.5 8.5v6" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" /></>,
   budget: <><rect x="3" y="5" width="11" height="15" rx="1.6" transform="rotate(-14 8.5 12.5)" fill="#ff5b6e" /><rect x="9" y="4" width="11" height="15" rx="1.6" transform="rotate(10 14.5 11.5)" fill="#ffd23f" stroke="#16171a" strokeWidth="1" /><text x="14.6" y="15.6" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="700" fontSize="8" fill="#16171a" transform="rotate(10 14.5 11.5)">5</text></>,
   herring: <><path d="M3 10h7l1.5 1.8H21V21H3z" fill="#e9e6dc" /><path d="M3 13h18" stroke="#b9b3a2" strokeWidth=".8" /><path d="M17.5 2.5a4.2 4.2 0 1 0 3.8 6 3.4 3.4 0 1 1-3.8-6z" fill="#b8c4f4" /></>,
+  pindrop: <><path d="M2 7l6-2.5 8 2.5 6-2.5v14.5l-6 2.5-8-2.5-6 2.5z" fill="#ecdcb0" stroke="#2f6f86" strokeWidth="1.1" strokeLinejoin="round" /><path d="M8 4.5v14.5M16 7v14.5" stroke="#2f6f86" strokeWidth=".8" opacity=".55" /><path d="M4.5 16.5c3-1 4 1 7-1s3-2.5 4.5-2.7" fill="none" stroke="#2f6f86" strokeWidth="1" strokeDasharray="1.6 1.4" /><path d="M16 13V8.4" stroke="#16171a" strokeWidth="1.3" strokeLinecap="round" /><circle cx="16" cy="6.2" r="3.4" fill="#d8432b" stroke="#16171a" strokeWidth=".7" /><circle cx="14.9" cy="5.1" r="1" fill="#fff" opacity=".7" /></>,
 };
 function Motif({ id }) {
   return <svg className="hub-motif" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">{MOTIFS[id]}</svg>;

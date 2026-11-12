@@ -1,0 +1,444 @@
+/* Pin Drop — a traveller's atlas pinned to a cork board, not the split-flap board of the Game Night menu.
+   The frame is cork; every screen is a sheet of map paper with a faint graticule. The map itself is NASA's Blue
+   Marble relief, warmed a little to sit on the paper, with coastlines and borders but no names. Players are push pins
+   in ten colours (always with their name beside them); distances and codes are typed like a travel document
+   (Courier Prime, shared with Red Herring's files); points land as passport stamps, each with a word as well as an
+   ink colour. The clue is a postcard with an airmail edge. Everything is scoped to Pin Drop's own screens
+   (.pd, .pd-setup), plus its row on the Game Night menu at the bottom. */
+
+@font-face { font-family: "PD Typed"; src: url("../herring/fonts/courier-prime-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "PD Typed"; src: url("../herring/fonts/courier-prime-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+
+/* ---------- Palette ---------- */
+body:has(.pd), body:has(.pd-setup), .pd, .pd-setup {
+  --pd-paper: #f4ecd8;
+  --pd-paper-2: #ebdfc3;
+  --pd-paper-3: #d8c69c;
+  --pd-card: #fffaf0;
+  --pd-ink: #1e2a3b;
+  --pd-ink-soft: #4f5b70;
+  --pd-sea: #2c6a80;
+  --pd-sea-deep: #1b4658;
+  --pd-vermilion: #c4452a;
+  --pd-mustard: #b97f10;
+  --pd-grid: rgb(44 106 128 / 0.09);
+  --pd-typed: "PD Typed", "Courier New", monospace;
+  /* The house variables, re-inked for paper, so shared pieces (coach, host tools, dialogs, the TV rail) match. */
+  --board: var(--pd-paper);
+  --well: var(--pd-paper-2);
+  --flap-face: var(--pd-paper-2);
+  --flap-face-lo: var(--pd-paper-3);
+  --flap-gap: #b9a77d;
+  --rule: #d2c196;
+  --rule-strong: #b6a275;
+  --paint: var(--pd-ink);
+  --paint-dim: #7d8090;
+  --steel-hi: #384459;
+  --steel: #556076;
+  --steel-mid: #8a8f9c;
+  --steel-lo: #c9b88e;
+  --table: var(--pd-sea);
+  --on-table: var(--pd-card);
+  --red: #b13a22;
+  --red-text: #a3301b;
+  color-scheme: light;
+}
+/* The frame: cork, speckled. */
+body:has(.pd), body:has(.pd-setup) {
+  background-color: #b4874f;
+  background-image:
+    radial-gradient(circle at 30% 40%, rgb(74 40 12 / 0.38) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 70% 70%, rgb(255 232 196 / 0.22) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 50% 20%, rgb(90 52 20 / 0.3) 0 1.3px, transparent 2px),
+    linear-gradient(180deg, #c09460, #a87a44);
+  background-size: 7px 7px, 11px 11px, 17px 17px, 100% 100%;
+  background-attachment: fixed;
+}
+/* The sheet: map paper with a faint graticule. */
+.pd, .pd-setup {
+  position: relative;
+  background:
+    linear-gradient(var(--pd-grid) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(90deg, var(--pd-grid) 1px, transparent 1px) 0 0 / 72px 72px,
+    var(--pd-paper);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.5) inset, 0 3px 0 rgb(60 35 10 / 0.25), 0 14px 36px rgb(50 28 6 / 0.4);
+  border-radius: 3px;
+  color: var(--pd-ink);
+}
+.pd ::selection, .pd-setup ::selection { background: var(--pd-sea); color: var(--pd-card); }
+.pd :focus-visible, .pd-setup :focus-visible { outline-color: var(--pd-vermilion); }
+.pd .notice, .pd-setup .notice { color: var(--red-text); }
+/* Two brass push pins hold the TV's sheet to the cork. */
+.pd-tv::before, .pd-tv::after {
+  content: ""; position: absolute; top: -7px; z-index: 6; width: 20px; height: 20px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff6d6 0 2px, #e3b44a 3px, #a97a17 9px, #6f4d0b 10px);
+  box-shadow: 0 3px 4px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.pd-tv::before { left: 18px; }
+.pd-tv::after { right: 18px; }
+
+/* ---------- Pieces ---------- */
+.pd-logo { display: inline-flex; align-items: flex-end; gap: 0.18em; color: var(--pd-ink); }
+.pd-logo .pd-glyph { color: #2b2b2b; margin-bottom: 0.04em; }
+.pd-logo-text {
+  font: 800 2.5rem/0.9 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+  /* A dotted route underneath, like a flight path on an atlas page. */
+  padding-bottom: 0.16em;
+  background: radial-gradient(circle, var(--pd-vermilion) 0 1.6px, transparent 2px) 0 100% / 9px 5px repeat-x;
+}
+.pd-logo.is-small .pd-logo-text { font-size: 1.3rem; background-size: 6px 4px; }
+.pd-glyph { flex: none; overflow: visible; color: #2b2b2b; }
+
+/* Points as a passport stamp: a double-ruled box in ink, a little crooked. The word under the points says how
+   close the pin was, so the ink colour is never the only cue. */
+.pd-stamp {
+  --ink: #8b8270;
+  display: inline-grid; justify-items: center; align-content: center; gap: 2px;
+  min-width: 5.6em; padding: 4px 9px 5px;
+  border: 3px double var(--ink); border-radius: 7px;
+  color: var(--ink); transform: rotate(-5deg);
+  font-family: var(--pd-typed); line-height: 1;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.pd-stamp b { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.02em; }
+.pd-stamp small { font: 700 0.62rem/1 var(--flap-font); letter-spacing: 0.18em; text-transform: uppercase; }
+.pd-stamp i { margin-top: 2px; padding: 2px 5px; border-radius: 2px; background: var(--ink); color: var(--pd-card); font: 700 0.6rem/1 var(--flap-font); font-style: normal; letter-spacing: 0.12em; text-transform: uppercase; }
+.pd-stamp.is-close { --ink: #1f6b45; }
+.pd-stamp.is-warm { --ink: #2c5596; }
+.pd-stamp.is-far { --ink: #8e3a24; }
+
+/* The clock: a dial that empties as time runs out. */
+.pd-clock {
+  --size: 66px;
+  display: grid; place-items: center; flex: none;
+  width: var(--size); height: var(--size); border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--pd-card) 74%, transparent 76% 100%),
+    conic-gradient(var(--pd-sea) calc(var(--left) * 360deg), var(--pd-paper-3) 0);
+  box-shadow: 0 0 0 2px var(--pd-ink);
+  font: 700 1.45rem/1 var(--pd-typed); color: var(--pd-ink);
+  transition: background 250ms linear;
+}
+.pd-clock.is-low {
+  background:
+    radial-gradient(closest-side, var(--pd-card) 74%, transparent 76% 100%),
+    conic-gradient(var(--pd-vermilion) calc(var(--left) * 360deg), var(--pd-paper-3) 0);
+  color: var(--pd-vermilion);
+}
+
+.pd-hint { color: var(--pd-ink-soft); font-size: 1rem; line-height: 1.45; }
+.pd-clue-label { font: 700 0.84rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-sea); }
+
+/* ---------- The map ---------- */
+.pd-map { width: 100%; height: 100%; background: #16364f; font-family: var(--set); }
+.pd-map .pd-base { filter: sepia(0.22) saturate(0.92) brightness(1.04); }
+/* The coastlines and borders come as dark lines; light ones read better on the relief. */
+.pd-map .pd-borders { filter: invert(1) brightness(1.25); opacity: 0.6; }
+.pd-map .leaflet-control-attribution { background: rgb(255 250 240 / 0.82); color: var(--pd-ink-soft); font: 400 10px/1.4 var(--set); }
+.pd-map .leaflet-control-attribution a { color: var(--pd-sea-deep); }
+.pd-map .leaflet-bar { border: 2px solid var(--pd-ink); border-radius: 3px; box-shadow: 0 2px 0 rgb(0 0 0 / 0.2); }
+.pd-map .leaflet-bar a { width: 36px; height: 36px; line-height: 34px; background: var(--pd-card); color: var(--pd-ink); font: 700 20px/34px var(--flap-font); }
+.pd-map .leaflet-bar a:hover { background: var(--pd-paper-2); }
+.pd-map.leaflet-container { cursor: crosshair; }
+.pd-map.leaflet-dragging .leaflet-container, .pd-map.leaflet-dragging { cursor: grabbing; }
+
+.pd-pin { background: none; border: 0; }
+.pd-pin-body { position: relative; display: block; width: 32px; height: 46px; filter: drop-shadow(1px 3px 2px rgb(0 0 0 / 0.35)); }
+.pd-pin-body svg { display: block; }
+.pd-pin.is-mine .pd-pin-body { cursor: grab; }
+.pd-pin.is-locked .pd-pin-body svg circle:first-of-type { stroke: #fff; stroke-width: 2.4; }
+.pd-pin-tag {
+  position: absolute; left: 50%; top: -3px; transform: translate(-50%, -100%);
+  display: grid; justify-items: center; padding: 2px 7px 3px;
+  border-radius: 2px; border-bottom: 3px solid var(--pin);
+  background: var(--pd-card, #fffaf0); color: #1e2a3b; white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+.pd-pin-tag b { font: 700 13px/1.1 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-pin-tag small { font: 700 11px/1.1 "PD Typed", "Courier New", monospace; }
+.pd-tv .pd-pin-tag b { font-size: 16px; }
+.pd-tv .pd-pin-tag small { font-size: 13px; }
+.pd-target { background: none; border: 0; }
+.pd-target-body { position: relative; display: block; width: 40px; height: 40px; filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.4)); }
+.pd-target-tag {
+  position: absolute; left: 50%; top: 100%; transform: translate(-50%, 4px);
+  padding: 3px 8px; border-radius: 2px; background: #c4452a; color: #fffaf0; white-space: nowrap;
+  font: 700 14px/1.1 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+.pd-tv .pd-target-tag { font-size: 18px; padding: 4px 10px; }
+@media (prefers-reduced-motion: no-preference) {
+  .pd-pin.is-dropped .pd-pin-body { animation: pd-drop 460ms cubic-bezier(0.25, 1.5, 0.5, 1) both; }
+  .pd-target-body { animation: pd-target 600ms ease-out both; }
+  .pd-line, .pd-line-casing { animation: pd-fade 500ms ease-out both; }
+}
+@keyframes pd-drop { from { transform: translateY(-60px); opacity: 0; } 60% { opacity: 1; } }
+@keyframes pd-target { from { transform: scale(2.4); opacity: 0; } }
+@keyframes pd-fade { from { opacity: 0; } }
+
+/* ---------- The TV ---------- */
+.pd-tv {
+  display: flex; flex-direction: column; gap: 12px;
+  height: calc(100vh - 2 * var(--frame)); height: calc(100dvh - 2 * var(--frame));
+  padding: 18px 26px 70px; text-align: left; overflow: hidden;
+}
+.pd-tv.is-lobby, .pd-end.pd-tv { height: auto; overflow: visible; }
+.pd-tv-bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 22px; padding-bottom: 12px; border-bottom: 2px solid var(--rule); }
+.pd-tv-round { font: 700 1.55rem/1.1 var(--flap-font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--pd-ink); }
+.pd-tv-round small { display: block; margin-top: 3px; font: 500 0.95rem/1.3 var(--set); letter-spacing: 0; text-transform: none; color: var(--pd-ink-soft); }
+.pd-lobby-title { font: 800 clamp(1.6rem, 3vw, 2.6rem)/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; }
+.pd-join-corner { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 4px; background: var(--pd-card); box-shadow: 0 1px 0 var(--rule-strong); }
+.pd-join-corner .qr { width: 64px; }
+.pd-join-corner span { display: grid; gap: 2px; }
+.pd-join-corner small { font: 600 0.72rem/1.2 var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--pd-ink-soft); }
+.pd-join-corner b { font: 700 1.7rem/1 var(--pd-typed); letter-spacing: 0.1em; }
+.pd-tv .coach { max-width: none; margin: 0; background: var(--pd-card); border-left-color: var(--pd-vermilion); box-shadow: 0 1px 0 var(--rule-strong); }
+.pd-tv .coach-label { color: var(--pd-vermilion); }
+
+.pd-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(330px, 31vw, 540px); gap: 22px; }
+/* The map sheet: a deckle-edged inset on the paper. */
+.pd-sheet { position: relative; min-height: 0; padding: 8px; background: var(--pd-card); border-radius: 2px; box-shadow: 0 0 0 1px var(--rule-strong), 0 3px 0 rgb(60 35 10 / 0.12); }
+.pd-sheet .pd-map { border-radius: 1px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.3); }
+.pd-sheet-corner { position: absolute; right: 18px; top: 16px; z-index: 500; padding: 3px 9px; background: rgb(255 250 240 / 0.88); font: 700 0.78rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-ink-soft); pointer-events: none; }
+.pd-side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: 2px 4px 4px 2px; }
+
+/* The clue: a postcard with an airmail edge. */
+.pd-clue {
+  padding: 16px 20px 18px; background: var(--pd-card);
+  border: 7px solid transparent;
+  border-image: repeating-linear-gradient(135deg, #c4452a 0 12px, var(--pd-card) 12px 18px, #2c5596 18px 30px, var(--pd-card) 30px 36px) 7;
+  box-shadow: 0 2px 6px rgb(60 35 10 / 0.18);
+}
+.pd-clue-text { margin-top: 6px; font: 600 clamp(1.45rem, 2.2vw, 2.35rem)/1.2 var(--set); color: var(--pd-ink); text-wrap: balance; }
+.pd-clue.is-reveal .pd-clue-text { font-size: clamp(1.1rem, 1.5vw, 1.5rem); color: var(--pd-ink-soft); }
+.pd-answer { display: grid; gap: 3px; margin-top: 12px; padding-top: 10px; border-top: 2px dashed var(--rule-strong); }
+.pd-answer-label { font: 700 0.78rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-vermilion); }
+.pd-answer b { font: 800 clamp(1.5rem, 2.3vw, 2.4rem)/1.05 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.pd-answer small { font: 400 0.95rem/1.2 var(--pd-typed); color: var(--pd-ink-soft); }
+
+/* Who's in: a row per player with their pin, name and a word for where they are. */
+.pd-status, .pd-breakdown { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pd-status li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 46px; padding: 4px 12px; border-radius: 2px; background: rgb(255 250 240 / 0.7); box-shadow: inset 0 0 0 1px var(--rule);
+}
+.pd-status-name, .pd-bd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 1.2rem/1.1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-status-word { font: 600 0.95rem/1 var(--flap-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--pd-ink-soft); }
+.pd-status li.is-placed .pd-status-word { color: var(--pd-mustard); }
+.pd-status li.is-locked { background: var(--pd-card); box-shadow: inset 0 0 0 2px var(--pd-sea); }
+.pd-status li.is-locked .pd-status-word { padding: 5px 8px; border-radius: 2px; background: var(--pd-sea); color: var(--pd-card); }
+.pd-status li.is-away { opacity: 0.6; box-shadow: inset 0 0 0 1px var(--rule-strong); border: 1px dashed var(--rule-strong); }
+
+/* The reveal's breakdown, closest first. */
+.pd-breakdown li {
+  display: grid; grid-template-columns: 1.6em auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+  min-height: 56px; padding: 4px 12px; border-radius: 2px; background: rgb(255 250 240 / 0.75); box-shadow: inset 0 0 0 1px var(--rule);
+}
+.pd-breakdown li.is-closest { background: var(--pd-card); box-shadow: inset 0 0 0 2px var(--pd-sea); }
+.pd-rank { font: 700 1.2rem/1 var(--pd-typed); color: var(--pd-ink-soft); text-align: center; }
+.pd-bd-name small { font: 500 0.78rem var(--set); letter-spacing: 0; text-transform: none; color: var(--pd-ink-soft); }
+.pd-bd-km { font: 700 1.05rem/1 var(--pd-typed); white-space: nowrap; }
+.pd-breakdown .pd-stamp { font-size: 0.95rem; }
+
+.pd-next { align-self: stretch; min-height: 54px; font-size: 1.15rem; }
+.pd-tv .secondary.pd-next { background: var(--pd-card); }
+/* The side panel scrolls on a short screen; the host's Next button stays in view at its foot. */
+.pd-side > * { flex-shrink: 0; }
+.pd-side .pd-next { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -8px 12px -6px rgb(60 35 10 / 0.25); }
+
+.pd-standings h2 { margin-bottom: 6px; font: 700 0.84rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-ink-soft); }
+.pd-standings ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-standings li { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px 5px 8px; border-radius: 2px 12px 12px 2px; background: var(--pd-card); box-shadow: inset 0 0 0 1px var(--rule-strong); font: 700 1rem/1 var(--flap-font); letter-spacing: 0.05em; text-transform: uppercase; }
+.pd-standings li b { font: 700 1rem/1 var(--pd-typed); }
+.pd-standings li small { font: 700 0.8rem/1 var(--pd-typed); color: #1f6b45; }
+.pd-standings li.is-away { opacity: 0.6; }
+
+/* ---------- The lobby ---------- */
+.pd-lobby { display: grid; justify-items: center; gap: 18px; padding: 10px 0 20px; text-align: center; }
+.pd-lobby-join { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 26px; }
+/* The room code on a boarding pass. */
+.pd-ticket {
+  position: relative; display: grid; justify-items: center; gap: 6px;
+  padding: 18px 34px 18px; background: var(--pd-card); border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--rule-strong), 0 3px 0 rgb(60 35 10 / 0.14);
+  background-image: linear-gradient(90deg, var(--pd-sea) 0 14px, transparent 14px);
+}
+.pd-ticket-label { font: 700 0.85rem/1 var(--flap-font); letter-spacing: 0.24em; text-transform: uppercase; color: var(--pd-sea); }
+.pd-code { font: 700 clamp(3rem, 10vh, 6.2rem)/1 var(--pd-typed); letter-spacing: 0.14em; color: var(--pd-ink); }
+.pd-ticket-url { max-width: 30ch; font-size: 1rem; color: var(--pd-ink-soft); }
+.pd-qr-card { margin: 0; padding: 10px 10px 6px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px var(--rule-strong); }
+.pd-qr-card .qr { width: clamp(120px, 21vh, 210px); }
+.pd-qr-card figcaption { margin-top: 4px; font: 700 0.8rem var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-ink-soft); }
+.pd-settings-line { font: 400 1.05rem var(--pd-typed); color: var(--pd-ink-soft); }
+/* Players as luggage tags. */
+.pd-travellers { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 1100px; }
+.pd-travellers li {
+  display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left;
+  padding: 8px 18px 8px 12px; border-radius: 3px 16px 16px 3px; background: var(--pd-card); box-shadow: 0 0 0 1px var(--rule-strong), 0 2px 0 rgb(60 35 10 / 0.12);
+}
+.pd-travellers .pd-glyph { grid-row: span 2; }
+.pd-travellers span { font: 700 1.35rem/1.05 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-travellers small { font: 600 0.78rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase; color: var(--pd-sea); }
+.pd-travellers li.is-away small { color: var(--pd-ink-soft); }
+.pd-travellers li.is-open { background: transparent; box-shadow: none; border: 2px dashed var(--rule-strong); color: var(--pd-ink-soft); }
+.pd-travellers li.is-open small { color: var(--pd-ink-soft); }
+.pd-lobby-note { max-width: 60ch; font-size: 1.1rem; color: var(--pd-ink-soft); }
+.pd-start { min-width: 260px; min-height: 60px; font-size: 1.35rem; }
+
+.pd-host-tools { flex: none; max-width: 760px; margin: 0 auto; }
+
+@media (max-height: 800px) {
+  .pd-tv { padding-top: 12px; gap: 8px; }
+  .pd-tv-bar { padding-bottom: 8px; }
+  .pd-clock { --size: 54px; font-size: 1.2rem; }
+  .pd-logo-text { font-size: 2rem; }
+  .pd-status li { min-height: 40px; }
+  .pd-breakdown li { min-height: 48px; }
+  .pd-clue { padding: 10px 14px 12px; }
+  .pd-clue.is-reveal .pd-clue-text { font-size: 1rem; }
+  .pd-answer { margin-top: 8px; padding-top: 6px; }
+  .pd-answer b { font-size: 1.5rem; }
+}
+@media (max-width: 900px) {
+  .pd-tv { height: auto; overflow: visible; }
+  .pd-stage { grid-template-columns: 1fr; }
+  .pd-sheet { height: 60vh; }
+  .pd-tv-bar { grid-template-columns: auto 1fr auto; }
+  .pd-join-corner { display: none; }
+}
+
+/* ---------- Setup ---------- */
+.pd-setup { text-align: left; }
+.pd-setup-card { max-width: 980px; margin: 18px auto 0; padding: 22px 0 0; border-top: 2px solid var(--rule); display: grid; gap: 14px; }
+.pd-setup-card h1 { font: 800 2.1rem/1.05 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-setup-intro { max-width: 68ch; font-size: 1.1rem; line-height: 1.45; color: var(--pd-ink-soft); }
+.pd-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.pd-fieldset legend { margin-bottom: 8px; padding: 0; font: 700 0.84rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-sea); }
+.pd-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.pd-choices button {
+  display: inline-grid; justify-items: start; gap: 2px; min-height: 48px; padding: 8px 18px 8px 14px;
+  border-radius: 3px; background: var(--pd-card); color: var(--pd-ink); box-shadow: inset 0 0 0 1.5px var(--rule-strong);
+  font: 700 1.1rem/1 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; text-align: left;
+}
+.pd-choices button small { font: 500 0.82rem var(--set); letter-spacing: 0; text-transform: none; color: var(--pd-ink-soft); }
+.pd-choices button:hover { box-shadow: inset 0 0 0 1.5px var(--pd-sea); }
+.pd-choices button[aria-checked="true"] { background: var(--pd-sea); color: var(--pd-card); box-shadow: inset 0 0 0 1.5px var(--pd-sea-deep), 0 2px 0 var(--pd-sea-deep); }
+.pd-choices button[aria-checked="true"] small { color: rgb(255 250 240 / 0.85); }
+/* A pin goes into the chosen cell, so the choice doesn't rest on colour. */
+.pd-choices button span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 2px solid currentColor; vertical-align: 0.06em; }
+.pd-choices button[aria-checked="true"] span::before { background: #e8b222; border-color: var(--pd-card); }
+.pd-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+.pd-options { display: grid; gap: 8px; margin-top: 6px; }
+.pd-options h2 { font: 700 0.84rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-sea); }
+.pd-setup .game-mode { background: var(--pd-card); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.pd-setup .game-mode small { color: var(--pd-ink-soft); }
+.pd-final-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-top: 8px; padding-top: 16px; border-top: 2px solid var(--rule); }
+.pd-summary { font: 400 1rem var(--pd-typed); color: var(--pd-ink-soft); }
+.pd-final-row .primary { min-width: 220px; min-height: 56px; font-size: 1.2rem; }
+.pd-credit { font-size: 0.88rem; }
+.pd-credit a { color: var(--pd-sea-deep); }
+.pd-setup .back-to-hub { color: var(--pd-ink-soft); }
+.pd-setup .back-to-hub:hover { color: var(--pd-ink); }
+@media (max-width: 760px) { .pd-setup-grid { grid-template-columns: 1fr; } .pd-final-row .primary { width: 100%; } }
+
+/* ---------- Phones (players and the host controller) ---------- */
+.pd-phone { text-align: left; }
+.pd-phone-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--rule); }
+.pd-phone-name { display: inline-flex; align-items: center; gap: 7px; min-width: 0; font: 700 1rem/1 var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
+.pd-phone-name b { margin-left: 4px; padding: 4px 7px; border-radius: 2px; background: var(--pd-card); box-shadow: inset 0 0 0 1px var(--rule-strong); font: 700 1rem/1 var(--pd-typed); }
+.pd-status-line { margin: 26px 0; font-size: 1.15rem; text-align: center; color: var(--pd-ink-soft); }
+.pd-phone .coach.is-phone { margin: 8px 0 0; padding: 8px 10px 8px 12px; background: var(--pd-card); border-left-color: var(--pd-vermilion); }
+.pd-phone .coach.is-phone .coach-label { color: var(--pd-vermilion); margin-bottom: 2px; }
+.pd-phone .coach.is-phone .coach-text { font-size: 0.95rem; line-height: 1.3; }
+.pd-phone .coach.is-phone .tutorial-skip { min-height: 38px; }
+.pd-phone .coach.is-phone .tutorial-vote { gap: 4px; }
+.pd-phone .coach.is-phone .tutorial-skip-note { font-size: 0.85rem; }
+
+/* While a round is on, the phone is exactly one screen tall: clue on top, the map filling the middle, Lock in at the
+   bottom. Nothing scrolls, so a drag always moves the map and never the page. */
+.pd-phone.is-mapping {
+  display: flex; flex-direction: column; gap: 8px;
+  height: calc(100vh - 2 * var(--frame)); height: calc(100dvh - 2 * var(--frame));
+  min-height: 0; overflow: hidden;
+  padding: calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
+}
+html:has(.pd-phone.is-mapping), body:has(.pd-phone.is-mapping) { overflow: hidden; overscroll-behavior: none; }
+.pd-phone-clue { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 8px 10px; background: var(--pd-card); border-left: 4px solid var(--pd-sea); box-shadow: 0 1px 0 var(--rule-strong); }
+.pd-phone-clue .pd-clock { --size: 46px; grid-row: 1 / span 2; grid-column: 2; font-size: 1.05rem; }
+.pd-phone-clue > p { grid-column: 1; }
+.pd-phone-clue-text { font: 600 1.05rem/1.25 var(--set); color: var(--pd-ink); }
+.pd-phone-map { position: relative; flex: 1 1 auto; min-height: 150px; border-radius: 2px; box-shadow: 0 0 0 2px var(--pd-ink); overflow: hidden; }
+.pd-phone-map .pd-map { position: absolute; inset: 0; touch-action: none; }
+.pd-phone-map.is-reveal { min-height: 120px; }
+.pd-map-hint {
+  position: absolute; left: 50%; bottom: 26px; z-index: 500; transform: translateX(-50%);
+  padding: 7px 12px; border-radius: 2px; background: rgb(255 250 240 / 0.92); white-space: nowrap; pointer-events: none;
+  font: 700 0.9rem/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--pd-ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+.pd-lock { flex: none; width: 100%; min-height: 56px; font-size: 1.2rem; }
+.pd-locked { flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; border-radius: 3px; background: var(--pd-card); box-shadow: inset 0 0 0 2px var(--pd-sea); font: 700 1.1rem/1 var(--flap-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--pd-sea-deep); }
+.pd-phone-error { flex: none; margin: 0; font-size: 0.95rem; }
+.pd-my-result { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 12px; background: var(--pd-card); box-shadow: 0 1px 0 var(--rule-strong); }
+.pd-my-answer { font: 800 1.25rem/1.05 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--pd-vermilion); }
+.pd-my-line { margin-top: 3px; font-size: 0.98rem; line-height: 1.3; color: var(--pd-ink-soft); }
+
+/* The host controller. */
+.pd-ctrl { text-align: left; }
+.pd-ctrl > .pd-phone-bar { margin-bottom: 12px; }
+.pd-ctrl h1 { font: 800 1.7rem var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+.pd-ctrl-code { font: 700 1.3rem/1 var(--pd-typed); letter-spacing: 0.1em; }
+.pd-ctrl-clue { margin: 4px 0 10px; font: 600 1.15rem/1.3 var(--set); }
+.pd-ctrl-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; padding: 8px 12px; background: var(--pd-card); box-shadow: inset 0 0 0 1px var(--rule-strong); font: 700 1.1rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
+.pd-ctrl-status .pd-clock { --size: 48px; font-size: 1.05rem; }
+.pd-ctrl-answer { margin-bottom: 14px; padding: 10px 12px; border-left: 4px solid var(--pd-vermilion); background: var(--pd-card); }
+.pd-ctrl-answer h2 { font: 700 0.8rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-vermilion); }
+.pd-ctrl-answer p { display: grid; gap: 2px; margin-top: 4px; }
+.pd-ctrl-answer b { font: 800 1.4rem/1.1 var(--flap-font); letter-spacing: 0.04em; text-transform: uppercase; }
+.pd-ctrl-answer small { font: 400 0.9rem var(--pd-typed); color: var(--pd-ink-soft); }
+.pd .fib-player-tools li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name score" "add sub" "kick kick"; gap: 6px; }
+.pd .fib-player-tools li input { grid-area: name; min-width: 0; }
+.pd-tool-score { grid-area: score; align-self: center; font: 700 1.1rem var(--pd-typed); }
+.pd .fib-player-tools li > .add { grid-area: add; }
+.pd .fib-player-tools li > .subtract { grid-area: sub; }
+.pd .fib-player-tools li > .danger { grid-area: kick; }
+.pd .fib-player-tools li.muted { display: block; }
+
+/* ---------- The end ---------- */
+.pd-end { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: 18px; padding: 24px 22px 90px; text-align: center; }
+.pd-end.pd-phone { padding: 18px 12px 40px; }
+.pd-winner { font: 800 clamp(2rem, 5vw, 4rem)/1.05 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-winner span { color: var(--pd-vermilion); }
+/* The house .end h1 is a flex row, which drops the space before "wins"; a gap puts it back and long names wrap. */
+.pd-winner { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.3em; max-width: 100%; overflow-wrap: anywhere; }
+.pd-podium { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: min(100%, 640px); }
+.pd-podium li {
+  display: grid; grid-template-columns: 3.2em auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 8px 16px; border-radius: 3px 18px 18px 3px; background: var(--pd-card); box-shadow: 0 0 0 1px var(--rule-strong); text-align: left;
+}
+.pd-podium li.is-place-1 { box-shadow: 0 0 0 3px var(--pd-sea); }
+.pd-podium-rank { font: 700 1.2rem var(--pd-typed); color: var(--pd-ink-soft); }
+.pd-podium li.is-place-1 .pd-podium-rank { color: var(--pd-sea); }
+.pd-podium b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 1.5rem/1 var(--flap-font); letter-spacing: 0.06em; text-transform: uppercase; }
+.pd-podium-score { font: 700 1.5rem var(--pd-typed); }
+.pd-end.pd-phone .pd-podium b, .pd-end.pd-phone .pd-podium-score { font-size: 1.15rem; }
+.pd-rounds { width: min(100%, 1400px); min-width: 0; }
+.pd-rounds h2 { margin-bottom: 8px; font: 700 0.9rem/1.2 var(--flap-font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pd-sea); }
+.pd-rounds-scroll { overflow-x: auto; background: var(--pd-card); box-shadow: 0 0 0 1px var(--rule-strong); }
+.pd-rounds table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.pd-rounds th, .pd-rounds td { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
+.pd-rounds thead th { font: 700 0.9rem var(--flap-font); letter-spacing: 0.08em; text-transform: uppercase; }
+.pd-rounds thead .pd-glyph { margin-right: 4px; vertical-align: -3px; }
+.pd-rounds tbody th { max-width: 18em; overflow: hidden; text-overflow: ellipsis; font: 600 0.95rem var(--set); }
+.pd-round-num { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; margin-right: 8px; border-radius: 50%; background: var(--pd-paper-2); font: 700 0.8rem var(--pd-typed); }
+.pd-rounds td b { display: block; font: 700 1rem var(--pd-typed); }
+.pd-rounds td small { font: 400 0.78rem var(--pd-typed); color: var(--pd-ink-soft); }
+.pd-rounds td.is-best { background: rgb(44 106 128 / 0.1); box-shadow: inset 3px 0 0 var(--pd-sea); }
+.pd-none { color: var(--pd-ink-soft); font-style: italic; }
+.pd-end-buttons { display: grid; justify-items: center; gap: 10px; }
+.pd-end-buttons a { color: var(--pd-sea-deep); }
+
+/* ---------- Its row on the Game Night menu ---------- */
+/* Parchment lamp with a sea-blue tint, after the atlas sheet. */
+.hub-row.row--pindrop, .instruction-card .row--pindrop { --table: #ecd9a8; --on-table: #2a2416; --row-tint: #2c6a80; }

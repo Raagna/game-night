@@ -97,6 +97,31 @@ Red Herring's manor look uses two fonts, self-hosted in `src/herring/fonts/` (La
 Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/); the licence texts sit next to the
 font files. The art, wax seal, tags and stamps are drawn in CSS for this project and don't come from any board game.
 
+## Pin Drop map
+
+Pin Drop's map is drawn with [Leaflet](https://leafletjs.com) 1.9 (copyright Volodymyr Agafonkin and CloudMade,
+[BSD 2-Clause licence](https://github.com/Leaflet/Leaflet/blob/main/LICENSE)), installed from npm.
+
+The map tiles are loaded from NASA's Global Imagery Browse Services (GIBS) while the game is played; none are stored
+in this repository. GIBS needs no key and asks only that it be acknowledged:
+
+- **Imagery**: `BlueMarble_ShadedRelief_Bathymetry`, NASA Earth Observatory's Blue Marble. We acknowledge the use of
+  imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data
+  and Information System (ESDIS).
+- **Borders and coastlines**: the GIBS `Reference_Features` layer, built from OpenStreetMap data,
+  © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
+  [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
+
+The map shows both credits in its corner. It carries no place names, so the clues can't be read off it.
+
+## Pin Drop places and look
+
+The clues in `src/pindrop/places.json` were written for this project. The coordinates are the well-known locations
+of each place; places whose spot couldn't be pinned down well (a whole desert, a long canal) were left out.
+The typed text reuses Courier Prime from `src/herring/fonts/` (see Red Herring fonts above); the headings use
+Barlow Condensed and Barlow Semi Condensed from Fontsource (SIL Open Font License 1.1). The cork board, map sheet,
+pins, postcard and stamps are drawn in CSS and SVG for this project.
+
 ## Great Minds prompts, font and sounds
 
 The prompts in `src/minds/prompts.json` were written for this project. The sounds are synthesized in the browser by
