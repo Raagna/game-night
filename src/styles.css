@@ -214,6 +214,14 @@ select { background-color: var(--well); }
   text-align: center;
   font: 700 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase;
 }
+.server-note {
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  font: 600 0.95rem var(--set); letter-spacing: 0; text-transform: none;
+}
+.server-note button {
+  font: 700 0.85rem var(--flap-font); letter-spacing: 0.16em; padding: 4px 14px;
+  background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 4px; cursor: pointer;
+}
 .server-waking small {
   display: block; margin-top: 2px;
   font: 500 0.85rem var(--set); letter-spacing: 0; text-transform: none; opacity: 0.85;
