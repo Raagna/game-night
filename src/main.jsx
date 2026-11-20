@@ -1032,6 +1032,12 @@ function EndGame({ game, host, display = false }) {
 }
 // ---------- Back to settings ----------
 const CLOSED_MESSAGE = "The host closed that game to change the settings. Scan the new QR code, or enter the new code to join again.";
+// The server closes a room nobody has played in for hours (reason "idle"; ROOM_IDLE_MS in server/index.js).
+const IDLE_MESSAGE = "That game was closed after hours without play. Ask the host to start a new one, then enter its code.";
+const closedMessage = (reason) => (reason === "idle" ? IDLE_MESSAGE : CLOSED_MESSAGE);
+const controllerClosedNote = (reason) => reason === "idle"
+  ? "That game was closed after hours without play. Start a new lobby on the TV, then open the host controller from it."
+  : "That game was closed to change the settings. Open the host controller again from the new lobby on the TV.";
 const NO_HOST_KEY = "Only the host’s screens can run a game. Open the controller with “Open host controller” on the TV, or scan “Use your phone as the controller” on a controller that’s already open.";
 // Back to the game's settings, from the lobby or after starting by mistake. It ends this room: every phone is sent
 // back to the join screen, and creating the lobby again makes a new room with a new code.
@@ -1114,7 +1120,7 @@ function App() {
   gameKind.current = game ? game.kind || "jeopardy" : gameKind.current;
   // The host closed the room (from this screen or the other host screen).
   const roomClosed = useRef(null);
-  roomClosed.current = () => {
+  roomClosed.current = (reason) => {
     if (host) {
       sessionStorage.removeItem("displayCode");
       lastFail.current?.(""); // the setup's "Creating…" button is ready again
@@ -1122,11 +1128,11 @@ function App() {
       setGame(null);
     } else if (controller) {
       sessionStorage.removeItem("hostCode");
-      setControllerNote("The game was closed to change the settings. Open the host controller again from the new lobby on the TV.");
+      setControllerNote(controllerClosedNote(reason));
       setGame(null);
     } else {
       clearPlayerSession(); setPlayerId(undefined); setGame(null);
-      setJoinError(CLOSED_MESSAGE);
+      setJoinError(closedMessage(reason));
       history.replaceState({}, "", location.pathname);
     }
   };
@@ -1147,7 +1153,7 @@ function App() {
           if (err) return socket.disconnect().connect();
           if (r.ok) setGame(r.game);
           else if (host) { sessionStorage.removeItem("displayCode"); setGame(null); }
-          else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote("That game was closed to change the settings. Open the host controller again from the new lobby on the TV."); }
+          else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote(controllerClosedNote(r.reason)); }
           else if (r.denied) setControllerNote(NO_HOST_KEY);
           setRestoring(false);
         });
@@ -1160,7 +1166,7 @@ function App() {
         if (r.ok && r.rejoined) { setPlayerId(r.playerId); setGame(r.game); }
         else {
           clearPlayerSession(); setPlayerId(undefined); setGame(null);
-          setJoinError(r.closed ? CLOSED_MESSAGE : "That game has ended or the server restarted. Enter the code to join again.");
+          setJoinError(r.closed ? closedMessage(r.reason) : "That game has ended or the server restarted. Enter the code to join again.");
         }
         setRestoring(false);
       });
@@ -1172,7 +1178,7 @@ function App() {
       if (!socket.connected) socket.connect(); else resync();
     };
     const kicked = () => { clearPlayerSession(); location.assign("./"); };
-    const closed = () => roomClosed.current();
+    const closed = (info) => roomClosed.current(info?.reason);
     socket.on("game:update", setGame);
     socket.on("player:kicked", kicked);
     socket.on("game:closed", closed);

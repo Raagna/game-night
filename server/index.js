@@ -312,19 +312,37 @@ function makeGame(code, rawConfig) {
 
 // Rooms the host closed by going back to the settings. Their codes aren't handed out again for a while, so a
 // phone holding an old code is told the game was closed rather than landing in someone else's new room.
+// Each entry is { at, reason }: 'host' (Back to settings) or 'idle' (nobody played for ROOM_IDLE_MS, below).
 const closedGames = new Map()
 const CLOSED_CODE_MS = 12 * 60 * 60 * 1000
 const wasClosed = (code) => closedGames.has(String(code || '').toUpperCase())
-function forgetOldClosedGames() { const now=Date.now(); for (const [code, at] of closedGames) if (now - at > CLOSED_CODE_MS) closedGames.delete(code) }
-// Back to settings: end the room. Every phone, TV and controller in it is told, taken out of it, and the room is freed.
-function closeGame(game) {
+const closedReason = (code) => closedGames.get(String(code || '').toUpperCase())?.reason
+function forgetOldClosedGames() { const now=Date.now(); for (const [code, { at }] of closedGames) if (now - at > CLOSED_CODE_MS) closedGames.delete(code) }
+// End the room: every phone, TV and controller in it is told why, taken out of it, and the room is freed.
+function closeGame(game, reason = 'host') {
   clearGameTimers(game); gameTimers.delete(game.code)
   for (const timer of game.holds?.values() || []) clearTimeout(timer)
   for (const playerId of game.players.keys()) cancelLeave(game.code, playerId)
-  games.delete(game.code); closedGames.set(game.code, Date.now())
-  io.to(game.code).emit('game:closed', { code: game.code })
+  games.delete(game.code); closedGames.set(game.code, { at: Date.now(), reason })
+  io.to(game.code).emit('game:closed', { code: game.code, reason })
   io.in(game.code).socketsLeave(game.code)
 }
+
+// Abandoned rooms. A room otherwise lasts until the host goes back to the settings, so a TV tab closed mid-game would
+// keep its room (players, timers, the whole board) in memory for good. Any socket event naming the room counts as
+// activity; a room with none for ROOM_IDLE_MS is closed like Back to settings, with reason 'idle'.
+// The two env variables are only there so the tests can use short times.
+const ROOM_IDLE_MS = Number(process.env.ROOM_IDLE_MS) || 6 * 60 * 60 * 1000
+const ROOM_SWEEP_MS = Number(process.env.ROOM_SWEEP_MS) || 10 * 60 * 1000
+function touchRoom(code) { const game = typeof code === 'string' && games.get(code.toUpperCase()); if (game) game.lastActiveAt = Date.now() }
+function closeIdleRooms(now = Date.now()) {
+  for (const game of [...games.values()]) {
+    game.lastActiveAt ??= now // a room rebuilt in place (Jeoparty's replay) starts its clock at the next sweep
+    if (now - game.lastActiveAt >= ROOM_IDLE_MS) closeGame(game, 'idle')
+  }
+  forgetOldClosedGames()
+}
+setInterval(closeIdleRooms, ROOM_SWEEP_MS).unref()
 
 // The host's key to a room. Only the screen that created it gets it (it's never in the public game), and only a
 // screen holding it can become the TV or the host controller, so knowing the room code isn't enough to run the game.
@@ -335,12 +353,13 @@ function isHostToken(game, token) {
 }
 
 io.on('connection', (socket) => {
+  socket.use(([, payload], next) => { touchRoom(payload?.code); next() })
   socket.on('host:create', (config, ack) => {
     forgetOldClosedGames()
     let code; do { code = id() } while (games.has(code) || closedGames.has(code))
     const mode = modeFor(config?.game)
     let game; try { game = mode ? mode.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
-    game.hostSocketId = socket.id; game.hostToken = newHostToken(); games.set(code, game)
+    game.hostSocketId = socket.id; game.hostToken = newHostToken(); game.lastActiveAt = Date.now(); games.set(code, game)
     socket.join(code); ack?.({ ok: true, code, hostToken: game.hostToken, game: publicGame(game) })
   })
   socket.on('host:close', ({ code } = {}, ack) => {
@@ -348,7 +367,7 @@ io.on('connection', (socket) => {
     closeGame(game); ack?.({ ok: true })
   })
   socket.on('host:join', ({ code, display, hostToken } = {}, ack) => {
-    const game = games.get(String(code || '').toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), error: 'Game not found' })
+    const game = games.get(String(code || '').toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), reason: closedReason(code), error: 'Game not found' })
     if (!isHostToken(game, hostToken)) return ack?.({ ok: false, denied: true, error: 'Only the host’s screens can open this game.' })
     socket.data.controllerGame = game.code; if (display) game.hostSocketId = socket.id
     socket.join(game.code); ack?.({ ok: true, game: publicGame(game) }); emitGame(game)
@@ -356,7 +375,7 @@ io.on('connection', (socket) => {
   })
   socket.on('player:join', ({ code, name, returningPlayerId }, ack) => {
     const game = games.get(code?.toUpperCase())
-    if (!game) return ack?.(wasClosed(code) ? { ok: false, closed: true, error: 'The host closed this game. Ask for the new code.' } : { ok: false, error: 'Game not found' })
+    if (!game) return ack?.(wasClosed(code) ? { ok: false, closed: true, reason: closedReason(code), error: closedReason(code) === 'idle' ? 'This game was closed after hours without play. Ask for a new code.' : 'The host closed this game. Ask for the new code.' } : { ok: false, error: 'Game not found' })
     const returning = game.players.get(returningPlayerId)
     if (returning) {
       cancelLeave(game.code, returning.id)
