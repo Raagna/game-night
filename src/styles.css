@@ -23,7 +23,7 @@
   --flap-face-lo: #1d1e21;
   --flap-gap: #0b0b0d;
   --paint: #f2f2ee;
-  --paint-dim: #6b6e75;
+  --paint-dim: #7f8287; /* 4.6:1 on --board, 5:1 on --well (it was 3.5:1) */
   /* The lamp: each game's one colour. The house lamp is amber. */
   --table: #e8a23a;
   --on-table: #1a1205;

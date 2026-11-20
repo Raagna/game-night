@@ -76,7 +76,7 @@ body:has(.rh.is-night) { background: #060a16; }
   --table: var(--moon);
   --on-table: var(--on-moon);
   --paint: #e7ecf8;
-  --paint-dim: #6f7a9a;
+  --paint-dim: #75809f; /* 4.6:1 on the night board */
   --steel-hi: #b0bbd8;
   --steel: #8b97b8;
   --steel-mid: #4d5877;
