@@ -259,11 +259,12 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     if (start != null) game.rotation.guess[round.control] = start
     nextGuesser(game)
   }
-  // Where the team's guessing rotation starts: `step` players on from the face-off player, in team order, skipping
-  // anyone who has dropped out (the face-off player included). Null keeps the rotation as it was.
-  function guessStart(game, team, faceoffId, step) {
-    const roster = [...game.players.values()].filter((player) => player.team === team), members = teamMembers(game, team)
-    const at = roster.findIndex((player) => player.id === faceoffId)
+  // Where a team's rotation goes next: `step` players on from `fromId`, in team order, skipping anyone who has dropped
+  // out (`fromId` included). `fromId` keeps its place in the order even if they've just left or moved to the other
+  // team, so whoever was after them is next. Null keeps the rotation as it was.
+  function guessStart(game, team, fromId, step) {
+    const roster = [...game.players.values()].filter((player) => player.team === team || player.id === fromId), members = teamMembers(game, team)
+    const at = roster.findIndex((player) => player.id === fromId)
     if (at < 0 || !members.length) return null
     for (let i = 0; i < roster.length; i++) {
       const player = roster[(at + step + i) % roster.length]
@@ -382,7 +383,11 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
     const round = game.round
     if (game.status !== 'playing' || !round || team == null) return
     const { faceoff } = round
+    // A rotation counts through the connected teammates, so someone leaving shifts everyone after them down one place.
+    // Pointing it at the player after the one who left keeps that player next, rather than skipping them.
+    const resume = (kind) => { const at = guessStart(game, team, playerId, 1); if (at != null) game.rotation[kind][team] = at }
     if (['faceoffRead', 'faceoff', 'faceoffAnswer'].includes(round.phase) && faceoff.playerIds[team] === playerId) {
+      resume('faceoff')
       const replacement = nextFrom(game, 'faceoff', team)
       if (replacement) {
         faceoff.playerIds[team] = replacement.id
@@ -393,7 +398,7 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
         winFaceoff(game, other(team))
       }
     } else if (round.phase === 'choose' && round.chooserId === playerId) choose(game, true, false)
-    else if (round.phase === 'guessing' && round.guesserId === playerId) nextGuesser(game)
+    else if (round.phase === 'guessing' && round.guesserId === playerId) { resume('guess'); nextGuesser(game) }
     else if (round.phase === 'steal' && round.stealTeam === team && !teamMembers(game, team).length) endRound(game, round.control)
   }
   function playerLeft(game, playerId) {
@@ -451,8 +456,10 @@ export function createSurveyGames({ io, games, emitGame, schedule, clearGameTime
         cancelLeave(game.code, player.id)
         const socket = io.sockets.sockets.get(player.socketId)
         socket?.leave(game.code); socket?.emit('player:kicked')
-        game.players.delete(player.id)
+        // Handed off while still in the list (but no longer connected), so the turn goes to the player after them.
+        player.socketId = null
         handOff(game, player.id, player.team)
+        game.players.delete(player.id)
       }
     }
     if (action === 'replay') {
