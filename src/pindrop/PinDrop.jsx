@@ -84,9 +84,12 @@ function AtlasMap({ pack, className = "", interactive = true, pin = null, pinCol
   useEffect(() => {
     const m = L.map(el.current, {
       worldCopyJump: true, minZoom: 1, maxZoom: MAX_ZOOM, zoomSnap: 0.25, zoomDelta: 1, wheelPxPerZoomLevel: 90,
-      maxBounds: [[-85, -720], [85, 720]], maxBoundsViscosity: 1, zoomControl: interactive, attributionControl: true,
+      maxBounds: [[-85, -720], [85, 720]], maxBoundsViscosity: 1, zoomControl: false, attributionControl: true,
       dragging: interactive, touchZoom: interactive, doubleClickZoom: interactive, scrollWheelZoom: interactive, boxZoom: false, keyboard: interactive,
     });
+    // Zoom buttons bottom right: each pin's name label sits above its pin, so the labels crowd the top corners, where
+    // Leaflet puts the buttons by default (they covered "YOU" on the phone's reveal).
+    if (interactive) L.control.zoom({ position: "bottomright" }).addTo(m);
     L.tileLayer(BASE_TILES, { maxNativeZoom: 8, maxZoom: MAX_ZOOM, className: "pd-base", attribution: ATTRIBUTION }).addTo(m);
     L.tileLayer(BORDER_TILES, { maxNativeZoom: 9, maxZoom: MAX_ZOOM, className: "pd-borders" }).addTo(m);
     m.fitBounds(PINDROP_PACKS[pack]?.view || PINDROP_PACKS.world.view);

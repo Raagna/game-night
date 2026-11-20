@@ -447,6 +447,17 @@ body:has(.gm) :is(.sv-sound, .controller-link, .back-to-settings.is-tv):hover { 
 .gm-my-rounds li.is-zero .gm-r-points { color: var(--steel-mid); }
 .gm-r-points .gm-wolf-icon { color: var(--gm-night-hi); }
 .gm-end-buttons { display: grid; justify-items: center; gap: 12px; margin-top: 6px; }
+/* On a TV the standings (up to 12 rows) and the round-by-round table side by side, so both fit on one screen
+   above the Sound / Back to settings rail instead of the table running off the bottom. */
+@media (min-width: 1100px) {
+  .gm-end.gm-tv { grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.6fr); justify-items: stretch; align-items: start; gap: 14px 36px; max-width: 1760px; margin-inline: auto; width: 100%; }
+  .gm-end.gm-tv > :not(.gm-standings, .gm-breakdown) { grid-column: 1 / -1; justify-self: center; }
+  .gm-end.gm-tv .gm-standings { width: 100%; gap: 6px; }
+  .gm-end.gm-tv .gm-standings li { padding-block: 5px; }
+  .gm-end.gm-tv .gm-standings b { font-size: 1.2rem; }
+  .gm-end.gm-tv .gm-standing-score { font-size: 1.5rem; }
+  .gm-end.gm-tv .gm-breakdown { width: 100%; }
+}
 .gm-end-buttons p { font: 500 1.2rem var(--gm-font); }
 .gm-end-buttons a { color: var(--gm-cream); font: 500 1rem var(--gm-font); }
 
