@@ -74,3 +74,38 @@ describe('idle rooms', { concurrency: true }, () => {
     assert.equal(again.reason, 'host'); assert.match(again.error, /host closed/)
   })
 })
+
+describe('codes, player IDs and /lan', { concurrency: true }, () => {
+  test('room codes are six characters with no 0, O, 1 or I', async () => {
+    const tv = await connect()
+    for (let i = 0; i < 40; i++) {
+      const { code } = await ask(tv, 'host:create', BOARD)
+      assert.match(code, /^[A-HJ-NP-Z2-9]{6}$/)
+      await ask(tv, 'host:close', { code })
+    }
+  })
+  test('player IDs are random UUIDs, and a phone rejoins with its own', async () => {
+    const { code, playerId } = await room()
+    assert.match(playerId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    const again = await ask(await connect(), 'player:join', { code, returningPlayerId: playerId })
+    assert.equal(again.ok, true); assert.equal(again.playerId, playerId)
+  })
+  test('/lan answers on a home server', async () => {
+    const reply = await (await fetch(`${SERVER_URL}/lan`)).json()
+    assert.ok(Array.isArray(reply.addresses))
+  })
+})
+
+test('/lan is off on the hosted server (RENDER set)', async () => {
+  const port = PORT + 1
+  const hosted = spawn(process.execPath, [fileURLToPath(new URL('./index.js', import.meta.url))], { env: { ...process.env, PORT: String(port), RENDER: 'true' }, stdio: ['ignore', 'pipe', 'inherit'] })
+  try {
+    await new Promise((resolve, reject) => {
+      hosted.stdout.on('data', (data) => { if (String(data).includes('listening')) resolve() })
+      hosted.on('exit', (code) => reject(new Error(`server exited with ${code}`)))
+    })
+    const response = await fetch(`http://localhost:${port}/lan`)
+    assert.equal(response.status, 404)
+    assert.deepEqual(await response.json(), { addresses: [] })
+  } finally { hosted.kill() }
+})
