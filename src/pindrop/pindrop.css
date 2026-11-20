@@ -32,7 +32,7 @@ body:has(.pd), body:has(.pd-setup), .pd, .pd-setup {
   --rule: #d2c196;
   --rule-strong: #b6a275;
   --paint: var(--pd-ink);
-  --paint-dim: #7d8090;
+  --paint-dim: #5c6272; /* 4.6:1 on the paper (it was 3:1) */
   --steel-hi: #384459;
   --steel: #556076;
   --steel-mid: #8a8f9c;

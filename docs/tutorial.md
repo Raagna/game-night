@@ -1,9 +1,22 @@
 # Tutorials: a practice round before the first real round
 
 Any game can run a short guided practice round before its first real round. Nothing scores, and a coach banner on
-the TV, the host controller and every phone explains each step as the players do it. Jeoparty! is the first game to
-use it (two practice clues: a regular clue, then a Daily Double); this page is the contract for adding one to another
-game.
+the TV, the host controller and every phone explains each step as the players do it. Every game has one now, turned
+on by a "Practice round first" checkbox in its setup (on by default, off on Play again); this page is the contract
+for adding one to a new game, with Jeoparty! as the worked example.
+
+| Game | Its practice round | Server |
+| --- | --- | --- |
+| Jeoparty! | two clues: a regular clue, then a Daily Double | `server/index.js` |
+| Survey Says! | one question: face-off, play or pass, a guess, a strike and a steal | `server/survey.js` |
+| Spin & Solve | one puzzle: spin, a consonant, a vowel, a Bankrupt or Lose a Turn, and the solve | `server/wheel.js` |
+| Fib or Fact | one easy clue: pick a category, write a fib, vote | `server/fib.js` |
+| Price Check | two products: one bid and one Higher or Lower call | `server/price.js` |
+| Tip of the Tongue | one 25-second turn on three easy words | `server/tongue.js` |
+| Word Budget | one card: bidding, clueing, going over and the steal | `server/budget.js` |
+| Red Herring | a short case (everyone a Detective against a made-up killer; the storyteller skips it) | `server/herring.js`, `server/herringCase.js` |
+| Pin Drop | one easy place | `server/pindrop.js` |
+| Great Minds | one prompt: matching, scoring and the Lone Wolf | `server/greatminds.js` |
 
 The pieces:
 
@@ -37,7 +50,7 @@ const TUTORIAL_STEPS = ['faceoff', 'guess', 'strike', 'done']
 if (fromLobby && game.config.tutorial) { beginTutorial(game, TUTORIAL_STEPS); /* set up your practice state */ }
 ```
 
-Add a `tutorial: !!config.tutorial` option to your game's config (Jeoparty's setup has a "Practice round first"
+Add a `tutorial: !!config.tutorial` option to your game's config (every game's setup has a "Practice round first"
 checkbox, on by default), and leave it off on a replay.
 
 ### 2. Move through the steps

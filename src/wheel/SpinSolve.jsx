@@ -152,7 +152,8 @@ function phaseText(game) {
       if (round.control == null) return { title: "Waiting for players", detail: "Nobody’s phone is connected" };
       return { title: `${possessive(who)} turn`, detail: teamActor(game) + (round.consonantsLeft ? "Spin, buy a vowel or solve" : "Only vowels left: buy a vowel or solve") };
     case "spinning":
-      return { title: `${who} is spinning…`, detail: "" };
+      // A team name can be plural ("the Reds"), so a team's spin names the player: "Sam is spinning for the Reds…".
+      return { title: isTeams(game) && playerName(game, round.actorId) ? `${playerName(game, round.actorId)} is spinning for ${who}…` : `${who} is spinning…`, detail: "" };
     case "consonant":
       return { title: `${who} landed on ${landedName(round)}`, detail: landedHint(round) };
     case "mystery":
@@ -1522,7 +1523,7 @@ export function WheelEnd({ game, host, display, onAction }) {
     <main className="end wheel-game">
       {display && <SoundToggle />}
       <ShowTitle />
-      <h1 className="ws-winner-title">{!ranked.length ? "Game over" : tied ? "It’s a tie!" : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
+      <h1 className="ws-winner-title">{!ranked.length ? "Game over" : tied ? "It’s a tie!" : isTeams(game) ? `Winners: ${nameOf(game, game.winner ?? ranked[0].i)}` : `${nameOf(game, game.winner ?? ranked[0].i)} wins!`}</h1>
       {game.bonus?.prize != null && (
         <p className="ws-bonus-result">
           {game.bonus.solved

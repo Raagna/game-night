@@ -1,5 +1,5 @@
 import express from 'express'
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
 import { Server } from 'socket.io'
@@ -41,7 +41,9 @@ const HOLD_LIMIT_MS = 15000
 const MAX_HOLDS = 3
 function cancelLeave(code, playerId) { const key=leaveKey(code,playerId); clearTimeout(leaveTimers.get(key)); leaveTimers.delete(key) }
 
-const id = () => Math.random().toString(36).slice(2, 8).toUpperCase()
+// Room codes are read off a TV across the room and typed on a phone, so they leave out the look-alikes 0/O and 1/I.
+const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const roomCode = () => Array.from({ length: 6 }, () => CODE_LETTERS[randomInt(CODE_LETTERS.length)]).join('')
 const clone = (x) => JSON.parse(JSON.stringify(x))
 const connectedPlayers = (game) => [...game.players.values()].filter((player) => player.socketId)
 function assignLowestConnected(game) {
@@ -312,19 +314,37 @@ function makeGame(code, rawConfig) {
 
 // Rooms the host closed by going back to the settings. Their codes aren't handed out again for a while, so a
 // phone holding an old code is told the game was closed rather than landing in someone else's new room.
+// Each entry is { at, reason }: 'host' (Back to settings) or 'idle' (nobody played for ROOM_IDLE_MS, below).
 const closedGames = new Map()
 const CLOSED_CODE_MS = 12 * 60 * 60 * 1000
 const wasClosed = (code) => closedGames.has(String(code || '').toUpperCase())
-function forgetOldClosedGames() { const now=Date.now(); for (const [code, at] of closedGames) if (now - at > CLOSED_CODE_MS) closedGames.delete(code) }
-// Back to settings: end the room. Every phone, TV and controller in it is told, taken out of it, and the room is freed.
-function closeGame(game) {
+const closedReason = (code) => closedGames.get(String(code || '').toUpperCase())?.reason
+function forgetOldClosedGames() { const now=Date.now(); for (const [code, { at }] of closedGames) if (now - at > CLOSED_CODE_MS) closedGames.delete(code) }
+// End the room: every phone, TV and controller in it is told why, taken out of it, and the room is freed.
+function closeGame(game, reason = 'host') {
   clearGameTimers(game); gameTimers.delete(game.code)
   for (const timer of game.holds?.values() || []) clearTimeout(timer)
   for (const playerId of game.players.keys()) cancelLeave(game.code, playerId)
-  games.delete(game.code); closedGames.set(game.code, Date.now())
-  io.to(game.code).emit('game:closed', { code: game.code })
+  games.delete(game.code); closedGames.set(game.code, { at: Date.now(), reason })
+  io.to(game.code).emit('game:closed', { code: game.code, reason })
   io.in(game.code).socketsLeave(game.code)
 }
+
+// Abandoned rooms. A room otherwise lasts until the host goes back to the settings, so a TV tab closed mid-game would
+// keep its room (players, timers, the whole board) in memory for good. Any socket event naming the room counts as
+// activity; a room with none for ROOM_IDLE_MS is closed like Back to settings, with reason 'idle'.
+// The two env variables are only there so the tests can use short times.
+const ROOM_IDLE_MS = Number(process.env.ROOM_IDLE_MS) || 6 * 60 * 60 * 1000
+const ROOM_SWEEP_MS = Number(process.env.ROOM_SWEEP_MS) || 10 * 60 * 1000
+function touchRoom(code) { const game = typeof code === 'string' && games.get(code.toUpperCase()); if (game) game.lastActiveAt = Date.now() }
+function closeIdleRooms(now = Date.now()) {
+  for (const game of [...games.values()]) {
+    game.lastActiveAt ??= now // a room rebuilt in place (Jeoparty's replay) starts its clock at the next sweep
+    if (now - game.lastActiveAt >= ROOM_IDLE_MS) closeGame(game, 'idle')
+  }
+  forgetOldClosedGames()
+}
+setInterval(closeIdleRooms, ROOM_SWEEP_MS).unref()
 
 // The host's key to a room. Only the screen that created it gets it (it's never in the public game), and only a
 // screen holding it can become the TV or the host controller, so knowing the room code isn't enough to run the game.
@@ -335,12 +355,13 @@ function isHostToken(game, token) {
 }
 
 io.on('connection', (socket) => {
+  socket.use(([, payload], next) => { touchRoom(payload?.code); next() })
   socket.on('host:create', (config, ack) => {
     forgetOldClosedGames()
-    let code; do { code = id() } while (games.has(code) || closedGames.has(code))
+    let code; do { code = roomCode() } while (games.has(code) || closedGames.has(code))
     const mode = modeFor(config?.game)
     let game; try { game = mode ? mode.makeGame(code, config) : makeGame(code, config) } catch (error) { return ack?.({ ok: false, error: error.message }) }
-    game.hostSocketId = socket.id; game.hostToken = newHostToken(); games.set(code, game)
+    game.hostSocketId = socket.id; game.hostToken = newHostToken(); game.lastActiveAt = Date.now(); games.set(code, game)
     socket.join(code); ack?.({ ok: true, code, hostToken: game.hostToken, game: publicGame(game) })
   })
   socket.on('host:close', ({ code } = {}, ack) => {
@@ -348,7 +369,7 @@ io.on('connection', (socket) => {
     closeGame(game); ack?.({ ok: true })
   })
   socket.on('host:join', ({ code, display, hostToken } = {}, ack) => {
-    const game = games.get(String(code || '').toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), error: 'Game not found' })
+    const game = games.get(String(code || '').toUpperCase()); if (!game) return ack?.({ ok: false, closed: wasClosed(code), reason: closedReason(code), error: 'Game not found' })
     if (!isHostToken(game, hostToken)) return ack?.({ ok: false, denied: true, error: 'Only the host’s screens can open this game.' })
     socket.data.controllerGame = game.code; if (display) game.hostSocketId = socket.id
     socket.join(game.code); ack?.({ ok: true, game: publicGame(game) }); emitGame(game)
@@ -356,7 +377,7 @@ io.on('connection', (socket) => {
   })
   socket.on('player:join', ({ code, name, returningPlayerId }, ack) => {
     const game = games.get(code?.toUpperCase())
-    if (!game) return ack?.(wasClosed(code) ? { ok: false, closed: true, error: 'The host closed this game. Ask for the new code.' } : { ok: false, error: 'Game not found' })
+    if (!game) return ack?.(wasClosed(code) ? { ok: false, closed: true, reason: closedReason(code), error: closedReason(code) === 'idle' ? 'This game was closed after hours without play. Ask for a new code.' : 'The host closed this game. Ask for the new code.' } : { ok: false, error: 'Game not found' })
     const returning = game.players.get(returningPlayerId)
     if (returning) {
       cancelLeave(game.code, returning.id)
@@ -369,7 +390,7 @@ io.on('connection', (socket) => {
     if (!['lobby', 'playing'].includes(game.status)) return ack?.({ ok: false, error: 'This game is no longer accepting new players.' })
     if (game.players.size >= maxPlayers) return ack?.({ ok: false, error: `This game already has the maximum of ${maxPlayers} players.` })
     const clean = String(name || '').trim().slice(0, 20); if (!clean) return ack?.({ ok: false, error: 'Enter a name' })
-    const player = { id: id(), name: clean, score: 0, socketId: socket.id }
+    const player = { id: randomUUID(), name: clean, score: 0, socketId: socket.id }
     game.players.set(player.id, player); mode?.playerJoined(game, player); socket.join(game.code); socket.data.game = game.code; socket.data.player = player.id
     ack?.({ ok: true, playerId: player.id, game: publicGame(game) }); emitGame(game)
   })
@@ -512,8 +533,12 @@ io.on('connection', (socket) => {
 app.get('/health', (_, res) => res.json({ ok: true, games: games.size }))
 // When the host screen runs on localhost, phones can't reach "localhost". The host page asks for this
 // computer's Wi-Fi/LAN address so the join QR code points somewhere a phone on the same network can open.
+// Only for a server on the home network: on the hosted server (Render sets RENDER; NODE_ENV=production elsewhere)
+// it would just hand out the machine's internal addresses.
+const ON_PRODUCTION = !!process.env.RENDER || process.env.NODE_ENV === 'production'
 app.get('/lan', (_, res) => {
   res.set('Access-Control-Allow-Origin', '*')
+  if (ON_PRODUCTION) return res.status(404).json({ addresses: [] })
   const addresses=Object.values(networkInterfaces()).flat().filter((net)=>net && net.family==='IPv4' && !net.internal).map((net)=>net.address)
   res.json({ addresses })
 })

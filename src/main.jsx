@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer, ConfirmSubmit } from "./shared";
+import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer, ConfirmSubmit, ServerWaking, firstContactMs } from "./shared";
 import {
   fallbackQuestions,
   loadSeason,
@@ -967,7 +967,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
   const join = (event) => {
     event.preventDefault();
     tone(1,.01,"sine",.001); setBusy(true); setError("");
-    socket.timeout(8000).emit("player:join", { code: code.trim(), name, returningPlayerId: sessionStorage.playerId }, (err, r) => {
+    socket.timeout(firstContactMs(8000)).emit("player:join", { code: code.trim(), name, returningPlayerId: sessionStorage.playerId }, (err, r) => {
       setBusy(false);
       if (err) return setError("Couldn’t reach the game server. Check your connection and try again.");
       if (r.ok) return onJoined(r.game, r.playerId);
@@ -1032,6 +1032,17 @@ function EndGame({ game, host, display = false }) {
 }
 // ---------- Back to settings ----------
 const CLOSED_MESSAGE = "The host closed that game to change the settings. Scan the new QR code, or enter the new code to join again.";
+// The server closes a room nobody has played in for hours (reason "idle"; ROOM_IDLE_MS in server/index.js).
+const IDLE_MESSAGE = "That game was closed after hours without play. Ask the host to start a new one, then enter its code.";
+const closedMessage = (reason) => (reason === "idle" ? IDLE_MESSAGE : CLOSED_MESSAGE);
+// A screen reconnects and its room is gone without having been closed: the game server restarted (an update, or
+// Render putting it to sleep) and games live only in its memory. Each screen says so and what to do next.
+const RESTART_MESSAGE = "The game server restarted, so that game was lost. When the host starts a new lobby, join with its new code.";
+const RESTART_NOTE_TV = "The game server restarted, so that game was lost. Your settings are still here: create a new lobby, and everyone joins with its new code.";
+const RESTART_NOTE_CONTROLLER = "The game server restarted, so that game was lost. Create a new lobby on the TV, then open the host controller from it.";
+const controllerClosedNote = (reason) => reason === "idle"
+  ? "That game was closed after hours without play. Start a new lobby on the TV, then open the host controller from it."
+  : "That game was closed to change the settings. Open the host controller again from the new lobby on the TV.";
 const NO_HOST_KEY = "Only the host’s screens can run a game. Open the controller with “Open host controller” on the TV, or scan “Use your phone as the controller” on a controller that’s already open.";
 // Back to the game's settings, from the lobby or after starting by mistake. It ends this room: every phone is sent
 // back to the join screen, and creating the lobby again makes a new room with a new code.
@@ -1104,6 +1115,7 @@ function App() {
     [connected, setConnected] = useState(socket.connected),
     [joinError, setJoinError] = useState(""),
     [controllerNote, setControllerNote] = useState(""),
+    [tvNote, setTvNote] = useState(""),
     // The game this TV is set up for. Its setup screen stays mounted (hidden) during the game, so going back to
     // the settings finds every choice as the host left it.
     [pick, setPick] = useState(() => (host ? params.get("game") : null)),
@@ -1114,7 +1126,7 @@ function App() {
   gameKind.current = game ? game.kind || "jeopardy" : gameKind.current;
   // The host closed the room (from this screen or the other host screen).
   const roomClosed = useRef(null);
-  roomClosed.current = () => {
+  roomClosed.current = (reason) => {
     if (host) {
       sessionStorage.removeItem("displayCode");
       lastFail.current?.(""); // the setup's "Creating…" button is ready again
@@ -1122,11 +1134,11 @@ function App() {
       setGame(null);
     } else if (controller) {
       sessionStorage.removeItem("hostCode");
-      setControllerNote("The game was closed to change the settings. Open the host controller again from the new lobby on the TV.");
+      setControllerNote(controllerClosedNote(reason));
       setGame(null);
     } else {
       clearPlayerSession(); setPlayerId(undefined); setGame(null);
-      setJoinError(CLOSED_MESSAGE);
+      setJoinError(closedMessage(reason));
       history.replaceState({}, "", location.pathname);
     }
   };
@@ -1146,9 +1158,10 @@ function App() {
         socket.timeout(5000).emit("host:join", { code, display: host, hostToken }, (err, r) => {
           if (err) return socket.disconnect().connect();
           if (r.ok) setGame(r.game);
-          else if (host) { sessionStorage.removeItem("displayCode"); setGame(null); }
-          else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote("That game was closed to change the settings. Open the host controller again from the new lobby on the TV."); }
+          else if (host) { sessionStorage.removeItem("displayCode"); lastFail.current?.(""); setGame(null); if (!r.closed) setTvNote(RESTART_NOTE_TV); else if (r.reason === "idle") setTvNote(IDLE_MESSAGE); }
+          else if (r.closed) { sessionStorage.removeItem("hostCode"); setControllerNote(controllerClosedNote(r.reason)); }
           else if (r.denied) setControllerNote(NO_HOST_KEY);
+          else { sessionStorage.removeItem("hostCode"); setControllerNote(RESTART_NOTE_CONTROLLER); }
           setRestoring(false);
         });
         return;
@@ -1160,7 +1173,7 @@ function App() {
         if (r.ok && r.rejoined) { setPlayerId(r.playerId); setGame(r.game); }
         else {
           clearPlayerSession(); setPlayerId(undefined); setGame(null);
-          setJoinError(r.closed ? CLOSED_MESSAGE : "That game has ended or the server restarted. Enter the code to join again.");
+          setJoinError(r.closed ? closedMessage(r.reason) : RESTART_MESSAGE);
         }
         setRestoring(false);
       });
@@ -1172,7 +1185,7 @@ function App() {
       if (!socket.connected) socket.connect(); else resync();
     };
     const kicked = () => { clearPlayerSession(); location.assign("./"); };
-    const closed = () => roomClosed.current();
+    const closed = (info) => roomClosed.current(info?.reason);
     socket.on("game:update", setGame);
     socket.on("player:kicked", kicked);
     socket.on("game:closed", closed);
@@ -1201,11 +1214,11 @@ function App() {
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   const create = (config, fail) => {
     lastFail.current = fail;
-    socket.timeout(10000).emit("host:create", config, (err, r) => {
+    socket.timeout(firstContactMs(10000)).emit("host:create", config, (err, r) => {
       if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
       if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
       sessionStorage.displayCode = r.code; sessionStorage.hostToken = r.hostToken;
-      setGame(r.game);
+      setTvNote(""); setGame(r.game);
       history.replaceState({}, "", "?host");
     });
   };
@@ -1216,7 +1229,10 @@ function App() {
     <BackToSettings game={game} place={host ? "tv" : "controller"} onClosed={() => roomClosed.current()} />
     {controller && <ControllerOnPhone code={game.code} />}
   </>;
-  return <>{setupSlot}{dock}{renderScreen()}</>;
+  const note = host && !game && !restoring && tvNote && (
+    <div className="connection-banner server-note" role="status">{tvNote}<button type="button" onClick={() => setTvNote("")}>OK</button></div>
+  );
+  return <>{!game && <ServerWaking />}{note}{setupSlot}{dock}{renderScreen()}</>;
 
   function renderScreen() {
   if (!game) {

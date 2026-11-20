@@ -534,6 +534,10 @@ export function TonguePlayer({ game, playerId }) {
   const myMove = turn && ((turn.phase === "ready" || turn.phase === "play") && turn.clueGiverId === playerId || (turn.phase === "choose" && team?.id === turn.teamId));
   useEffect(() => { if (myMove) { try { navigator.vibrate?.(150); } catch {} } }, [myMove, turn?.phase]);
   if (!player) return <main className="player tt"><p className="status-card">You’re no longer in this game.</p></main>;
+  // In the practice turn the clue-giver needs the word, Pass and "Oops, I said it" on screen, so their coach goes
+  // below the controls; on a phone it would push them past the fold. Everyone else reads it first, above.
+  const coach = <Coach game={game} coach={TONGUE_COACH} place="phone" playerId={playerId} />;
+  const coachBelow = turn?.phase === "play" && giverOf(game) === playerId;
   return (
     <main className="player tt">
       <header className="player-bar"><TongueLogo /><span className="player-name">{player.name}</span></header>
@@ -541,13 +545,14 @@ export function TonguePlayer({ game, playerId }) {
         <span className="tt-my-name">{team && <span className="tt-team-num" aria-hidden="true">{teamNumber(game, team)}</span>}<span className="tt-my-text"><b>{team ? team.name : "No team yet"}</b>{team && <small>{pairNames(game, team)}</small>}</span></span>
         <Segments className="tt-my-score" value={team?.score ?? 0} digits={2} label={`${team?.score ?? 0} points`} />
       </div>
-      <Coach game={game} coach={TONGUE_COACH} place="phone" playerId={playerId} />
+      {!coachBelow && coach}
       {game.status === "lobby" || !turn ? <p className="player-status">You’re in! {team?.members.length < 2 ? "Waiting for a partner…" : "The game starts when everyone’s here."}</p> : (
         <>
           <p className="player-clue-meta">{turnLabel(game)}{isLast(game) && !game.tutorial ? " · last round" : ""}</p>
           <PlayerAction game={game} playerId={playerId} />
         </>
       )}
+      {coachBelow && coach}
     </main>
   );
 }

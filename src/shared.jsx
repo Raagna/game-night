@@ -9,6 +9,39 @@ export const SERVER =
   `${location.protocol}//${location.hostname}:3001`;
 export const JOIN_URL = "raagna.github.io/jeopardy-party";
 export const socket = io(SERVER, { autoConnect: true });
+
+// The game server sleeps when nobody has used it for a while (Render's free plan), and the first visit after that
+// waits about 50 seconds for it to start. Until the socket has connected once, the app says so instead of looking
+// broken, and the first requests (create a lobby, join a game) wait for it: firstContactMs() is their timeout.
+let everConnected = socket.connected;
+socket.on("connect", () => { everConnected = true; });
+const WAKING_AFTER_MS = 2500, WAKE_LIMIT_MS = 90000;
+export const firstContactMs = (usual) => (everConnected ? usual : WAKE_LIMIT_MS);
+// null once connected (or in the first moments, when most connections are made), "waking" while the server
+// starts, and "down" if it still hasn't answered after WAKE_LIMIT_MS (the socket keeps trying either way).
+export function useServerWaking() {
+  const [state, setState] = useState(null);
+  useEffect(() => {
+    if (everConnected) return;
+    const started = performance.now();
+    const check = () => setState(everConnected ? null : performance.now() - started >= WAKE_LIMIT_MS ? "down" : performance.now() - started >= WAKING_AFTER_MS ? "waking" : null);
+    const timer = setInterval(check, 500);
+    const connected = () => { setState(null); clearInterval(timer); };
+    socket.on("connect", connected);
+    return () => { clearInterval(timer); socket.off("connect", connected); };
+  }, []);
+  return state;
+}
+export function ServerWaking() {
+  const state = useServerWaking();
+  if (!state) return null;
+  return (
+    <div className="connection-banner server-waking" role="status">
+      {state === "waking" ? "Waking up the game server…" : "Can’t reach the game server yet. Still trying…"}
+      <small>{state === "waking" ? "The first game of the day can take up to a minute to start." : "Check your connection, or try again in a minute."}</small>
+    </div>
+  );
+}
 export const CloseIcon = () => (
   <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
 );

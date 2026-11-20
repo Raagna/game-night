@@ -16,6 +16,8 @@ function coachText(entry, place, context) {
   return typeof text === "function" ? text(context) : text || "";
 }
 // "2 of 5 want to skip": votes from connected players, out of the connected players.
+// What a game calls its host, where it isn't "host" (Red Herring's is the storyteller).
+const HOST_NAME = { herring: "storyteller" };
 const tally = (tutorial) => `${tutorial.votes.length} of ${tutorial.connected} want to skip`;
 
 // The skip control for this place. With a host: a button on the TV and the controller, and nothing on the phones.
@@ -25,7 +27,7 @@ export function TutorialSkip({ game, place, playerId, label }) {
   const tutorial = game.tutorial;
   if (!tutorial) return null;
   if (!game.hostless) {
-    if (place === "phone") return <p className="tutorial-skip-note">The host can skip the practice.</p>;
+    if (place === "phone") return <p className="tutorial-skip-note">The {HOST_NAME[game.kind] || "host"} can skip the practice.</p>;
     return <button type="button" className={(label ? "primary" : "secondary") + " tutorial-skip"} onClick={() => socket.emit("tutorial:skip", { code: game.code })}>{label || "Skip tutorial"}</button>;
   }
   const count = <p className="tutorial-tally" role="status">{tutorial.votes.length ? tally(tutorial) : "Vote on your phone to skip"}<small>Skips at {tutorial.needed}</small></p>;

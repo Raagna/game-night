@@ -29,6 +29,8 @@ Setup offers three question packs, one at a time or all together (*Everything*).
 
 The ProtoQA and Feud Sheet packs are loaded when Survey Says! opens.
 
+**Practice round** (on by default): one practice question before round one, with tips on the TV and every phone: the face-off buzz, play or pass, guessing, a strike and a steal. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
+
 The TV screen plays a buzzer for wrong answers, a ding for each answer revealed, a short fanfare when a team banks a round and an upbeat tune on the winners screen. They're all synthesized in the browser, with a sound on/off button in the corner.
 
 ### Spin & Solve
@@ -41,6 +43,7 @@ A Wheel of Fortune-style word puzzle game for 2 to 6 players on their own, or 2 
 - **The final round** ends in a speed-up: one last spin sets every consonant's value (plus $1,000), vowels are free, and each letter found gives a few seconds to solve. A tie for the lead is settled with a toss-up, and anyone who solved nothing gets $1,000 for playing.
 - **The bonus round**: the winner picks a category, spins for a sealed envelope ($40,000 to $100,000, or $1,000,000 with the Million Dollar wedge), gets R S T L N E plus three consonants and a vowel, and has ten seconds to solve it.
 - **Teams**: teammates take turns acting for the team, anyone on it can buzz in on a toss-up, and the whole team plays the bonus round.
+- **Practice round** (on by default): a short practice puzzle before the game, with tips on the TV and every phone: spinning, calling a consonant, buying a vowel, a Bankrupt or Lose a Turn, and solving. Nothing banks. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 
 Setup offers two puzzle packs, one at a time or both together (*Everything*):
 
@@ -56,6 +59,7 @@ A bluffing trivia game for 2 to 8 players (best with 4 or more), played on clues
 - **Fibs**: typing the real answer, or a copy of someone else's fib, is turned away and you write another. If there aren't enough fibs to choose from, "house fibs" (other answers from the same Jeopardy category) fill the vote up to four choices.
 - **The reveal**: the fibs that fooled somebody are shown one at a time, least popular first, with who fell for each and who wrote it, and then the fact.
 - **Game length**: 5, 7 or 9 clues. Setup loads three random seasons of the archive and deals three categories for each clue; you can swap any clue's categories before starting. The final clue comes from the hardest rows.
+- **Practice round** (on by default): one easy practice clue before the game, with tips on the TV and every phone: picking a category, writing a fib, voting for the fact and how the points work. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 
 The TV plays a pop for each fib and vote, a sliding "wah-wah" for each fib that fooled someone, a bell and fanfare for the fact and a ticking count at the end of each clock, sharing the other games' sound on/off button.
 
@@ -70,12 +74,13 @@ A price-guessing game for 2 to 8 players on real prices: what shoppers paid for 
 - **The Showcase**: the top two players each bid on a bundle of big-ticket prizes; closest without going over wins 1,500, and within 250 dollars of your own showcase wins both (1,500 more). Everyone else predicts the winner (300 if they're right).
 - **Game length**: Short (four rounds and the showcase, about 20 minutes) or Classic (eight rounds, about 40 minutes). Setup deals the products; "New products" deals again.
 - **Clocks**: 35 seconds to bid, 70 for the five Higher or Lower calls, 20 for each Pick the Priciest set, 55 for Price Order, 70 for Grocery Run and 75 for the showcase. Without a host, each reveal stays up for 16 seconds (20 for the showcase, 9 between Pick the Priciest sets).
+- **Practice round** (on by default): a quick warm-up on two products from the chosen pack before round one, with tips on the TV and every phone: one bid, one Higher or Lower call, and how a reveal shows who got what. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 - **Look**: Price Check has its own look, a bright 1970s TV showroom: saturated yellow, orange and pink, chasing marquee bulbs, price tags and big price readouts.
 
 Prices come from three packs:
 
 - **Open Prices, United States**: real receipt prices in US dollars from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py --country US` into `public/data/prices-openprices.json`.
-- **Open Prices, Canada**: real receipt prices in Canadian dollars from Canadian stores, built by `scripts/build-openprices-pack.py --country CA` into `public/data/prices-openprices-ca.json`. It is much smaller than the US pack (a few hundred products), since fewer Canadian receipts have been contributed; a product with no Canadian receipt is simply not in it.
+- **Open Prices, Canada**: real receipt prices in Canadian dollars from Canadian stores, built by `scripts/build-openprices-pack.py --country CA` into `public/data/prices-openprices-ca.json`. It is much smaller than the US pack (about 350 products), since fewer Canadian receipts have been contributed; a product with no Canadian receipt is simply not in it. Sale prices are left out, except that a sale receipt which also records the regular shelf price counts at that regular price.
 - **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project, each with its own estimated typical US price and Canadian price (a few trips differ by country, such as Québec City instead of New Orleans).
 
 The chosen country's pack is fetched when the game is set up; product photos load from Open Food Facts.
@@ -88,6 +93,7 @@ A team word game for teams of two (up to 12 players). Players pair up as they jo
 - **Scoring**: a point per word. Clearing all seven banks a bonus point for every second left on the clock. Passes are unlimited (a passed word comes round again); saying the word is a foul and throws it out.
 - **Rounds**: 3, 4 or 5. Every team takes a turn each round; partners swap who gives the clues, and in the last round each team decides. No word comes up twice until the pool runs out.
 - **Guessing**: set up to be typed (the guesser types on their phone and the game checks it) or said out loud (the clue-giver, or the host, taps Got it).
+- **Practice round** (on by default): one short practice turn before round one: a team clues three easy words on a 25-second clock, with tips on the TV and every phone for Got it, Pass and fouls. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 - **Words**: 32 categories in `src/tongue/words.json`, written for this project.
 
 ### Word Budget
@@ -100,6 +106,7 @@ A bid-and-clue word game for two teams of two or more (4 to 16 players). New pla
 - **The steal**: if the clue-giver's team goes over budget or runs out of time, the other team gets 35 seconds to say every word still left, using only the clues already given. If they get them all, they steal the card. If they miss any, **nobody gets the card** (in the classic game the other team wins it on any fail; here they have to earn it). The clue-giver who just lost the card sees the whole card on their phone through the steal, with the words their team already got, so they can follow along. Without a host, they also check off the stealing team's words (with a host, the host does), and the TV shows the whole card afterwards so the room can see.
 - **Words saved**: finishing a card under budget banks the unused words (bid 19, used 14: 5 saved). They break a tie and show on the scoreboard.
 - **Winning**: first to 5, 7 or 10 cards (10 by default), with saved words as the tiebreak. Or set up "Points": a card is worth 10 and every saved word 1, first to 10 × the target. Clue-givers move along their team every card, so everyone gets a go.
+- **Practice round** (on by default): one practice card before card one, with tips on the TV and every phone: the look, bidding the budget down, clueing while every word is counted, going over the budget, and the steal. Nothing scores, and it takes about two minutes. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 
 ### Red Herring
 A detective social deduction game for 5 to 12 players, about 25 to 40 minutes. The owner of Herringbone Hall is found dead, the guests investigate, and one of them is the killer.
@@ -113,6 +120,7 @@ A detective social deduction game for 5 to 12 players, about 25 to 40 minutes. T
 - **Winning**: the detectives win by jailing the killer, unless the killer's Last Words name the Witness. The killer's side wins once it's as big as everyone else still free, or when day 5 ends without the killer jailed. A jailed guest's role stays hidden (only the Coroner learns it); the verdict only says whether they were the killer.
 - **Privacy**: roles, cards and notes go only to each guest's own phone (and, in a hosted game, the storyteller's controller), never to the TV. Each phone has a Board tab that mirrors the TV, for playing over a video call. The role card lies face down until tapped.
 - **The storyteller**: with a host, one person who isn't a guest runs the case from the controller: a grimoire of every role, card and night action, the narration to read aloud, the pacing of mornings and verdicts, and what the Rookie learns. Without one, the TV narrates and everything runs on the clock.
+- **Practice round** (on by default): a two-to-three-minute practice case before the real one, with tips on the TV and every phone: the alibi card, a night, the morning report, a statement and a lie, one lab task, and an accusation, trial and vote. Everyone plays a Detective against a made-up killer; real roles are dealt afterwards. With a storyteller, the storyteller can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 
 ### Pin Drop
 A map game for 1 to 10 players. Each round, a clue for a place in the world shows on the TV and every phone ("a rocky hill crowned by the marble Parthenon"). Everyone finds it on the world map on their phone (drag to look around, pinch to zoom), taps to drop a pin, drags or taps again to move it, and locks it in. The TV shows who has locked in, never where.
@@ -135,6 +143,7 @@ A think-alike party game for 2 to 12 players (best with 3 or more), about 15 to 
 - **The Lone Wolf**: if exactly one player ends a round alone, they take the Lone Wolf from whoever had it. Whoever holds it at the end can't win, and the win goes to the next highest score. The TV marks the holder, and their phone says so.
 - **Same answer?** Before the scores lock, groups that mean the same thing can be merged ("flapjacks" and "pancakes"). With a host, only the controller can merge or split groups, and the host locks the scores. Without one, any player can tap two groups and propose a merge (two ideas each a round); it goes through when more than half the connected players vote Same, and the review waits for the vote.
 - **Rounds**: 8, 12 or 16 (12 by default), each prompt from a pack of over 200 written for the game, dealt so no category comes up twice in a row. The end screen has the standings and a round-by-round breakdown, and Play again deals new prompts.
+- **Practice round** (on by default): one practice prompt before round one, with tips on the TV and every phone about matching, scoring and the Lone Wolf. Nothing scores. With a host, the host can skip it; without one, players vote on their phones and it skips once more than half of them want to.
 
 ### With or without a host
 Every game can be played two ways:
@@ -192,7 +201,9 @@ npm run check:puzzles
 
 ## Deployment
 
-Every push to `main` builds the client and deploys it to GitHub Pages (`.github/workflows/deploy-pages.yml`). The deployed client connects to the game server at `VITE_SERVER_URL` from `.env.production`; without that variable, the client looks for the server on port 3001 of the host it was loaded from.
+Every push to `main` runs `npm test`, builds the client and deploys it to GitHub Pages (`.github/workflows/deploy-pages.yml`). A failing test stops the deploy.
+
+The same workflow then redeploys the game server on Render, if the repository has a `RENDER_DEPLOY_HOOK` secret: in Render, open the server's **Settings → Deploy Hook**, copy the URL, and add it under GitHub's **Settings → Secrets and variables → Actions** as `RENDER_DEPLOY_HOOK`. Without the secret, that step is skipped and the server is redeployed by hand from the Render dashboard. The deployed client connects to the game server at `VITE_SERVER_URL` from `.env.production`; without that variable, the client looks for the server on port 3001 of the host it was loaded from.
 
 ## Project layout
 

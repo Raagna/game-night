@@ -817,7 +817,7 @@ export function SurveyEnd({ game, host, display, onAction }) {
     <main className="end survey">
       {display && <SoundToggle />}
       <ShowTitle />
-      <h1 className="sv-winner-title">{winner == null ? "It’s a tie!" : `${teamName(game, winner)} win!`}</h1>
+      <h1 className="sv-winner-title">{winner == null ? "It’s a tie!" : `Winners: ${teamName(game, winner)}`}</h1>
       <div className="sv-final-scores">
         {[0, 1].map((team) => (
           <section key={team} className={`sv-final-team team-${team}${winner === team ? " is-winner" : ""}`}>
