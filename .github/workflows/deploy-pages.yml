@@ -20,6 +20,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    env:
+      # Render's Deploy Hook URL (Render > game server > Settings > Deploy Hook),
+      # saved as a repository secret. Without it, the server step is skipped.
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
 
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +34,8 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # A failing test stops the deploy: neither the client nor the server goes out.
+      - run: npm test
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
@@ -38,3 +44,7 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Deploy the game server on Render
+        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
+        run: curl --fail --silent --show-error --max-time 30 -X POST "$RENDER_DEPLOY_HOOK" > /dev/null

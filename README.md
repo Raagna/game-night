@@ -192,7 +192,9 @@ npm run check:puzzles
 
 ## Deployment
 
-Every push to `main` builds the client and deploys it to GitHub Pages (`.github/workflows/deploy-pages.yml`). The deployed client connects to the game server at `VITE_SERVER_URL` from `.env.production`; without that variable, the client looks for the server on port 3001 of the host it was loaded from.
+Every push to `main` runs `npm test`, builds the client and deploys it to GitHub Pages (`.github/workflows/deploy-pages.yml`). A failing test stops the deploy.
+
+The same workflow then redeploys the game server on Render, if the repository has a `RENDER_DEPLOY_HOOK` secret: in Render, open the server's **Settings → Deploy Hook**, copy the URL, and add it under GitHub's **Settings → Secrets and variables → Actions** as `RENDER_DEPLOY_HOOK`. Without the secret, that step is skipped and the server is redeployed by hand from the Render dashboard. The deployed client connects to the game server at `VITE_SERVER_URL` from `.env.production`; without that variable, the client looks for the server on port 3001 of the host it was loaded from.
 
 ## Project layout
 
