@@ -214,6 +214,10 @@ select { background-color: var(--well); }
   text-align: center;
   font: 700 0.95rem var(--flap-font); letter-spacing: 0.16em; text-transform: uppercase;
 }
+.server-waking small {
+  display: block; margin-top: 2px;
+  font: 500 0.85rem var(--set); letter-spacing: 0; text-transform: none; opacity: 0.85;
+}
 
 /* Scores along the foot of the board: a name, then the score on flaps. Whose turn it is fills the row marker and
    lights the name; a player who dropped out goes to dim letters with "away". */

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer, ConfirmSubmit } from "./shared";
+import { SERVER, JOIN_URL, socket, CloseIcon, tone, useClueMusic, ClueTimer, ConfirmSubmit, ServerWaking, firstContactMs } from "./shared";
 import {
   fallbackQuestions,
   loadSeason,
@@ -967,7 +967,7 @@ function Join({ onJoined, initialError, presetCode = "" }) {
   const join = (event) => {
     event.preventDefault();
     tone(1,.01,"sine",.001); setBusy(true); setError("");
-    socket.timeout(8000).emit("player:join", { code: code.trim(), name, returningPlayerId: sessionStorage.playerId }, (err, r) => {
+    socket.timeout(firstContactMs(8000)).emit("player:join", { code: code.trim(), name, returningPlayerId: sessionStorage.playerId }, (err, r) => {
       setBusy(false);
       if (err) return setError("Couldn’t reach the game server. Check your connection and try again.");
       if (r.ok) return onJoined(r.game, r.playerId);
@@ -1207,7 +1207,7 @@ function App() {
   const banner = game && !connected && <div className="connection-banner" role="status">Reconnecting…</div>;
   const create = (config, fail) => {
     lastFail.current = fail;
-    socket.timeout(10000).emit("host:create", config, (err, r) => {
+    socket.timeout(firstContactMs(10000)).emit("host:create", config, (err, r) => {
       if (err) return fail("Couldn’t reach the game server. Check your connection and try again.");
       if (!r?.ok) return fail(r?.error || "Couldn’t create the game.");
       sessionStorage.displayCode = r.code; sessionStorage.hostToken = r.hostToken;
@@ -1222,7 +1222,7 @@ function App() {
     <BackToSettings game={game} place={host ? "tv" : "controller"} onClosed={() => roomClosed.current()} />
     {controller && <ControllerOnPhone code={game.code} />}
   </>;
-  return <>{setupSlot}{dock}{renderScreen()}</>;
+  return <>{!game && <ServerWaking />}{setupSlot}{dock}{renderScreen()}</>;
 
   function renderScreen() {
   if (!game) {
