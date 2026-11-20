@@ -13,7 +13,7 @@ price records carry the product's name, brand, size and photo. Every price in th
 100 to a page, about a second apart, and each page is cached in CACHE_DIR so a rerun only refetches with --refresh.
 
 A price is kept when it is for a whole product (not a per-kilo category price or produce sold by weight), is not
-a sale price, was paid in a shop in the country in the last MAX_AGE_DAYS before the newest price, and is between
+a sale price (when a sale record notes the regular price, that is used instead), was paid in a shop in the country in the last MAX_AGE_DAYS before the newest price, and is between
 MIN_PRICE and MAX_PRICE. A product is kept when it has a name, a front photo and a brand or a size. Its price is the median of its kept prices, rounded to
 the cent, and the pack notes how many receipts that came from and the month of the newest one. Products that
 look the same (brand + name + size) are merged.
@@ -127,8 +127,15 @@ def build(prices, report, country):
             skip("no price"); continue
         if p.get("type") != "PRODUCT" or not product or p.get("price_per"):
             skip("not a whole product"); continue
+        # A sale price isn't what the product usually costs, but many sale records also note the regular shelf
+        # price (price_without_discount); that one is kept. A sale price without it is skipped.
         if p.get("price_is_discounted"):
-            skip("sale price"); continue
+            try:
+                price = float(p.get("price_without_discount"))
+            except (TypeError, ValueError):
+                skip("sale price, no regular price"); continue
+            if price <= float(p.get("price") or 0):
+                skip("sale price, no regular price"); continue
         if shop_country not in country["names"] or p.get("currency") != country["currency"]:
             skip("not a shop in the country"); continue
         if p.get("duplicate_of"):

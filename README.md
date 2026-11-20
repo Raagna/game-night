@@ -80,7 +80,7 @@ A price-guessing game for 2 to 8 players on real prices: what shoppers paid for 
 Prices come from three packs:
 
 - **Open Prices, United States**: real receipt prices in US dollars from US stores, built from [Open Prices](https://prices.openfoodfacts.org) by `scripts/build-openprices-pack.py --country US` into `public/data/prices-openprices.json`.
-- **Open Prices, Canada**: real receipt prices in Canadian dollars from Canadian stores, built by `scripts/build-openprices-pack.py --country CA` into `public/data/prices-openprices-ca.json`. It is much smaller than the US pack (a few hundred products), since fewer Canadian receipts have been contributed; a product with no Canadian receipt is simply not in it.
+- **Open Prices, Canada**: real receipt prices in Canadian dollars from Canadian stores, built by `scripts/build-openprices-pack.py --country CA` into `public/data/prices-openprices-ca.json`. It is much smaller than the US pack (about 350 products), since fewer Canadian receipts have been contributed; a product with no Canadian receipt is simply not in it. Sale prices are left out, except that a sale receipt which also records the regular shelf price counts at that regular price.
 - **Showcase**: big-ticket items in `src/price/showcase.json`, written for this project, each with its own estimated typical US price and Canadian price (a few trips differ by country, such as Québec City instead of New Orleans).
 
 The chosen country's pack is fetched when the game is set up; product photos load from Open Food Facts.
